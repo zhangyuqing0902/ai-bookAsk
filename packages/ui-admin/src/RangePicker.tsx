@@ -1,0 +1,127 @@
+import { useState } from 'react';
+
+// 时间区间：今日 / 近7天 / 30天 / 自定义；选定自定义后在页面回显区间 + 可取消重选。
+const MN = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const pad = (n: number) => String(n).padStart(2, '0');
+const fmtD = (d: Date | null) => (d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : '');
+
+export function RangePicker({
+  presets = ['今日', '近 7 天', '30 天'],
+  defaultActive = 1,
+}: {
+  presets?: string[];
+  defaultActive?: number;
+}) {
+  const [active, setActive] = useState(defaultActive);
+  const [showCal, setShowCal] = useState(false);
+  const [applied, setApplied] = useState<string | null>(null);
+  const [view, setView] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
+  const [start, setStart] = useState<Date | null>(null);
+  const [end, setEnd] = useState<Date | null>(null);
+
+  const y = view.getFullYear();
+  const m = view.getMonth();
+  const wd = (new Date(y, m, 1).getDay() + 6) % 7;
+  const days = new Date(y, m + 1, 0).getDate();
+
+  const pickDay = (d: number) => {
+    const dt = new Date(y, m, d);
+    if (!start || end) {
+      setStart(dt);
+      setEnd(null);
+    } else if (dt >= start) setEnd(dt);
+    else setStart(dt);
+  };
+  const apply = () => {
+    if (!start) return;
+    setApplied(fmtD(start) + (end ? ' 至 ' + fmtD(end) : ''));
+    setShowCal(false);
+  };
+  const cancelApplied = () => {
+    setApplied(null);
+    setStart(null);
+    setEnd(null);
+    setActive(defaultActive);
+  };
+
+  const cells: React.ReactNode[] = [];
+  for (let i = 0; i < wd; i++) cells.push(<span key={'e' + i} className="cal-d empty" />);
+  for (let d = 1; d <= days; d++) {
+    const dt = new Date(y, m, d);
+    let c = 'cal-d';
+    if (start && fmtD(dt) === fmtD(start)) c += ' sel start';
+    if (end && fmtD(dt) === fmtD(end)) c += ' sel end';
+    if (start && end && dt > start && dt < end) c += ' inrange';
+    cells.push(
+      <span key={d} className={c} onClick={() => pickDay(d)}>
+        {d}
+      </span>,
+    );
+  }
+
+  return (
+    <div className="rangewrap">
+      {applied && (
+        <span className="dr-applied">
+          {applied}
+          <i title="取消自定义区间" onClick={cancelApplied}>
+            ✕
+          </i>
+        </span>
+      )}
+      <div className="seg seg-range">
+        {presets.map((p, i) => (
+          <b
+            key={p}
+            className={active === i && !showCal && !applied ? 'on' : undefined}
+            onClick={() => {
+              setActive(i);
+              setShowCal(false);
+              setApplied(null);
+            }}
+          >
+            {p}
+          </b>
+        ))}
+        <b className={showCal || applied ? 'on' : undefined} onClick={() => setShowCal((s) => !s)}>
+          自定义
+        </b>
+      </div>
+      <div className={'dr-pop calpop' + (showCal ? ' show' : '')}>
+        <div className="cal-h">
+          <span className="cal-nav" onClick={() => setView(new Date(y, m - 1, 1))}>
+            ‹
+          </span>
+          <b>
+            {y} 年 {MN[m]} 月
+          </b>
+          <span className="cal-nav" onClick={() => setView(new Date(y, m + 1, 1))}>
+            ›
+          </span>
+        </div>
+        <div className="cal-wk">
+          <span>一</span>
+          <span>二</span>
+          <span>三</span>
+          <span>四</span>
+          <span>五</span>
+          <span>六</span>
+          <span>日</span>
+        </div>
+        <div className="cal-grid">{cells}</div>
+        <div className="cal-f">
+          <span className="cal-range">
+            {start ? fmtD(start) : '开始'} ~ {end ? fmtD(end) : '结束'}
+          </span>
+          <button className="btn btn-primary btn-sm" onClick={apply}>
+            应用
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

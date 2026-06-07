@@ -1,0 +1,144 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e6]:
+      - img "AI 问书" [ref=e7]
+      - generic [ref=e8]: 中国医学临床百家
+    - navigation [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]: 运营
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link "主控台" [ref=e14] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e16]
+              - generic [ref=e18]: 主控台
+          - listitem [ref=e19]:
+            - link "知识产品 KP" [ref=e20] [cursor=pointer]:
+              - /url: /kps
+              - img [ref=e22]
+              - generic [ref=e24]: 知识产品 KP
+      - generic [ref=e25]:
+        - generic [ref=e26]: 数据
+        - list [ref=e27]:
+          - listitem [ref=e28]:
+            - link "C 端用户" [ref=e29] [cursor=pointer]:
+              - /url: /users
+              - img [ref=e31]
+              - generic [ref=e33]: C 端用户
+          - listitem [ref=e34]:
+            - link "订单管理" [ref=e35] [cursor=pointer]:
+              - /url: /orders
+              - img [ref=e37]
+              - generic [ref=e39]: 订单管理
+          - listitem [ref=e40]:
+            - link "数据看板" [ref=e41] [cursor=pointer]:
+              - /url: /insights
+              - img [ref=e43]
+              - generic [ref=e45]: 数据看板
+      - generic [ref=e46]:
+        - generic [ref=e47]: 配置
+        - list [ref=e48]:
+          - listitem [ref=e49]:
+            - link "Agent 配置" [ref=e50] [cursor=pointer]:
+              - /url: /agent
+              - img [ref=e52]
+              - generic [ref=e54]: Agent 配置
+          - listitem [ref=e55]:
+            - link "客服配置" [ref=e56] [cursor=pointer]:
+              - /url: /service
+              - img [ref=e58]
+              - generic [ref=e60]: 客服配置
+  - generic [ref=e62]:
+    - banner [ref=e63]:
+      - generic [ref=e65]:
+        - generic [ref=e66]: 机构管理员
+        - button "admin@org_med" [ref=e68] [cursor=pointer]:
+          - text: admin@org_med
+          - img [ref=e69]
+    - main [ref=e71]:
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - heading "知识产品 KP" [level=1] [ref=e75]
+            - generic [ref=e76]: 本机构共 4 个 KP
+          - generic [ref=e77]:
+            - generic [ref=e79]:
+              - img [ref=e81]
+              - textbox "搜索 KP 名称 / ID" [ref=e83]
+            - button "新建 KP" [ref=e84] [cursor=pointer]:
+              - img [ref=e85]
+              - text: 新建 KP
+        - table [ref=e90]:
+          - rowgroup [ref=e91]:
+            - row "名称 ID 颗粒度 基础标签 创建 发布状态 操作" [ref=e92]:
+              - columnheader "名称" [ref=e93]
+              - columnheader "ID" [ref=e94]
+              - columnheader "颗粒度" [ref=e95]
+              - columnheader "基础标签" [ref=e96]
+              - columnheader "创建" [ref=e97]:
+                - generic [ref=e98]:
+                  - text: 创建
+                  - img [ref=e99]
+              - columnheader "发布状态" [ref=e101]
+              - columnheader "操作" [ref=e102]
+          - rowgroup [ref=e103]:
+            - row "中国医学临床百家 · 心血管分册（第 4 版） kp_cardio 单本书 免费 2026-04-12 已发布 管理" [ref=e104] [cursor=pointer]:
+              - cell "中国医学临床百家 · 心血管分册（第 4 版）" [ref=e105]:
+                - generic [ref=e108]: 中国医学临床百家 · 心血管分册（第 4 版）
+              - cell "kp_cardio" [ref=e109]:
+                - generic [ref=e110]: kp_cardio
+              - cell "单本书" [ref=e111]:
+                - generic [ref=e113]: 单本书
+              - cell "免费" [ref=e114]:
+                - generic [ref=e116]: 免费
+              - cell "2026-04-12" [ref=e117]:
+                - generic [ref=e118]: 2026-04-12
+              - cell "已发布" [ref=e119]:
+                - generic [ref=e121]: 已发布
+              - cell "管理" [ref=e122]:
+                - button "管理" [ref=e124]
+            - row "内分泌临床决策手册 kp_endo 单本书 会员 2026-03-20 已发布 管理" [ref=e125] [cursor=pointer]:
+              - cell "内分泌临床决策手册" [ref=e126]:
+                - generic [ref=e129]: 内分泌临床决策手册
+              - cell "kp_endo" [ref=e130]:
+                - generic [ref=e131]: kp_endo
+              - cell "单本书" [ref=e132]:
+                - generic [ref=e134]: 单本书
+              - cell "会员" [ref=e135]:
+                - generic [ref=e137]: 会员
+              - cell "2026-03-20" [ref=e138]:
+                - generic [ref=e139]: 2026-03-20
+              - cell "已发布" [ref=e140]:
+                - generic [ref=e142]: 已发布
+              - cell "管理" [ref=e143]:
+                - button "管理" [ref=e145]
+            - row "谢渭芬教授专家库 kp_xie 专家 会员 2026-02-08 已发布 管理" [ref=e146] [cursor=pointer]:
+              - cell "谢渭芬教授专家库" [ref=e147]:
+                - generic [ref=e150]: 谢渭芬教授专家库
+              - cell "kp_xie" [ref=e151]:
+                - generic [ref=e152]: kp_xie
+              - cell "专家" [ref=e153]:
+                - generic [ref=e155]: 专家
+              - cell "会员" [ref=e156]:
+                - generic [ref=e158]: 会员
+              - cell "2026-02-08" [ref=e159]:
+                - generic [ref=e160]: 2026-02-08
+              - cell "已发布" [ref=e161]:
+                - generic [ref=e163]: 已发布
+              - cell "管理" [ref=e164]:
+                - button "管理" [ref=e166]
+            - row "儿科临床系列（共 8 册） kp_pediatrics_series 系列 会员 2026-05-02 草稿 管理" [ref=e167] [cursor=pointer]:
+              - cell "儿科临床系列（共 8 册）" [ref=e168]:
+                - generic [ref=e171]: 儿科临床系列（共 8 册）
+              - cell "kp_pediatrics_series" [ref=e172]:
+                - generic [ref=e173]: kp_pediatrics_series
+              - cell "系列" [ref=e174]:
+                - generic [ref=e176]: 系列
+              - cell "会员" [ref=e177]:
+                - generic [ref=e179]: 会员
+              - cell "2026-05-02" [ref=e180]:
+                - generic [ref=e181]: 2026-05-02
+              - cell "草稿" [ref=e182]:
+                - generic [ref=e184]: 草稿
+              - cell "管理" [ref=e185]:
+                - button "管理" [ref=e187]

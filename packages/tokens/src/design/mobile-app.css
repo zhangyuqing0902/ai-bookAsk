@@ -1,0 +1,559 @@
+/* 手机舞台：桌面端居中显示 375×812 手机框；窄屏（≤559）自动整屏（DevTools 375 模式即真实 H5）。
+   必须在 styles.css / proto.css 之后引入。 */
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+/* 每屏建立低层叠上下文,使屏内 z-index(如 .h5-top:20)不越过浮层 .ov(对应原型 .screen.active{z-index:2} 的作用) */
+.h5,
+.pg,
+.lg,
+.member,
+.call {
+  position: relative;
+  z-index: 0;
+}
+.h5-stage {
+  min-height: 100vh;
+  background: var(--canvas);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+@media (max-width: 559px) {
+  .h5-stage {
+    padding: 0;
+    background: var(--paper);
+    display: block;
+  }
+  .h5-stage .phone {
+    width: 100%;
+    height: 100vh;
+    min-height: 100dvh;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    background: var(--paper);
+  }
+  .h5-stage .phone-screen {
+    border-radius: 0;
+  }
+  .h5-stage .notch {
+    display: none;
+  }
+}
+
+/* ============================================================
+   前台精修（0607）：登录 / 会话 / 我的 新增样式
+   ============================================================ */
+
+/* —— 登录落地页：品牌上 / 按钮+协议下 —— */
+.lg-landing {
+  justify-content: flex-start;
+  padding-top: 13%;
+}
+.lg-landing .lg-bottom {
+  margin-top: auto;
+  width: 100%;
+}
+.lg-inst {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  text-align: center;
+  margin: 16px 0 10px;
+}
+.lg-inst b {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.lg-agree {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  padding-bottom: 2px;
+}
+.lg-cbx {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1.5px solid var(--line);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: 0.15s;
+}
+.lg-cbx svg {
+  width: 11px;
+  height: 11px;
+  opacity: 0;
+}
+.lg-cbx.on {
+  background: var(--indigo);
+  border-color: var(--indigo);
+}
+.lg-cbx.on svg {
+  opacity: 1;
+}
+.lg-agree a {
+  color: var(--indigo-ink);
+  font-weight: 600;
+}
+
+/* —— 主题色登录表单页（非白底） —— */
+.lg-auth {
+  background: radial-gradient(132% 78% at 50% -8%, #E3E8FF 0%, #ECE9FE 40%, var(--paper) 80%);
+}
+/* 登录输入框：真实 input + 光标 + 错误态 */
+.pf .pin input {
+  all: unset;
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--ink);
+  cursor: text;
+}
+.pf .pin input::placeholder {
+  color: var(--ink-3);
+}
+.pf .pin.bad {
+  border-color: var(--terra);
+  background: var(--terra-soft);
+}
+.btn:disabled,
+.btn.is-off {
+  opacity: 0.42;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* —— 欢迎态打字机（"问 AI 问书" 从左至右循环） —— */
+.tw {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+  border-right: 2px solid var(--indigo);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tw {
+    animation: twType 3.2s steps(5, end) infinite, twCaret 0.7s steps(1) infinite;
+  }
+}
+@keyframes twType {
+  0% { width: 0; }
+  55%, 92% { width: 5em; }
+  100% { width: 0; }
+}
+@keyframes twCaret {
+  50% { border-color: transparent; }
+}
+
+/* —— composer 真实输入 —— */
+.composer-box .ci-input {
+  all: unset;
+  display: block;
+  width: 100%;
+  font-size: 14px;
+  color: var(--ink);
+  padding: 4px 4px 12px;
+  cursor: text;
+}
+.composer-box .ci-input::placeholder {
+  color: var(--ink-3);
+}
+.mini-chip {
+  cursor: pointer;
+}
+.mini-chip.on {
+  background: var(--indigo);
+  color: #fff;
+}
+.send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--indigo);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+/* —— 答案操作：点赞/反馈填充态 + 灰色溯源按钮 —— */
+.act-ic.on {
+  color: var(--indigo);
+}
+.act-ic.on svg {
+  fill: var(--indigo);
+}
+.src-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+.src-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* —— 多模态区改灰色系 —— */
+.media-zone {
+  background: var(--surface-warm) !important;
+}
+.media-thumb {
+  background: repeating-linear-gradient(135deg, #E7EAF2 0 7px, #EEF1F7 7px 14px) !important;
+}
+
+/* —— 反馈 sheet —— */
+.fbk-h {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-family: var(--serif-cjk);
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+.fbk-h .x {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-warm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.fbk-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.fbk-tag {
+  font-size: 12.5px;
+  padding: 8px 15px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.fbk-tag.on {
+  background: var(--indigo-soft);
+  border-color: transparent;
+  color: var(--indigo-ink);
+  font-weight: 600;
+}
+.fbk-ta {
+  width: 100%;
+  background: var(--surface-warm);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 13px;
+  font-size: 13.5px;
+  color: var(--ink);
+  min-height: 96px;
+  resize: none;
+  outline: none;
+  font-family: var(--sans);
+}
+.fbk-ta::placeholder {
+  color: var(--ink-3);
+}
+
+/* —— 语音输入浮层（短语音,松手发送） —— */
+.voice-ov {
+  position: absolute;
+  inset: 46px 0 0;
+  z-index: 60;
+  background: linear-gradient(176deg, #EAEEFE 0%, #F1ECFC 46%, #FDEDF1 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.voice-tip {
+  margin-top: auto;
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-bottom: 18px;
+}
+.voice-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 56px;
+  margin-bottom: 60px;
+}
+.voice-wave span {
+  width: 4px;
+  border-radius: 3px;
+  background: linear-gradient(var(--indigo), #8B6CF6);
+  height: 10px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .voice-wave span {
+    animation: vwave 0.9s infinite ease-in-out;
+  }
+}
+@keyframes vwave {
+  0%, 100% { height: 8px; }
+  50% { height: 46px; }
+}
+.voice-hint {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 130px;
+}
+
+/* —— 会话左抽屉：搜索 + 分组 + 页脚更多 —— */
+.ld-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px;
+  padding: 10px 13px;
+  background: var(--surface-warm);
+  border-radius: 12px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.ld-search svg {
+  width: 15px;
+  height: 15px;
+}
+.ld-grp {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  padding: 14px 14px 6px;
+}
+.ld-hist .hi {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ld-foot .more {
+  margin-left: auto;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+}
+.ld-foot .more svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* —— 我的永享：媒体预览（图/音/视） —— */
+.mp-img {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.mp-img .ph {
+  width: 86%;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  background: repeating-linear-gradient(135deg, #2a2c38 0 12px, #23242e 12px 24px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--mono);
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+.mp-video {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.mp-video .frame {
+  width: 88%;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  background: linear-gradient(155deg, #3a3d4d, #23242e);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mp-video .playbtn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  cursor: pointer;
+}
+.mp-video .playbtn svg {
+  width: 26px;
+  height: 26px;
+  margin-left: 3px;
+}
+.mp-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px 4px;
+  color: #fff;
+}
+.mp-bar .pp {
+  cursor: pointer;
+  display: flex;
+}
+.mp-bar .pp svg {
+  width: 22px;
+  height: 22px;
+}
+.mp-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  position: relative;
+  cursor: pointer;
+}
+.mp-track i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: var(--indigo);
+}
+.mp-track i::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+}
+.mp-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 78px;
+  text-align: right;
+}
+/* 音频：播客式音浪 */
+.mp-audio {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding: 0 26px;
+}
+.mp-audio .cover {
+  width: 150px;
+  height: 150px;
+  border-radius: 20px;
+  background: linear-gradient(150deg, #5b73f2, #4b57e8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 40px -16px rgba(75, 87, 232, 0.6);
+}
+.mp-audio .cover svg {
+  width: 48px;
+  height: 48px;
+}
+.mp-audio .title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+.mp-bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 40px;
+  width: 100%;
+  justify-content: center;
+}
+.mp-bars span {
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.mp-bars span.on {
+  background: var(--indigo);
+}
+
+/* —— 订单详情 —— */
+.od-card {
+  margin: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--sh-sm);
+  overflow: hidden;
+}
+.od-card .od-h {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 14px 16px 4px;
+}
+.od-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  font-size: 13px;
+  border-top: 1px solid var(--line-2);
+}
+.od-row .k {
+  color: var(--ink-2);
+}
+.od-row .v {
+  color: var(--ink);
+  font-family: var(--mono);
+}
+.od-cover {
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  background: repeating-linear-gradient(135deg, #E7EAF2 0 8px, #EEF1F7 8px 16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  cursor: pointer;
+}

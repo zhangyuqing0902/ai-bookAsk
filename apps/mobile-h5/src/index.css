@@ -1,0 +1,4 @@
+/* 不加载 @tailwind base（preflight 会把 svg 强制 display:block,破坏原型的行内图标）。
+   设计系统的重置由 design/styles.css 提供。仅保留工具类供零碎布局使用。 */
+@tailwind components;
+@tailwind utilities;

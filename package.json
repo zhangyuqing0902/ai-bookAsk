@@ -1,0 +1,24 @@
+{
+  "name": "ai-bookask",
+  "private": true,
+  "version": "0.0.1",
+  "description": "AI 问书 三端高保真原型（机构前台 H5 / 机构后台 / 平台超管）",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:mobile dev:org dev:platform",
+    "dev:mobile": "npm --workspace apps/mobile-h5 run dev",
+    "dev:org": "npm --workspace apps/org-admin run dev",
+    "dev:platform": "npm --workspace apps/platform-admin run dev",
+    "build": "npm-run-all --parallel build:*",
+    "build:mobile": "npm --workspace apps/mobile-h5 run build",
+    "build:org": "npm --workspace apps/org-admin run build",
+    "build:platform": "npm --workspace apps/platform-admin run build"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.6.3"
+  }
+}

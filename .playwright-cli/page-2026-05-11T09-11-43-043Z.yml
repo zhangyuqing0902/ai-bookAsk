@@ -1,0 +1,194 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e6]:
+        - img "AI 问书" [ref=e7]
+        - generic [ref=e8]: 平台管理
+      - navigation [ref=e9]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: 总览
+          - list [ref=e12]:
+            - listitem [ref=e13]:
+              - link "主控台" [ref=e14] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e16]
+                - generic [ref=e18]: 主控台
+        - generic [ref=e19]:
+          - generic [ref=e20]: 机构管理
+          - list [ref=e21]:
+            - listitem [ref=e22]:
+              - link "机构管理" [ref=e23] [cursor=pointer]:
+                - /url: /orgs
+                - img [ref=e25]
+                - generic [ref=e27]: 机构管理
+            - listitem [ref=e28]:
+              - link "机构账户" [ref=e29] [cursor=pointer]:
+                - /url: /accounts
+                - img [ref=e31]
+                - generic [ref=e33]: 机构账户
+            - listitem [ref=e34]:
+              - link "角色与权限" [ref=e35] [cursor=pointer]:
+                - /url: /roles
+                - img [ref=e37]
+                - generic [ref=e39]: 角色与权限
+        - generic [ref=e40]:
+          - generic [ref=e41]: 数据
+          - list [ref=e42]:
+            - listitem [ref=e43]:
+              - link "全平台 LLM 统计" [ref=e44] [cursor=pointer]:
+                - /url: /data/llm-usage
+                - img [ref=e46]
+                - generic [ref=e48]: 全平台 LLM 统计
+            - listitem [ref=e49]:
+              - link "全平台订单" [ref=e50] [cursor=pointer]:
+                - /url: /data/orders
+                - img [ref=e52]
+                - generic [ref=e54]: 全平台订单
+            - listitem [ref=e55]:
+              - link "全平台用户" [ref=e56] [cursor=pointer]:
+                - /url: /users
+                - img [ref=e58]
+                - generic [ref=e60]: 全平台用户
+        - generic [ref=e61]:
+          - generic [ref=e62]: 策略 / 安全
+          - list [ref=e63]:
+            - listitem [ref=e64]:
+              - link "平台配置" [ref=e65] [cursor=pointer]:
+                - /url: /policy/llm
+                - img [ref=e67]
+                - generic [ref=e69]: 平台配置
+    - generic [ref=e71]:
+      - banner [ref=e72]:
+        - generic [ref=e74]:
+          - generic [ref=e75]: 超管
+          - button "superadmin" [ref=e77] [cursor=pointer]:
+            - text: superadmin
+            - img [ref=e78]
+      - main [ref=e80]:
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - heading "主控台" [level=1] [ref=e84]
+            - generic [ref=e85]:
+              - button "近 30 天" [ref=e88] [cursor=pointer]:
+                - img [ref=e89]
+                - text: 近 30 天
+                - img [ref=e91]
+              - button "导出数据" [ref=e93] [cursor=pointer]:
+                - img [ref=e94]
+                - text: 导出数据
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - generic [ref=e98]:
+                - generic [ref=e99]:
+                  - generic [ref=e100]: 入驻机构
+                  - generic [ref=e102]: "?"
+                - img [ref=e104]
+              - generic [ref=e107]: "3"
+              - generic [ref=e108]:
+                - generic [ref=e109]: 新增 0 / 本周
+                - generic [ref=e110]: +0.0%
+            - generic [ref=e111]:
+              - generic [ref=e112]:
+                - generic [ref=e113]:
+                  - generic [ref=e114]: 本月 GMV
+                  - generic [ref=e116]: "?"
+                - img [ref=e118]
+              - generic [ref=e121]: ¥124.7K
+              - generic [ref=e123]: +9.3%
+            - generic [ref=e124]:
+              - generic [ref=e125]:
+                - generic [ref=e126]:
+                  - generic [ref=e127]: 平台默认 token
+                  - generic [ref=e129]: "?"
+                - img [ref=e131]
+              - generic [ref=e134]: 38.4M
+              - generic [ref=e135]:
+                - generic [ref=e136]: vs 上月
+                - generic [ref=e137]: "-4.1%"
+            - generic [ref=e138]:
+              - generic [ref=e139]:
+                - generic [ref=e140]:
+                  - generic [ref=e141]: 超额告警
+                  - generic [ref=e143]: "?"
+                - img [ref=e145]
+              - generic [ref=e148]: "0"
+              - generic [ref=e150]: org_llm_quota_exceeded
+          - generic [ref=e151]:
+            - generic [ref=e153]:
+              - generic [ref=e154]: 平台默认 LLM token 14 天趋势
+              - generic [ref=e155]: 单位：百万 tokens / 日 · 按机构汇总
+            - img [ref=e160]:
+              - generic [ref=e162]:
+                - generic [ref=e164]: 05/01
+                - generic [ref=e166]: 05/02
+                - generic [ref=e168]: 05/03
+                - generic [ref=e170]: 05/04
+                - generic [ref=e172]: 05/05
+                - generic [ref=e174]: 05/06
+                - generic [ref=e176]: 05/07
+                - generic [ref=e178]: 05/08
+                - generic [ref=e180]: 05/09
+                - generic [ref=e182]: 05/10
+                - generic [ref=e184]: 05/11
+                - generic [ref=e186]: 05/12
+                - generic [ref=e188]: 05/13
+                - generic [ref=e190]: 05/14
+              - generic [ref=e192]:
+                - generic [ref=e194]: "0"
+                - generic [ref=e196]: "20"
+                - generic [ref=e198]: "40"
+                - generic [ref=e200]: "60"
+                - generic [ref=e202]: "80"
+          - generic [ref=e209]:
+            - generic [ref=e210]:
+              - generic [ref=e213]: 本月各机构 token 用量
+              - table [ref=e216]:
+                - rowgroup [ref=e217]:
+                  - row "机构 已用 上限 使用率 状态" [ref=e218]:
+                    - columnheader "机构" [ref=e219]
+                    - columnheader "已用" [ref=e220]
+                    - columnheader "上限" [ref=e221]
+                    - columnheader "使用率" [ref=e222]
+                    - columnheader "状态" [ref=e223]
+                - rowgroup [ref=e224]:
+                  - row "中国医学临床百家 32M 50M 64% 正常" [ref=e225] [cursor=pointer]:
+                    - cell "中国医学临床百家" [ref=e226]:
+                      - generic [ref=e227]: 中国医学临床百家
+                    - cell "32M" [ref=e228]:
+                      - generic [ref=e230]: 32M
+                    - cell "50M" [ref=e231]:
+                      - generic [ref=e233]: 50M
+                    - cell "64%" [ref=e234]:
+                      - generic [ref=e236]: 64%
+                    - cell "正常" [ref=e237]:
+                      - generic [ref=e239]: 正常
+                  - row "财经出版社 4.2M 50M 8% 正常" [ref=e240] [cursor=pointer]:
+                    - cell "财经出版社" [ref=e241]:
+                      - generic [ref=e242]: 财经出版社
+                    - cell "4.2M" [ref=e243]:
+                      - generic [ref=e245]: 4.2M
+                    - cell "50M" [ref=e246]:
+                      - generic [ref=e248]: 50M
+                    - cell "8%" [ref=e249]:
+                      - generic [ref=e251]: 8%
+                    - cell "正常" [ref=e252]:
+                      - generic [ref=e254]: 正常
+                  - row "十月文学 0M 30M 0% 低用量" [ref=e255] [cursor=pointer]:
+                    - cell "十月文学" [ref=e256]:
+                      - generic [ref=e257]: 十月文学
+                    - cell "0M" [ref=e258]:
+                      - generic [ref=e260]: 0M
+                    - cell "30M" [ref=e261]:
+                      - generic [ref=e263]: 30M
+                    - cell "0%" [ref=e264]:
+                      - generic [ref=e266]: 0%
+                    - cell "低用量" [ref=e267]:
+                      - generic [ref=e269]: 低用量
+            - generic [ref=e270]:
+              - generic [ref=e272]:
+                - generic [ref=e273]: 近 7 天告警
+                - generic [ref=e274]: 无超额事件
+              - generic [ref=e276]:
+                - generic [ref=e277]: "0"
+                - text: 告警（org_llm_quota_80_percent / exceeded）
+  - generic [ref=e278]: "0"

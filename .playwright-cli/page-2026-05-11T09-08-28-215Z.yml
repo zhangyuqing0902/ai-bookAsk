@@ -1,0 +1,195 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e6]:
+        - img "AI 问书" [ref=e7]
+        - generic [ref=e8]: 中国医学临床百家
+      - navigation [ref=e9]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: 运营
+          - list [ref=e12]:
+            - listitem [ref=e13]:
+              - link "主控台" [ref=e14] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e16]
+                - generic [ref=e18]: 主控台
+            - listitem [ref=e19]:
+              - link "知识产品 KP" [ref=e20] [cursor=pointer]:
+                - /url: /kps
+                - img [ref=e22]
+                - generic [ref=e24]: 知识产品 KP
+        - generic [ref=e25]:
+          - generic [ref=e26]: 数据
+          - list [ref=e27]:
+            - listitem [ref=e28]:
+              - link "C 端用户" [ref=e29] [cursor=pointer]:
+                - /url: /users
+                - img [ref=e31]
+                - generic [ref=e33]: C 端用户
+            - listitem [ref=e34]:
+              - link "订单管理" [ref=e35] [cursor=pointer]:
+                - /url: /orders
+                - img [ref=e37]
+                - generic [ref=e39]: 订单管理
+            - listitem [ref=e40]:
+              - link "数据看板" [ref=e41] [cursor=pointer]:
+                - /url: /insights
+                - img [ref=e43]
+                - generic [ref=e45]: 数据看板
+        - generic [ref=e46]:
+          - generic [ref=e47]: 配置
+          - list [ref=e48]:
+            - listitem [ref=e49]:
+              - link "Agent 配置" [ref=e50] [cursor=pointer]:
+                - /url: /agent
+                - img [ref=e52]
+                - generic [ref=e54]: Agent 配置
+            - listitem [ref=e55]:
+              - link "客服配置" [ref=e56] [cursor=pointer]:
+                - /url: /service
+                - img [ref=e58]
+                - generic [ref=e60]: 客服配置
+    - generic [ref=e62]:
+      - banner [ref=e63]:
+        - generic [ref=e65]:
+          - generic [ref=e66]: 机构管理员
+          - button "admin@org_med" [ref=e68] [cursor=pointer]:
+            - text: admin@org_med
+            - img [ref=e69]
+      - main [ref=e71]:
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - heading "主控台" [level=1] [ref=e75]
+              - generic [ref=e76]: 本机构核心 KPI · T+1 数据延迟 ≤ 4 小时
+            - generic [ref=e77]:
+              - button "近 30 天" [ref=e80] [cursor=pointer]:
+                - img [ref=e81]
+                - text: 近 30 天
+                - img [ref=e83]
+              - button "导出数据" [ref=e85] [cursor=pointer]:
+                - img [ref=e86]
+                - text: 导出数据
+              - button "新建 KP" [ref=e88] [cursor=pointer]:
+                - img [ref=e89]
+                - text: 新建 KP
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - generic [ref=e93]:
+                - generic [ref=e94]:
+                  - generic [ref=e95]: 本月 GMV
+                  - generic [ref=e97]: "?"
+                - img [ref=e99]
+              - generic [ref=e102]: ¥54,432
+              - generic [ref=e103]:
+                - generic [ref=e104]: vs 上月
+                - generic [ref=e105]: +12.4%
+            - generic [ref=e106]:
+              - generic [ref=e107]:
+                - generic [ref=e108]:
+                  - generic [ref=e109]: 本月新增订单
+                  - generic [ref=e111]: "?"
+                - img [ref=e113]
+              - generic [ref=e116]: "284"
+              - generic [ref=e117]:
+                - generic [ref=e118]: vs 上月
+                - generic [ref=e119]: +8.1%
+            - generic [ref=e120]:
+              - generic [ref=e121]:
+                - generic [ref=e122]:
+                  - generic [ref=e123]: 本月提问量
+                  - generic [ref=e125]: "?"
+                - img [ref=e127]
+              - generic [ref=e130]: 3.2K
+              - generic [ref=e132]: +3.8%
+            - generic [ref=e133]:
+              - generic [ref=e134]:
+                - generic [ref=e135]:
+                  - generic [ref=e136]: 活跃 KP
+                  - generic [ref=e138]: "?"
+                - img [ref=e140]
+              - generic [ref=e143]: 3/4
+              - generic [ref=e145]: 已发布 / 全部
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - generic [ref=e149]:
+                - generic [ref=e150]: 提问量 14 天趋势
+                - generic [ref=e151]: 日新增问题数（含语音转写）
+              - img [ref=e156]:
+                - generic [ref=e161]:
+                  - generic [ref=e163]: 05/01
+                  - generic [ref=e165]: 05/02
+                  - generic [ref=e167]: 05/03
+                  - generic [ref=e169]: 05/04
+                  - generic [ref=e171]: 05/05
+                  - generic [ref=e173]: 05/06
+                  - generic [ref=e175]: 05/07
+                  - generic [ref=e177]: 05/08
+                  - generic [ref=e179]: 05/09
+                  - generic [ref=e181]: 05/10
+                  - generic [ref=e183]: 05/11
+                  - generic [ref=e185]: 05/12
+                  - generic [ref=e187]: 05/14
+                - generic [ref=e189]:
+                  - generic [ref=e191]: "0"
+                  - generic [ref=e193]: "95"
+                  - generic [ref=e195]: "190"
+                  - generic [ref=e197]: "285"
+                  - generic [ref=e199]: "380"
+            - generic [ref=e202]:
+              - generic [ref=e204]:
+                - generic [ref=e205]: 付费转化
+                - generic [ref=e206]: 本月支付订单数 / 提问量
+              - generic [ref=e207]:
+                - generic [ref=e208]: 8.9%
+                - generic [ref=e209]: +1.2pp vs 上月
+                - img [ref=e213]
+          - generic [ref=e214]:
+            - generic [ref=e216]:
+              - generic [ref=e217]: 热门 KP
+              - generic [ref=e218]: 按本月提问量排序
+            - table [ref=e221]:
+              - rowgroup [ref=e222]:
+                - row "名称 提问量 GMV 状态" [ref=e223]:
+                  - columnheader "名称" [ref=e224]
+                  - columnheader "提问量" [ref=e225]
+                  - columnheader "GMV" [ref=e226]
+                  - columnheader "状态" [ref=e227]
+              - rowgroup [ref=e228]:
+                - row "心血管分册 1,284 ¥23,440 已发布" [ref=e229] [cursor=pointer]:
+                  - cell "心血管分册" [ref=e230]:
+                    - generic [ref=e231]: 心血管分册
+                  - cell "1,284" [ref=e232]:
+                    - generic [ref=e233]: 1,284
+                  - cell "¥23,440" [ref=e234]:
+                    - generic [ref=e236]: ¥23,440
+                  - cell "已发布" [ref=e237]:
+                    - generic [ref=e239]: 已发布
+                - row "内分泌决策手册 988 ¥12,790 已发布" [ref=e240] [cursor=pointer]:
+                  - cell "内分泌决策手册" [ref=e241]:
+                    - generic [ref=e242]: 内分泌决策手册
+                  - cell "988" [ref=e243]:
+                    - generic [ref=e244]: "988"
+                  - cell "¥12,790" [ref=e245]:
+                    - generic [ref=e247]: ¥12,790
+                  - cell "已发布" [ref=e248]:
+                    - generic [ref=e250]: 已发布
+                - row "谢渭芬专家库 642 ¥18,200 已发布" [ref=e251] [cursor=pointer]:
+                  - cell "谢渭芬专家库" [ref=e252]:
+                    - generic [ref=e253]: 谢渭芬专家库
+                  - cell "642" [ref=e254]:
+                    - generic [ref=e255]: "642"
+                  - cell "¥18,200" [ref=e256]:
+                    - generic [ref=e258]: ¥18,200
+                  - cell "已发布" [ref=e259]:
+                    - generic [ref=e261]: 已发布
+                - row "儿科系列（草稿） 18 ¥0 草稿" [ref=e262] [cursor=pointer]:
+                  - cell "儿科系列（草稿）" [ref=e263]:
+                    - generic [ref=e264]: 儿科系列（草稿）
+                  - cell "18" [ref=e265]:
+                    - generic [ref=e266]: "18"
+                  - cell "¥0" [ref=e267]:
+                    - generic [ref=e269]: ¥0
+                  - cell "草稿" [ref=e270]:
+                    - generic [ref=e272]: 草稿
+  - generic [ref=e273]: "0"

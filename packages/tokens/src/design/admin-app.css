@@ -1,0 +1,445 @@
+/* 整屏真实后台：去掉原型的 mac 浏览器窗壳，沿用 .adm-win 的 v3 视觉覆盖（渐变侧栏 + 75px 玻璃顶栏）。
+   必须在 styles.css / proto-admin.css 之后引入，以覆盖原型里 .adm-win .admin{height:812px} 等固定值。 */
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+.adm-win {
+  width: 100%;
+}
+.adm-win .admin {
+  height: 100vh;
+}
+/* 未加载 preflight,需手动去掉 <a>(侧栏 NavLink) 的默认下划线 */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+/* 整屏登录页（动态毛玻璃）：占满视口,不被 .admin 100vh 影响 */
+.login {
+  width: 100%;
+  height: 100vh;
+}
+
+/* —— 真实输入框光标：在设计容器内放原生 input,去掉默认样式只留光标 —— */
+.search input,
+.inp2 input,
+.field .inp input,
+.dr-f input,
+.inp2 textarea {
+  all: unset;
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  line-height: 1.5;
+  color: var(--ink);
+  cursor: text;
+}
+.inp2 input,
+.inp2 textarea {
+  width: 100%;
+}
+.inp2 textarea {
+  min-height: 64px;
+  white-space: pre-wrap;
+}
+.search input::placeholder,
+.inp2 input::placeholder,
+.field .inp input::placeholder,
+.inp2 textarea::placeholder {
+  color: var(--ink-3);
+}
+
+/* —— 下拉菜单项 —— */
+.dd-opt {
+  padding: 9px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.dd-opt:hover {
+  background: var(--surface-warm);
+  color: var(--ink);
+}
+.dd-opt.on {
+  background: var(--indigo-soft);
+  color: var(--indigo-ink);
+  font-weight: 600;
+}
+
+/* —— 弹窗 —— */
+@keyframes abaFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes abaPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 30, 0.42);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: abaFade 0.2s ease both;
+}
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--sh-lg);
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  animation: abaPop 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.modal-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  font-family: var(--serif-cjk);
+  font-weight: 700;
+  font-size: 16px;
+  border-bottom: 1px solid var(--line-2);
+}
+.modal-x {
+  cursor: pointer;
+  color: var(--ink-3);
+  font-size: 15px;
+  line-height: 1;
+}
+.modal-b {
+  padding: 18px 22px;
+}
+.modal-f {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 6px 22px 20px;
+}
+
+/* —— 骨架屏 —— */
+@keyframes abaShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.skel {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #edeef4 25%, #f6f7fb 37%, #edeef4 63%);
+  background-size: 400% 100%;
+  animation: abaShimmer 1.4s ease infinite;
+}
+
+/* —— 空态 / 错误态 —— */
+.estate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 70px 24px;
+  color: var(--ink-2);
+}
+.estate .eill {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--indigo-ink);
+  background: radial-gradient(120% 120% at 30% 24%, #fff, rgba(255, 255, 255, 0) 55%), var(--indigo-soft);
+}
+.estate .eill svg {
+  width: 40px;
+  height: 40px;
+}
+.estate .et {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.estate .es {
+  font-size: 13px;
+  margin-top: 7px;
+  color: var(--ink-3);
+}
+.estate .ea {
+  margin-top: 18px;
+}
+
+/* ============================================================
+   后台精修（0607）：全局基建
+   ============================================================ */
+
+/* #1 顶栏置于内容之上,使用户下拉菜单不被时间区间等盖住 */
+.adm-win .admin-top {
+  position: relative;
+  z-index: 40;
+}
+
+/* #2 退出登录：红字浅红底警示 */
+.logout-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--terra);
+  background: var(--terra-soft);
+  cursor: pointer;
+}
+.logout-row svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* #4 侧栏折叠 */
+.side-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.side-toggle:hover {
+  background: var(--surface-warm);
+}
+.side-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+.adm-win .side {
+  transition: width 0.2s ease;
+  overflow: hidden;
+}
+.adm-win.side-collapsed .side {
+  width: 64px;
+}
+.adm-win.side-collapsed .side-brandtext {
+  display: none;
+}
+.adm-win.side-collapsed .nav-label {
+  display: none;
+}
+.adm-win.side-collapsed .nav-group {
+  height: 14px;
+  padding: 8px 0 4px;
+  text-align: center;
+  overflow: hidden;
+}
+.adm-win.side-collapsed .nav-item {
+  justify-content: center;
+  padding: 10px 0;
+  gap: 0;
+}
+.adm-win.side-collapsed .side-brand {
+  justify-content: center;
+  padding: 0 0;
+}
+
+/* #5/#11/#31 指标说明问号 + 悬浮 tooltip（移开自动消失） */
+.info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+.info-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--ink-3);
+  color: var(--ink-3);
+  font-size: 9px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  margin-left: 5px;
+}
+.info-pop {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 70;
+  width: 232px;
+  background: rgba(24, 26, 33, 0.96);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 11.5px;
+  line-height: 1.65;
+  box-shadow: var(--sh-md);
+  white-space: normal;
+  text-align: left;
+}
+.info:hover .info-pop {
+  display: block;
+}
+
+/* #9/#12 下拉禁用项（如 LLM 自配） */
+.dd-opt.disabled {
+  color: var(--ink-3);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* #18 自定义时间区间回显 chip */
+.dr-applied {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--indigo-soft);
+  color: var(--indigo-ink);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: var(--mono);
+}
+.dr-applied i {
+  cursor: pointer;
+  font-style: normal;
+  font-size: 13px;
+}
+
+/* #8/#20/#29 弹窗表单：字段右对齐、收窄,输入框靠左 */
+.modal-card .fm-row {
+  gap: 14px;
+  padding: 12px 0;
+}
+.modal-card .fm-row .lab {
+  width: 92px;
+  text-align: right;
+}
+
+/* 横向滚动表格（#16/#27 订单号全展开 + 左右滑动） */
+.tbl.nowrap-id td,
+.tbl.nowrap-id th {
+  white-space: nowrap;
+}
+
+/* 知识库操作列按钮：独立、空格分隔、禁用置灰（#25） */
+.op.off {
+  color: var(--ink-3);
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+.op + .op {
+  margin-left: 14px;
+}
+
+/* 必填红星（#26） */
+.req {
+  color: var(--terra);
+}
+
+/* 试听按钮（#26） */
+.tts-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--indigo-ink);
+  background: var(--indigo-soft);
+  border-radius: 20px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.tts-play svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* KP 封面上传/裁剪占位 + 裁剪弹窗 */
+.cover-up {
+  position: relative;
+  width: 120px;
+  height: 173px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex: none;
+}
+.cover-up .empty {
+  width: 100%;
+  height: 100%;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  background: var(--surface-warm);
+  cursor: pointer;
+}
+.cover-up .ops {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: rgba(20, 18, 30, 0.55);
+}
+.cover-up .ops span {
+  flex: 1;
+  text-align: center;
+  color: #fff;
+  font-size: 11.5px;
+  padding: 7px 0;
+  cursor: pointer;
+}
+.cover-up .ops span + span {
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+.crop-box {
+  width: 100%;
+  height: 280px;
+  border-radius: 12px;
+  background: linear-gradient(155deg, #5b73f2, #4b57e8);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.crop-box .frame {
+  position: absolute;
+  inset: 30px 90px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+}

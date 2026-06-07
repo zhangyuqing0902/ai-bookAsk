@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "useDefineForClassFields": true,
+    "verbatimModuleSyntax": false,
+    "baseUrl": ".",
+    "paths": {
+      "@aba/tokens": ["./packages/tokens/src"],
+      "@aba/tokens/*": ["./packages/tokens/src/*"],
+      "@aba/mock": ["./packages/mock/src"],
+      "@aba/mock/*": ["./packages/mock/src/*"],
+      "@aba/ui": ["./packages/ui/src"],
+      "@aba/ui/*": ["./packages/ui/src/*"],
+      "@aba/ui-mobile": ["./packages/ui-mobile/src"],
+      "@aba/ui-mobile/*": ["./packages/ui-mobile/src/*"],
+      "@aba/ui-admin": ["./packages/ui-admin/src"],
+      "@aba/ui-admin/*": ["./packages/ui-admin/src/*"]
+    }
+  }
+}

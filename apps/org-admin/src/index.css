@@ -1,0 +1,3 @@
+/* 不加载 @tailwind base（preflight 会破坏表格内行内 svg）。重置由 design/styles.css 提供。 */
+@tailwind components;
+@tailwind utilities;

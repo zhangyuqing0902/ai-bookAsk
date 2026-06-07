@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pkill -9 -f \"Codex.app\")",
+      "Bash(pkill -9 -f \"SkyComputerUseClient\")",
+      "Bash(open -a \"Codex\")",
+      "Bash(awk '{print $3\"% \"$11\" \"$12\" \"$13}')",
+      "Bash(sqlite3 ~/.codex/logs_2.sqlite \".tables\")",
+      "Bash(sqlite3 ~/.codex/logs_2.sqlite \"SELECT name FROM sqlite_master WHERE type='table';\")",
+      "Read(//Users/ziye/.codex/**)",
+      "Bash(sqlite3 ~/.codex/logs_2.sqlite \".schema logs\")",
+      "Bash(sqlite3 -separator \" | \" ~/.codex/logs_2.sqlite \"SELECT * FROM logs ORDER BY rowid DESC LIMIT 25;\")",
+      "Bash(sqlite3 -separator \" | \" ~/.codex/logs_2.sqlite \"SELECT * FROM logs WHERE level IN \\('ERROR','WARN'\\) ORDER BY rowid DESC LIMIT 15;\")",
+      "Bash(awk '{print $11, $12}')",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f' IP: {d.get\\(\\\\\"ip\\\\\"\\)}\\\\\\\\n 位置: {d.get\\(\\\\\"city\\\\\"\\)}, {d.get\\(\\\\\"region\\\\\"\\)}, {d.get\\(\\\\\"country\\\\\"\\)}\\\\\\\\n ISP: {d.get\\(\\\\\"org\\\\\"\\)}'\\)\" echo \"\" echo \"=== 5. DNS 解析 chatgpt.com 解到哪 ===\" dig +short chatgpt.com @8.8.8.8)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/KKKKhazix/khazix-skills/main/neat-freak/SKILL.md\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/KKKKhazix/khazix-skills/main/hv-analysis/SKILL.md\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/KKKKhazix/khazix-skills/main/khazix-writer/SKILL.md\")",
+      "Bash(cp /tmp/neat-freak.md ~/.claude/skills/neat-freak.md)",
+      "Bash(cp /tmp/hv-analysis.md ~/.claude/skills/hv-analysis.md)",
+      "Bash(cp /tmp/khazix-writer.md ~/.claude/skills/khazix-writer.md)"
+    ]
+  }
+}
