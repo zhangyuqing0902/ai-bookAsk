@@ -56,9 +56,22 @@ body,
   justify-content: flex-start;
   padding-top: 13%;
 }
+/* 按钮+协议块上移到屏幕中下方,便于单手操作(不再贴底);
+   注意:padding-bottom 百分比按宽度算,这里用固定值才能真正抬高 */
 .lg-landing .lg-bottom {
   margin-top: auto;
   width: 100%;
+  padding-bottom: 150px;
+}
+/* slogan 中点:珊瑚暖圆点,与 AI 会话欢迎页 .hero-sub .d 同款 */
+.sgn-dot {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--amber);
+  margin: 0 8px;
+  vertical-align: middle;
 }
 .lg-inst {
   font-size: 11.5px;
@@ -173,10 +186,23 @@ body,
 }
 .mini-chip {
   cursor: pointer;
+  border: 1px solid transparent; /* 占位,避免选中/未选中切换时 1px 跳动 */
 }
+/* 选中=靛蓝软底+靛蓝字/icon(主题色);未选中(.grayed)=白底黑字黑 icon。两个 chip 统一(参考图1) */
 .mini-chip.on {
-  background: var(--indigo);
-  color: #fff;
+  background: var(--indigo-soft);
+  color: var(--indigo-ink);
+}
+.mini-chip.on svg {
+  color: var(--indigo-ink);
+}
+.mini-chip.grayed {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--line);
+}
+.mini-chip.grayed svg {
+  color: var(--ink);
 }
 .send-btn {
   width: 38px;
@@ -190,12 +216,37 @@ body,
   flex: none;
 }
 
-/* —— 答案操作：点赞/反馈填充态 + 灰色溯源按钮 —— */
+/* —— 弱化文字按钮:用于取消续费二次确认的「确认取消」次要操作 —— */
+.btn-text-weak {
+  background: transparent;
+  color: var(--ink-3);
+  border: none;
+  font-weight: 500;
+  font-size: 13.5px;
+  box-shadow: none;
+}
+.btn-text-weak:hover {
+  color: var(--ink-2);
+}
+
+/* —— 答案操作：点赞/反馈默认=灰色线性描边;激活态=靛蓝填充 —— */
+.act-ic {
+  color: var(--ink-3);
+}
+.act-ic svg {
+  stroke: currentColor;
+  fill: none;
+}
+.act-ic:hover {
+  color: var(--ink-2);
+  background: var(--surface);
+}
 .act-ic.on {
   color: var(--indigo);
 }
 .act-ic.on svg {
   fill: var(--indigo);
+  stroke: var(--indigo);
 }
 .src-btn {
   display: inline-flex;
@@ -213,12 +264,266 @@ body,
   height: 13px;
 }
 
-/* —— 多模态区改灰色系 —— */
+/* —— 多模态区:直接贴在回答卡片上,不再单独灰底框 ——
+   横向 15px 与上方答案文字(.ans-text padding 15px)左对齐;底部留足间距不贴卡片白底 —— */
 .media-zone {
-  background: var(--surface-warm) !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 2px 15px 16px !important;
+}
+.media-zone .mz-k {
+  margin-bottom: 7px;
+}
+.media-zone .mz-title {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0;
+  text-transform: none;
 }
 .media-thumb {
   background: repeating-linear-gradient(135deg, #E7EAF2 0 7px, #EEF1F7 7px 14px) !important;
+}
+
+/* —— 参考来源:KP 块 / 互联网块 分隔 + 命中文件列举 —— */
+.src-meta .fl + .fl {
+  margin-top: 3px;
+}
+.src-meta .fl.more {
+  color: var(--ink-3);
+}
+.src-divider {
+  height: 1px;
+  background: var(--line-2);
+  margin: 12px 22px;
+}
+/* 互联网来源:小圆圈图标(替代书本矩形封面) */
+.src-web-ic {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--surface-warm);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+}
+.src-web-ic svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* 一-7:开通会员页 协议行(宽限期文案已移到按钮下方单独一行) */
+.agree {
+  font-size: 11px;
+}
+/* 宽限期说明:立即开通按钮正下方,居中,浅灰小号单行 */
+.grace-note {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+/* ============ 一-9:模拟微信支付收银台(会员+永享共用) ============ */
+.wxpay {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+}
+.wxpay-top {
+  display: flex;
+  align-items: center;
+  padding: 14px;
+}
+.wxpay-top .ic {
+  color: var(--ink);
+}
+.wxpay-title {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.wxpay-top .grp {
+  width: 34px;
+}
+.wxpay-body {
+  flex: 1;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px;
+}
+.wxpay-merchant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+/* 商户 logo:会话界面同款电光靛紫色动画球(复用 .orb .float,弃微信绿) */
+.wxpay-logo {
+  width: 46px;
+  height: 46px;
+}
+.wxpay-mname {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.wxpay-amount {
+  font-size: 38px;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--serif-cjk);
+}
+.wxpay-subject {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-top: 6px;
+  margin-bottom: 26px;
+  text-align: center;
+}
+.wxpay-method {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 4px;
+  border-top: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
+  margin-bottom: 34px;
+}
+.wxpay-m-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wxpay-m-ic {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: #ffb200;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+.wxpay-m-name {
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 500;
+}
+.wxpay-m-bal {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 1px;
+}
+.wxpay-m-check {
+  color: #07c160;
+  display: flex;
+}
+.wxpay-btn {
+  width: 100%;
+  border: none;
+  background: #07c160;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 9px;
+  padding: 14px;
+  cursor: pointer;
+}
+.wxpay-btn:active {
+  background: #06ad56;
+}
+.wxpay-foot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 16px;
+}
+
+/* ============ 一-8:支付成功落地页(品牌质感,非后台味绿勾) ============ */
+.pay-ok {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 32px;
+}
+.pay-ok-badge {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 26px;
+}
+/* 成功对勾:改成功绿(避免珊瑚色让用户误以为失败) */
+.pay-ok-check {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, #2fcf9b, var(--jade));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 30px -8px rgba(21, 176, 128, 0.55);
+  position: relative;
+  z-index: 2;
+}
+.pay-ok-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid var(--jade);
+  opacity: 0.35;
+}
+.pay-ok-ring.r1 {
+  width: 96px;
+  height: 96px;
+}
+.pay-ok-ring.r2 {
+  width: 80px;
+  height: 80px;
+  opacity: 0.55;
+}
+.pay-ok-t {
+  font-family: var(--serif-cjk);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--ink);
+}
+.pay-ok-s {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  margin-top: 10px;
+  line-height: 1.6;
+}
+.pay-ok-btn {
+  margin-top: 30px;
+  justify-content: center;
+  padding: 14px 50px;
+}
+.pay-ok-link {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--ink-3);
+  cursor: pointer;
 }
 
 /* —— 反馈 sheet —— */
@@ -247,19 +552,22 @@ body,
   color: var(--ink-3);
   cursor: pointer;
 }
+/* 反馈选项:四项同一行(不换行) */
 .fbk-tags {
   display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
+  flex-wrap: nowrap;
+  gap: 7px;
   margin-bottom: 14px;
 }
 .fbk-tag {
-  font-size: 12.5px;
-  padding: 8px 15px;
+  font-size: 11.5px;
+  padding: 8px 11px;
   border-radius: 20px;
   border: 1px solid var(--line);
   color: var(--ink-2);
   cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 .fbk-tag.on {
   background: var(--indigo-soft);
@@ -284,28 +592,58 @@ body,
   color: var(--ink-3);
 }
 
-/* —— 语音输入浮层（短语音,松手发送） —— */
+/* —— 语音输入:仅在当前会话下方弹出(覆盖输入区),非全屏新页面(一-10) —— */
+/* 点击波形区外部关闭动画的透明捕获层 */
+.voice-dismiss {
+  position: absolute;
+  inset: 0;
+  z-index: 59;
+}
 .voice-ov {
   position: absolute;
-  inset: 46px 0 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 60;
-  background: linear-gradient(176deg, #EAEEFE 0%, #F1ECFC 46%, #FDEDF1 100%);
+  padding: 54px 0 36px;
+  /* 与会话底(--paper)同色系平滑过渡:上沿渐隐 + 模糊,衔接自然不割裂 */
+  background: linear-gradient(
+    to top,
+    var(--paper) 0%,
+    var(--paper) 50%,
+    rgba(251, 252, 254, 0.92) 74%,
+    rgba(251, 252, 254, 0.6) 88%,
+    rgba(251, 252, 254, 0)
+  );
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  -webkit-mask-image: linear-gradient(to top, #000 70%, transparent);
+  mask-image: linear-gradient(to top, #000 70%, transparent);
   display: flex;
   flex-direction: column;
   align-items: center;
+  animation: voiceRise 0.28s ease both;
+}
+@keyframes voiceRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .voice-tip {
-  margin-top: auto;
   font-size: 13px;
   color: var(--ink-2);
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 .voice-wave {
   display: flex;
   align-items: center;
   gap: 3px;
-  height: 56px;
-  margin-bottom: 60px;
+  height: 48px;
 }
 .voice-wave span {
   width: 4px;
@@ -367,11 +705,13 @@ body,
 }
 
 /* —— 我的永享：媒体预览（图/音/视） —— */
+/* 内容整体上移到界面中上方(原 center 偏中下,不便观看):垂直 flex-start + 顶部间距,水平仍居中 */
 .mp-img {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 8%;
   overflow: hidden;
 }
 .mp-img .ph {
@@ -387,12 +727,38 @@ body,
   font-size: 12px;
   transition: transform 0.2s;
 }
-.mp-video {
+/* 视频:整体上移到中上方,控件紧贴视频下方(一-12) */
+.mp-video-wrap {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 8%;
+  width: 100%;
+  min-height: 0;
+}
+.mp-video {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
   position: relative;
+}
+.mp-bar-video {
+  width: 88%;
+  gap: 8px;
+}
+.mp-bar-video .pp.sm svg {
+  width: 17px;
+  height: 17px;
+  opacity: 0.85;
+}
+/* 横竖屏切换:旋转视频框模拟横屏 */
+.mp-video-wrap.landscape .frame {
+  transform: rotate(90deg) scale(1.35);
+  transition: transform 0.3s ease;
 }
 .mp-video .frame {
   width: 88%;
@@ -470,15 +836,15 @@ body,
   min-width: 78px;
   text-align: right;
 }
-/* 音频：播客式音浪 */
+/* 音频：播客式音浪(内容上移到中上方) */
 .mp-audio {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 26px;
-  padding: 0 26px;
+  padding: 8% 26px 0;
 }
 .mp-audio .cover {
   width: 150px;
@@ -555,5 +921,311 @@ body,
   align-items: center;
   justify-content: center;
   color: var(--ink-3);
+  cursor: pointer;
+  flex: none;
+}
+/* 订单·永享内容整行可点(封面或右侧任意处直接预览,一-13) */
+.od-yx {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.od-yx:active {
+  background: var(--surface-warm);
+}
+
+/* 兑换码输入框:真实 input,有光标(一-14) */
+.redeem-box input.ipt {
+  color: var(--ink);
+  outline: none;
+  -webkit-appearance: none;
+  width: 100%;
+}
+.redeem-box input.ipt::placeholder {
+  color: var(--ink-3);
+  letter-spacing: normal;
+}
+.redeem-box input.ipt:focus {
+  border-color: var(--indigo);
+}
+
+/* ============ 一-1:微信授权两场景 ============ */
+/* 登录页底部隐性扫码入口 */
+.lg-scan {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.lg-scan:active {
+  color: var(--ink-2);
+}
+
+/* —— 场景 A:微信内置浏览器官方授权弹窗（底部 sheet 盖在模糊背景上）—— */
+.wxauth {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  background: #ededed;
+}
+.wxauth-bg {
+  position: absolute;
+  inset: 0;
+  filter: blur(3px);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.wxauth-bg-bar {
+  height: 70px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12px;
+  background: #ededed;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.wxauth-bg-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--line-2);
+}
+.wxauth-bg-row .av {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: #d8dbe2;
+  flex: none;
+}
+.wxauth-bg-row .ln {
+  height: 12px;
+  flex: 1;
+  border-radius: 6px;
+  background: #e2e5eb;
+}
+.wxauth-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 18, 30, 0.42);
+  cursor: pointer;
+  animation: fadeScrim 0.3s ease both;
+}
+.wxauth-sheet {
+  position: relative;
+  z-index: 2;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 28px 24px calc(28px + env(safe-area-inset-bottom));
+  box-shadow: 0 -16px 44px -18px rgba(20, 18, 30, 0.4);
+  animation: slideUp 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.wxauth-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line-2);
+}
+.wxauth-logo {
+  width: 56px;
+  height: 56px;
+}
+.wxauth-app {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.wxauth-perm {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 20px 2px 6px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.wxauth-perm svg {
+  color: var(--ink-2);
+}
+.wxauth-tip {
+  font-size: 12px;
+  color: var(--ink-3);
+  padding: 0 2px 24px;
+}
+.wxauth-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.wxauth-allow {
+  width: 100%;
+  border: none;
+  background: #07c160;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 9px;
+  padding: 13px;
+  cursor: pointer;
+}
+.wxauth-allow:active {
+  background: #06ad56;
+}
+.wxauth-deny {
+  width: 100%;
+  border: none;
+  background: #f2f3f5;
+  color: var(--ink);
+  font-size: 16px;
+  border-radius: 9px;
+  padding: 13px;
+  cursor: pointer;
+}
+.wxauth-deny:active {
+  background: #e7e9ed;
+}
+
+/* —— 场景 B:外部浏览器扫码授权页（open.weixin.qq.com 风格）—— */
+.wxscan {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f4f5f7;
+}
+.wxscan-bar {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: #e9eaee;
+  border-bottom: 1px solid var(--line-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.wxscan-bar .dot.g {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #07c160;
+}
+.wxscan-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 0 28px;
+}
+.wxscan-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #07c160;
+}
+.wxscan-qr {
+  position: relative;
+  width: 208px;
+  height: 208px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 14px 40px -16px rgba(20, 18, 30, 0.28);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wxscan-qrimg {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  transition: filter 0.3s, opacity 0.3s;
+}
+.wxscan-qrimg.dim {
+  filter: blur(3px);
+  opacity: 0.35;
+}
+.wxscan-qrgrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+}
+.wxscan-qrgrid span {
+  border-radius: 3px;
+  background: transparent;
+}
+.wxscan-qrgrid span.b {
+  background: #1b2030;
+}
+.wxscan-qr-mid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 0 0 5px #fff;
+}
+.wxscan-mask {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  animation: fadeScrim 0.25s ease both;
+}
+.wxscan-mask-ic {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--indigo-soft);
+  color: var(--indigo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wxscan-mask-ic.ok {
+  background: var(--jade-soft);
+  color: var(--jade);
+}
+.wxscan-mask-t {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.wxscan-mask-s {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.wxscan-tip {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.wxscan-back {
+  font-size: 12.5px;
+  color: var(--indigo-ink);
   cursor: pointer;
 }

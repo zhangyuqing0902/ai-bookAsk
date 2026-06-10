@@ -30,6 +30,54 @@ export function OrderDetail() {
     );
   }
 
+  const isCode = o.type === '兑换码';
+
+  // 兑换码：不叫「订单详情」，叫「详情」；不展示金额/订单编号/支付方式/下单付款时间
+  if (isCode) {
+    return (
+      <>
+        <div className="h5-top">
+          <div className="ic tap" onClick={() => nav(-1)}>
+            <Icon id="i-chevL" w={22} h={22} />
+          </div>
+          <div className="center">
+            <div className="ttl">详情</div>
+          </div>
+          <div className="grp" />
+        </div>
+        <div className="pg">
+          <div className="scrollY">
+            <div className="od-card" style={{ marginTop: 18 }}>
+              <div className="od-row">
+                <span className="k">类型</span>
+                <span className="v">兑换码核销</span>
+              </div>
+              <div className="od-row">
+                <span className="k">兑换码</span>
+                <span className="v" style={{ color: 'var(--ink)', fontWeight: 600, fontFamily: 'var(--mono)' }}>{o.code}</span>
+              </div>
+              <div className="od-row">
+                <span className="k">兑换时间</span>
+                <span className="v">{o.redeemTime}</span>
+              </div>
+            </div>
+            <div className="od-card">
+              <div className="od-h">兑换权益</div>
+              <div className="od-row">
+                <span className="k">权益</span>
+                <span className="v">{o.title}</span>
+              </div>
+              <div className="od-row">
+                <span className="k">会员时间区间</span>
+                <span className="v">{o.memberFrom} 至 {o.memberTo}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="h5-top">
@@ -59,6 +107,12 @@ export function OrderDetail() {
               <span className="k">支付方式</span>
               <span className="v">{o.payMethod}</span>
             </div>
+            {o.type === '会员' && (
+              <div className="od-row">
+                <span className="k">续费方式</span>
+                <span className="v">{o.autoRenew ? '自动续费' : '手动支付'}</span>
+              </div>
+            )}
             <div className="od-row">
               <span className="k">下单时间</span>
               <span className="v">{o.orderTime}</span>
@@ -82,25 +136,16 @@ export function OrderDetail() {
           {o.type === '永享' && o.media && (
             <div className="od-card">
               <div className="od-h">永享内容</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px' }}>
-                <div className="od-cover" onClick={() => setPreview(o.media!)}>
+              {/* 整行可点(封面或右侧区域)直接预览,不再单独「点击封面预览」文字按钮 */}
+              <div className="od-yx tap" onClick={() => setPreview(o.media!)}>
+                <div className="od-cover">
                   <Icon id={o.media.kind === 'image' ? 'i-image' : 'i-play'} w={26} h={26} />
                 </div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{o.media.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>关联知识产品 · {o.kp}</div>
-                  <div style={{ fontSize: 12, color: 'var(--indigo-ink)', marginTop: 6 }}>点击封面预览 ›</div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {o.type === '兑换码' && (
-            <div className="od-card">
-              <div className="od-h">兑换码</div>
-              <div className="od-row">
-                <span className="k">兑换码</span>
-                <span className="v" style={{ color: 'var(--ink)', fontWeight: 600 }}>{o.code}</span>
+                <Icon id="i-chevR" w={18} h={18} style={{ marginLeft: 'auto', color: 'var(--ink-3)' }} />
               </div>
             </div>
           )}

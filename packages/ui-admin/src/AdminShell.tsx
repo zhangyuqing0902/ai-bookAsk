@@ -58,11 +58,11 @@ export function AdminShell({
                     key={it.to}
                     to={it.to}
                     end={it.to === '/'}
-                    title={it.label}
                     className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
                   >
                     <Icon id={it.icon} />
                     <span className="nav-label">{it.label}</span>
+                    <span className="nav-tip">{it.label}</span>
                   </NavLink>
                 ))}
               </div>

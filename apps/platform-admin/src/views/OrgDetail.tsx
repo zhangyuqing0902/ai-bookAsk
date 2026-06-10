@@ -6,21 +6,25 @@ import { Dropdown, TextInput, InfoDot, pickFile, ACCEPT } from '@aba/ui-admin';
 const TABS = ['基本资料', '机构配置', '用量看板'];
 const SUBTABS = ['LLM 配置', '联网配置', '微信支付'];
 
+// 13.6:用量看板卡片(顶部色条 + 标题 + 指标行分隔 + 数值强调)
 function UsageCard({ title, rows }: { title: string; rows: [string, string, string][] }) {
   return (
-    <div className="kpi" style={{ minHeight: 150 }}>
-      <div className="lab" style={{ marginBottom: 10, fontWeight: 700, color: 'var(--ink)' }}>
+    <div className="usage-card">
+      <div className="uc-title">
+        <span className="uc-dot" />
         {title}
       </div>
-      {rows.map(([k, v, info]) => (
-        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 13 }}>
-          <span style={{ color: 'var(--ink-2)', display: 'inline-flex', alignItems: 'center' }}>
-            {k}
-            <InfoDot text={info} />
-          </span>
-          <span className="mono" style={{ color: 'var(--ink)', fontWeight: 500 }}>{v}</span>
-        </div>
-      ))}
+      <div className="uc-rows">
+        {rows.map(([k, v, info]) => (
+          <div className="uc-row" key={k}>
+            <span className="uc-k">
+              {k}
+              <InfoDot text={info} />
+            </span>
+            <span className="uc-v mono">{v}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -65,7 +69,7 @@ export function OrgDetail() {
           </div>
           <div className="fm-row">
             <div className="lab">上级机构</div>
-            <div className="ctl"><Dropdown label="无（顶级机构）" options={['无（顶级机构）', 'XX 集团']} style={{ maxWidth: 240 }} /></div>
+            <div className="ctl"><Dropdown label="无" options={['无', 'XX 出版集团']} style={{ width: 200 }} /></div>
           </div>
           <div className="fm-row">
             <div className="lab">备注</div>
@@ -73,11 +77,9 @@ export function OrgDetail() {
           </div>
           <div className="fm-row">
             <div className="lab">状态</div>
-            <div className="ctl">
-              <div className="seg">
-                <b className="on">正常</b>
-                <b>停用</b>
-              </div>
+            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="tag-s tag-jade">正常</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>状态变更请在机构列表的操作列进行</span>
             </div>
           </div>
         </div>
@@ -86,11 +88,11 @@ export function OrgDetail() {
       {tab === 1 && (
         <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 18 }}>
           <div className="card" style={{ padding: 8, alignSelf: 'start' }}>
+            {/* 13.3:二级 Tab 选中态(靛蓝软底+靛蓝字),不再灰扑扑 */}
             {SUBTABS.map((s, i) => (
               <div
                 key={s}
-                className={'role' + (sub === i ? ' on' : '')}
-                style={{ padding: '11px 13px', borderRadius: 9, fontSize: 13.5, cursor: 'pointer', color: sub === i ? undefined : 'var(--ink-2)' }}
+                className={'cfg-sub' + (sub === i ? ' on' : '')}
                 onClick={() => setSub(i)}
               >
                 {s}
@@ -127,17 +129,13 @@ export function OrgDetail() {
             {sub === 1 && (
               <>
                 <div className="fh">联网配置</div>
+                {/* 13.4:开关即时生效,去掉保存按钮 */}
                 <div className="fm-row" style={{ borderTop: 'none' }}>
                   <div className="lab">允许联网检索</div>
                   <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div className={'switch' + (net ? ' on' : '')} onClick={() => setNet((n) => !n)} />
-                    <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>开启后,知识库未命中时可联网补充检索（标注来源）。</span>
+                    <div className={'switch' + (net ? ' on' : '')} onClick={() => { setNet((n) => !n); toast(net ? '已关闭联网检索' : '已开启联网检索'); }} />
+                    <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>开启后,知识库未命中时可联网补充检索（标注来源）· 开关即时生效。</span>
                   </div>
-                </div>
-                <div style={{ paddingTop: 4 }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => toast('已保存')}>
-                    保存
-                  </button>
                 </div>
               </>
             )}
@@ -158,16 +156,15 @@ export function OrgDetail() {
                 <div className="fm-row">
                   <div className="lab">证书</div>
                   <div className="ctl">
-                    <div className="upbox" style={{ maxWidth: 220 }} onClick={() => pickFile(ACCEPT.cert, (n) => toast('已选择 ' + n))}>
+                    {/* 13.5:上传按钮加宽(文案不溢出)+ 保存按钮放其下方、与之左对齐 */}
+                    <div className="upbox" style={{ maxWidth: 360 }} onClick={() => pickFile(ACCEPT.cert, (n) => toast('已选择 ' + n))}>
                       <Icon id="i-up" />
                       <div className="nowrap">apiclient_cert.pem（已上传 · 点击替换）</div>
                     </div>
+                    <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => toast('已保存')}>
+                      保存
+                    </button>
                   </div>
-                </div>
-                <div style={{ paddingTop: 4 }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => toast('已保存')}>
-                    保存
-                  </button>
                 </div>
               </>
             )}

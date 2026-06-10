@@ -28,10 +28,16 @@ export function KpList() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('全部');
   const [source, setSource] = useState('全部');
+  const [page, setPage] = useState(1);
 
   const list = KPS.filter(
     (kp) => (!q || kp.name.includes(q)) && (status === '全部' || kp.status === status) && (source === '全部' || kp.source === source),
   );
+  // 4.2:每页 10 条,即使 ≤10 条也始终显示分页器(KP 列表特例),真实 slice 翻页
+  const PAGE_SIZE = 10;
+  const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const curPage = Math.min(page, pageCount);
+  const pageList = list.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE);
 
   return (
     <>
@@ -62,29 +68,30 @@ export function KpList() {
         </div>
       ) : (
         <div className="kp-grid">
-          {list.map((kp, i) => (
-            <div className="kp-card" key={kp.name} onClick={() => nav('/kps/' + (i + 1))}>
+          {pageList.map((kp, i) => (
+            <div className="kp-card" key={kp.name} onClick={() => nav('/kps/' + ((curPage - 1) * PAGE_SIZE + i + 1))}>
               <div className={'kp-cover ' + kp.cover}>
-                <div className="badges">
-                  <span className={'kp-badge' + (kp.source === '共享' ? ' share' : '')}>{kp.source}</span>
-                </div>
                 <div className="ct">{kp.name}</div>
               </div>
               <div className="kp-info">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between' }}>
+                <div className="kp-info-top">
                   <span className="kp-name">{kp.name}</span>
-                  <span className={'tag-s ' + kp.statusCls}>{kp.status}</span>
+                </div>
+                {/* 4.1:来源(自建/共享)=统一灰色小标签;发布状态=彩色标签;左右并排 */}
+                <div className="kp-tags">
+                  <span className="kp-tag-src">{kp.source}</span>
+                  <span className={'kp-tag-st ' + kp.statusCls}>{kp.status}</span>
                 </div>
                 <div className="kp-agent">
                   <span className="av" />
                   Agent · {kp.agent}
                 </div>
                 <div className="kp-stat">
-                  <span title="知识库文件数">
+                  <span className="has-tip" data-tip="知识库文件数">
                     <Icon id="i-file" />
                     {kp.files}
                   </span>
-                  <span title="C 端累计提问数">
+                  <span className="has-tip" data-tip="C 端累计提问数">
                     <Icon id="i-msg" />
                     {kp.asks}
                   </span>
@@ -95,7 +102,8 @@ export function KpList() {
         </div>
       )}
 
-      {list.length > 0 && <Pager total={24} unit="个" pages={2} />}
+      {/* 4.2:KP 列表始终显示分页器(即使 ≤10 条);空态时不显示 */}
+      {list.length > 0 && <Pager total={list.length} unit="个" pageSize={PAGE_SIZE} page={curPage} onPageChange={setPage} />}
 
       <Modal
         title="新建知识产品 KP"
@@ -145,7 +153,7 @@ export function KpList() {
           <div className="lab">密码<span className="req">*</span></div>
           <div className="ctl"><TextInput placeholder="输入提取密码" /></div>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>实时同步：列表直显并标「共享」；独立快照：名称加「-快照」后缀。</div>
+        <div className="imp-hint">实时同步：列表直显并标「共享」；独立快照：名称加「-快照」后缀。</div>
       </Modal>
     </>
   );

@@ -21,24 +21,29 @@ export function Search({
   );
 }
 
-// 真实可输入的表单输入框（带光标）。
+// 真实可输入的表单输入框（带光标）。传 value/onChange 即为受控（用于唯一校验等）。
 export function TextInput({
   defaultValue,
+  value,
+  onChange,
   placeholder,
   style,
   textarea,
 }: {
   defaultValue?: string;
+  value?: string;
+  onChange?: (e: { target: { value: string } }) => void;
   placeholder?: string;
   style?: CSSProperties;
   textarea?: boolean;
 }) {
+  const controlled = value !== undefined ? { value, onChange: (e: { target: { value: string } }) => onChange?.(e) } : { defaultValue };
   return (
     <div className="inp2" style={style}>
       {textarea ? (
-        <textarea defaultValue={defaultValue} placeholder={placeholder} />
+        <textarea placeholder={placeholder} {...(controlled as object)} />
       ) : (
-        <input defaultValue={defaultValue} placeholder={placeholder} />
+        <input placeholder={placeholder} {...(controlled as object)} />
       )}
     </div>
   );

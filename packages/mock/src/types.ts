@@ -13,6 +13,12 @@ export interface Organization {
   name: string;
   shortName: string;
   brandColor: string;
+  /**
+   * 上级机构 ID。null / undefined = 顶级机构。
+   * V1 约束：只允许一层（集团→分社）——能被选为上级的只能是「自身 parentId 为空」的机构，
+   * 且已有下级的机构不可再设上级，从而杜绝三层套娃与自环。
+   */
+  parentId?: string | null;
   serviceQrUrl?: string;
   servicePhone?: string;
   serviceEmail?: string;

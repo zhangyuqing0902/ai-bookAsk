@@ -6,3 +6,4 @@ export * from './qr';
 export * from './rbac';
 export * from './cross-users';
 export * from './agent';
+export * from './dashboard';

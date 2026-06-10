@@ -6,7 +6,9 @@ import { OrgList } from './views/OrgList';
 import { OrgDetail } from './views/OrgDetail';
 import { Accounts } from './views/Accounts';
 import { GlobalUsers } from './views/GlobalUsers';
+import { GlobalUserDetail } from './views/GlobalUserDetail';
 import { GlobalOrders } from './views/GlobalOrders';
+import { GlobalOrderDetail } from './views/GlobalOrderDetail';
 import { ModelUsage } from './views/ModelUsage';
 import { DefaultLlm } from './views/DefaultLlm';
 import { Roles } from './views/Roles';
@@ -44,7 +46,9 @@ const TITLES: Record<string, string> = {
   '/orgs/': '机构详情',
   '/accounts': '机构账户',
   '/users': '全域用户',
+  '/users/': '用户详情',
   '/orders': '全域订单',
+  '/orders/': '订单详情',
   '/model': '模型用量',
   '/llm': '默认 LLM 模型配置',
   '/roles': '角色权限',
@@ -75,7 +79,9 @@ export function App() {
           <Route path="/orgs/:id" element={<OrgDetail />} />
           <Route path="/accounts" element={<Accounts />} />
           <Route path="/users" element={<GlobalUsers />} />
+          <Route path="/users/:id" element={<GlobalUserDetail />} />
           <Route path="/orders" element={<GlobalOrders />} />
+          <Route path="/orders/:id" element={<GlobalOrderDetail />} />
           <Route path="/model" element={<ModelUsage />} />
           <Route path="/llm" element={<DefaultLlm />} />
           <Route path="/roles" element={<Roles />} />

@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 
 // 后台登录 · 动态毛玻璃（机构后台 / 平台超管共用,仅标题不同）。结构取自「主视觉.html」,样式见 styles.css .login。
 export function AdminLogin({ title, redirect = '/' }: { title: string; redirect?: string }) {
   const nav = useNavigate();
+  const [account, setAccount] = useState('');
+  const [pwd, setPwd] = useState('');
+  const [vcode, setVcode] = useState('');
+
   return (
     <div className="login">
       <div className="login-blob lb1" />
@@ -24,7 +29,9 @@ export function AdminLogin({ title, redirect = '/' }: { title: string; redirect?
         <div className="login-wm">
           AI <span className="grad">问书</span>
         </div>
-        <div className="login-tag">答案有出处 · 知识更可信</div>
+        <div className="login-tag">
+          答案有出处<span className="login-dot" />知识更可信
+        </div>
       </div>
 
       <div className="login-card">
@@ -34,33 +41,51 @@ export function AdminLogin({ title, redirect = '/' }: { title: string; redirect?
           <label>账号</label>
           <div className="inp">
             <Icon id="i-user" />
-            请输入账号 / 手机号
+            <input
+              className="inp-field"
+              placeholder="请输入账号 / 手机号"
+              value={account}
+              onChange={(e) => setAccount(e.target.value)}
+            />
           </div>
         </div>
         <div className="field">
           <label>密码</label>
           <div className="inp">
             <Icon id="i-lock" />
-            请输入密码
+            <input
+              className="inp-field"
+              type="password"
+              placeholder="请输入密码"
+              value={pwd}
+              onChange={(e) => setPwd(e.target.value)}
+            />
           </div>
         </div>
         <div className="field">
           <label>验证码</label>
           <div className="inp">
             <Icon id="i-check" />
-            4 位图形验证码<span className="vcode">A7K9</span>
+            <input
+              className="inp-field"
+              placeholder="4 位图形验证码"
+              value={vcode}
+              maxLength={4}
+              onChange={(e) => setVcode(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && nav(redirect)}
+            />
+            <span className="vcode">A7K9</span>
           </div>
         </div>
         <button className="btn btn-primary login-btn" onClick={() => nav(redirect)}>
           登 录
         </button>
-        <div className="login-foot">
-          <span>记住登录 30 天</span>
+        <div className="login-foot login-foot-end">
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              toast('请联系平台管理员重置');
+              toast('请联系管理员');
             }}
           >
             登录遇到问题?

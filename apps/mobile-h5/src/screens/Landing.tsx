@@ -14,10 +14,7 @@ export function Landing() {
     }
     fn();
   };
-  const wechat = guard(() => {
-    toast('正在调起微信授权…');
-    setTimeout(() => nav('/login/wechat-bind'), 800);
-  });
+  const wechat = guard(() => nav('/login/wechat-auth'));
 
   return (
     <div className="lg lg-landing">
@@ -32,7 +29,9 @@ export function Landing() {
       <div className="login-wm2" style={{ marginTop: 30 }}>
         AI <span className="grad">问书</span>
       </div>
-      <div className="sgn2" style={{ marginTop: 12 }}>答案有出处 · 知识更可信</div>
+      <div className="sgn2" style={{ marginTop: 12 }}>
+        答案有出处<span className="sgn-dot" />知识更可信
+      </div>
 
       <div className="lg-bottom">
         <div className="lg-btns">
@@ -41,7 +40,7 @@ export function Landing() {
             微信授权登录
           </button>
           <button
-            className="btn btn-ghost"
+            className="btn btn-primary"
             style={{ justifyContent: 'center', padding: 14 }}
             onClick={guard(() => nav('/login/phone'))}
           >
@@ -61,6 +60,9 @@ export function Landing() {
             <a onClick={(e) => { e.stopPropagation(); nav('/agreement/terms'); }}>《用户协议》</a>与
             <a onClick={(e) => { e.stopPropagation(); nav('/agreement/privacy'); }}>《隐私政策》</a>
           </span>
+        </div>
+        <div className="lg-scan tap" onClick={() => nav('/login/wechat-scan')}>
+          在浏览器中打开？扫码登录
         </div>
       </div>
     </div>

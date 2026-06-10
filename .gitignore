@@ -8,3 +8,8 @@ dist/
 .env.local
 .idea/
 .vscode/
+
+# TypeScript 误编译产物(源码为 .ts/.tsx，src 下同名 .js 一律忽略)
+packages/*/src/**/*.js
+apps/*/src/**/*.js
+*.tsbuildinfo

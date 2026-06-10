@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, DataGrid, type Col } from '@aba/ui-admin';
+import { Search, Dropdown, DataGrid, RangePicker, type Col } from '@aba/ui-admin';
 import { AORDERS, byPayDesc, type AOrder } from '../data/orders';
 
 const TYPES = ['全部', '会员', '永享', '兑换码'];
@@ -25,8 +25,10 @@ export function Orders() {
     { header: '支付方式', cell: (r) => r.payMethod },
     { header: '状态', cell: (r) => <span className="fstat ok"><span className="dt" />{r.status}</span> },
     { header: '用户', className: 'mono', cell: (r) => r.user },
-    { header: '下单时间', className: 'mono', cell: (r) => r.orderTime, sortValue: (r) => r.orderTime },
-    { header: '付款时间', className: 'mono', cell: (r) => r.payTime, sortValue: (r) => r.payTime },
+    // 9.5:兑换码类型无下单/付款时间(显示 —),单列展示兑换时间
+    { header: '下单时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.orderTime), sortValue: (r) => r.orderTime },
+    { header: '付款时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.payTime), sortValue: (r) => r.payTime },
+    { header: '兑换时间', className: 'mono', cell: (r) => (r.redeemTime ? r.redeemTime : <span className="muted">—</span>), sortValue: (r) => r.redeemTime ?? '' },
     { header: '操作', cell: (r) => <span className="op" onClick={() => nav('/orders/' + r.id)}>详情</span> },
   ];
 
@@ -36,20 +38,25 @@ export function Orders() {
         <div>
           <div className="pt">订单管理</div>
         </div>
-        <div className="pa">
-          <button className="btn btn-ghost btn-sm" onClick={() => toast('导出订单')}>
-            <Icon id="i-dl" w={14} h={14} />
-            导出
-          </button>
-        </div>
       </div>
-      <div className="filter">
+      {/* 9:导出按钮移到模糊匹配同一行最右侧,与列表右对齐 */}
+      <div className="orders-filter">
         <Search placeholder="搜索订单号 / 用户" minWidth={220} value={q} onChange={setQ} />
         <Dropdown label="类型" options={TYPES} onSelect={setType} />
         <Dropdown label="状态" options={['全部', '已支付', '已核销']} onSelect={setStatus} />
-        <Dropdown label="时间区间" options={['今日', '近 7 天', '30 天']} />
+        <div className="grow" />
+        <button className="btn btn-ghost btn-sm" onClick={() => toast('导出订单')}>
+          <Icon id="i-dl" w={14} h={14} />
+          导出
+        </button>
       </div>
-      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的订单' }} minWidth={1120} />
+      {/* 9.6:三个独立时间筛选,各支持单选 1 天或区间;9:自定义回显 chip 落到各自时间筛选下方(仅本页) */}
+      <div className="orders-ranges">
+        <div className="range-col"><RangePicker label="下单时间" /></div>
+        <div className="range-col"><RangePicker label="支付时间" /></div>
+        <div className="range-col"><RangePicker label="兑换时间" /></div>
+      </div>
+      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的订单' }} minWidth={1260} pageUnit="单" />
     </>
   );
 }

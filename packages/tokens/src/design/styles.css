@@ -481,6 +481,7 @@ body{
 .pager .pg{width:28px;height:28px;border-radius:7px;border:1px solid var(--line);display:flex;
   align-items:center;justify-content:center;cursor:pointer;background:var(--surface);}
 .pager .pg.on{background:var(--indigo);color:#fff;border-color:var(--indigo);}
+.pager .pg-ellip{color:var(--ink-3);padding:0 2px;user-select:none;}
 
 /* ============================================================
    后台 · 数据看板

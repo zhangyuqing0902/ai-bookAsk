@@ -18,6 +18,24 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:platform"],
       "port": 5175
+    },
+    {
+      "name": "platform-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "apps/platform-admin", "--", "--port", "5185"],
+      "port": 5185
+    },
+    {
+      "name": "mobile-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "apps/mobile-h5", "--", "--port", "5183"],
+      "port": 5183
+    },
+    {
+      "name": "org-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "apps/org-admin", "--", "--port", "5184"],
+      "port": 5184
     }
   ]
 }

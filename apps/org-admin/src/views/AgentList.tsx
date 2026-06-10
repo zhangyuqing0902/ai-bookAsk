@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon, toast } from '@aba/ui';
+import { Icon } from '@aba/ui';
+import { Search, Pager } from '@aba/ui-admin';
 
 const AGENTS = [
   { name: '李医生', type: '普通', cls: 'tag-line', kp: '3', voice: '已设音色', grad: '' },
@@ -7,9 +9,11 @@ const AGENTS = [
   { name: '机构 Agent', type: '机构', cls: 'tag-indigo', kp: '8', voice: '默认音色', grad: 'linear-gradient(155deg,#7c8bf5,#5562d8)' },
 ];
 
-// 机构后台 · Agent 人设列表（机构/普通 类型标签）
+// 机构后台 · Agent 人设列表（机构/普通 类型标签 + 名称模糊筛选）
 export function AgentList() {
   const nav = useNavigate();
+  const [q, setQ] = useState('');
+  const list = AGENTS.filter((a) => !q || a.name.includes(q));
   return (
     <div id="org-agent">
       <div className="page-head">
@@ -17,14 +21,19 @@ export function AgentList() {
           <div className="pt">Agent 人设</div>
         </div>
         <div className="pa">
-          <button className="btn btn-primary btn-sm" onClick={() => toast('新建 Agent')}>
+          {/* 8.6:新建直接进入空白编辑页 */}
+          <button className="btn btn-primary btn-sm" onClick={() => nav('/agents/new')}>
             <Icon id="i-plus" w={14} h={14} />
             新建 Agent
           </button>
         </div>
       </div>
+      {/* 二-7:Agent 名称模糊筛选 */}
+      <div className="filter">
+        <Search placeholder="搜索 Agent 名称" minWidth={220} value={q} onChange={setQ} />
+      </div>
       <div className="kp-grid">
-        {AGENTS.map((a, i) => (
+        {list.map((a, i) => (
           <div className="kp-card" key={a.name} onClick={() => nav('/agents/' + (i + 1))}>
             <div className="kp-cover agent-cover" style={a.grad ? { background: a.grad } : undefined}>
               <div className="ic">
@@ -47,6 +56,7 @@ export function AgentList() {
           </div>
         ))}
       </div>
+      {list.length > 10 && <Pager total={list.length} unit="个" />}
     </div>
   );
 }

@@ -16,7 +16,7 @@ export function Codes() {
     { header: '已兑换 / 生成', className: 'mono', cell: (b) => `${b.redeemed} / ${b.total}`, sortValue: (b) => b.redeemed },
     { header: '权益有效期', cell: (b) => '会员 · ' + b.duration },
     { header: '批次创建时间', className: 'mono', cell: (b) => b.createdAt, sortValue: (b) => b.createdAt },
-    { header: '操作', cell: (b) => <span className="op" onClick={() => nav('/codes/' + b.id)}>详情</span> },
+    { header: '操作', cell: (b) => <div className="op-cell"><span className="op" onClick={() => nav('/codes/' + b.id)}>详情</span></div> },
   ];
 
   return (
@@ -27,10 +27,7 @@ export function Codes() {
           <div className="ps">每次生成为一个批次,点击批次查看该批次全部兑换码</div>
         </div>
         <div className="pa">
-          <button className="btn btn-ghost btn-sm" onClick={() => toast('导出 Excel')}>
-            <Icon id="i-dl" w={14} h={14} />
-            导出 Excel
-          </button>
+          {/* 10:去掉列表的导出 Excel 按钮(导出保留在批次详情内) */}
           <button className="btn btn-primary btn-sm" onClick={() => setOpen(true)}>
             <Icon id="i-plus" w={14} h={14} />
             批量生成
@@ -40,7 +37,7 @@ export function Codes() {
       <div className="filter">
         <Search placeholder="搜索批次名称" minWidth={220} value={q} onChange={setQ} />
       </div>
-      <DataGrid columns={columns} rows={rows} empty={{ title: '还没有兑换码批次', sub: '点击「批量生成」创建第一个批次' }} />
+      <DataGrid columns={columns} rows={rows} empty={{ title: '还没有兑换码批次', sub: '点击「批量生成」创建第一个批次' }} pageUnit="批" />
 
       <Modal
         title="批量生成兑换码"

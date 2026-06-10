@@ -7,10 +7,16 @@ const fmtD = (d: Date | null) => (d ? `${d.getFullYear()}-${pad(d.getMonth() + 1
 
 export function RangePicker({
   presets = ['今日', '近 7 天', '30 天'],
+  presetDays = [1, 7, 30],
   defaultActive = 1,
+  label,
+  onChange,
 }: {
   presets?: string[];
+  presetDays?: number[];
   defaultActive?: number;
+  label?: string;
+  onChange?: (r: { days: number; label: string }) => void;
 }) {
   const [active, setActive] = useState(defaultActive);
   const [showCal, setShowCal] = useState(false);
@@ -38,14 +44,18 @@ export function RangePicker({
   };
   const apply = () => {
     if (!start) return;
-    setApplied(fmtD(start) + (end ? ' 至 ' + fmtD(end) : ''));
+    const lab = fmtD(start) + (end ? ' 至 ' + fmtD(end) : '');
+    setApplied(lab);
     setShowCal(false);
+    const d = end ? Math.round((end.getTime() - start.getTime()) / 86400000) + 1 : 1;
+    onChange?.({ days: d, label: lab });
   };
   const cancelApplied = () => {
     setApplied(null);
     setStart(null);
     setEnd(null);
     setActive(defaultActive);
+    onChange?.({ days: presetDays[defaultActive] ?? 7, label: presets[defaultActive] });
   };
 
   const cells: React.ReactNode[] = [];
@@ -65,6 +75,7 @@ export function RangePicker({
 
   return (
     <div className="rangewrap">
+      {label && <span className="range-label">{label}</span>}
       {applied && (
         <span className="dr-applied">
           {applied}
@@ -82,6 +93,7 @@ export function RangePicker({
               setActive(i);
               setShowCal(false);
               setApplied(null);
+              onChange?.({ days: presetDays[i] ?? 7, label: p });
             }}
           >
             {p}

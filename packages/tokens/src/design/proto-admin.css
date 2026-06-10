@@ -53,8 +53,11 @@
 .tbl tbody tr:hover{background:var(--surface-warm);}
 .tbl .mono{font-family:var(--mono);font-size:12px;color:var(--ink-2);}
 .tbl .strong{font-weight:600;}
-.tbl .op{color:var(--indigo-ink);font-weight:600;cursor:pointer;}
-.tbl .op:hover{text-decoration:underline;}
+.tbl .op{color:var(--indigo-ink);font-weight:600;cursor:pointer;text-decoration:none;}
+.tbl .op:hover{opacity:.65;text-decoration:none;}
+/* 操作列：多个按钮一行、垂直居中、间距统一（替代逐页手写 margin） */
+.op-cell{display:inline-flex;align-items:center;gap:16px;}
+.op-danger{color:var(--terra)!important;}
 .tbl .muted{color:var(--ink-3);}
 
 /* 过滤条 */
@@ -103,6 +106,11 @@
 .kpd-back svg{width:16px;height:16px;}
 .kpd-name{font-family:var(--serif-cjk);font-weight:700;font-size:20px;}
 .kpd-status{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2);}
+/* 11.1:批次详情权益信息(已兑换标签右侧) */
+.batch-meta{font-size:12.5px;color:var(--ink-3);}
+/* 9.6:时间筛选标签 */
+.range-label{font-size:12.5px;color:var(--ink-2);font-weight:500;margin-right:2px;}
+.rangewrap{display:inline-flex;align-items:center;gap:7px;}
 .kpd-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:16px 0 22px;flex-wrap:wrap;}
 .kpd-tab{padding:11px 15px;font-size:13.5px;color:var(--ink-2);cursor:pointer;position:relative;font-weight:500;white-space:nowrap;}
 .kpd-tab.on{color:var(--ink);font-weight:700;}
@@ -137,10 +145,24 @@
 .ae-prompt{background:var(--surface-warm);border:1px solid var(--line);border-radius:12px;padding:14px;
   font-size:13px;color:var(--ink-2);line-height:1.7;min-height:120px;}
 .ae-kp{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border:1px solid var(--line);
-  border-radius:12px;margin-bottom:10px;background:var(--surface);}
-.ae-kp .nm{font-size:13.5px;font-weight:600;}
+  border-radius:12px;margin-bottom:10px;background:var(--surface);cursor:pointer;
+  transition:border-color .14s,box-shadow .14s,transform .14s,background .14s;}
+/* 8.5:关联 KP 悬浮高亮,提示可点击 */
+.ae-kp:hover{border-color:rgba(75,87,232,.45);box-shadow:0 5px 16px -7px rgba(75,87,232,.45);transform:translateY(-1px);background:#fff;}
+.ae-kp:hover .nm{color:var(--indigo-ink);}
+.ae-kp .nm{font-size:13.5px;font-weight:600;transition:color .14s;}
 .ae-kp .go{font-size:12px;color:var(--indigo-ink);cursor:pointer;display:flex;align-items:center;gap:4px;}
 .ae-kp .go svg{width:13px;height:13px;}
+
+/* 8.3:TTS 参考音播放条(替代单独试听按钮) */
+.tts-bar{display:inline-flex;align-items:center;gap:11px;padding:7px 12px 7px 8px;border:1px solid var(--line);border-radius:24px;background:var(--surface);cursor:pointer;white-space:nowrap;}
+.tts-bar:hover{border-color:var(--ink-3);}
+.tts-pp{width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;}
+.tts-wave{display:flex;align-items:flex-end;gap:2px;height:18px;}
+.tts-wave i{width:2.5px;border-radius:2px;background:var(--indigo-soft);display:block;}
+.tts-wave i.on{background:var(--indigo);}
+.tts-dur{font-size:11px;color:var(--ink-3);}
+.tts-reup{font-size:12px;color:var(--indigo-ink);margin-left:4px;font-weight:500;}
 
 /* 权限矩阵 */
 .perm{display:grid;grid-template-columns:230px 1fr;gap:18px;}
@@ -167,7 +189,8 @@
 
 /* 趋势/多折线图例沿用 .legend;角色页/系统页通用网格 */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-.toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(10px);z-index:90;
+/* 3 秒提示:置于页面中上方,用户视线直达(原贴底太靠下) */
+.toast{position:fixed;left:50%;top:88px;transform:translateX(-50%) translateY(-10px);z-index:90;
   background:rgba(28,26,33,.92);color:#fff;font-size:13px;padding:10px 18px;border-radius:22px;opacity:0;transition:.25s;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
@@ -298,9 +321,31 @@
   border-left:3.5px solid transparent;border-right:3.5px solid transparent;border-top:5px solid var(--ink-3);}
 
 /* 水平 KP 卡(书封 + 关键信息,干净清晰) */
-.adm-win .kp-grid{grid-template-columns:1fr 1fr;gap:16px;}
-.adm-win .kp-card{display:flex;flex-direction:row;align-items:stretch;gap:15px;padding:14px;border-radius:16px;}
-.adm-win .kp-card>.kp-cover{width:90px;height:120px;flex:none;aspect-ratio:auto;border-radius:11px;}
+.adm-win .kp-grid{grid-template-columns:repeat(3,1fr);gap:16px;}
+.adm-win .kp-card{display:flex;flex-direction:row;align-items:stretch;gap:14px;padding:14px;border-radius:16px;}
+/* 5.1:来源标签 + 状态在卡片右侧垂直排列 */
+.kp-info-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+/* 4.1:来源标签 + 发布状态左右并排,圆角/尺寸风格一致 */
+.kp-tags{display:flex;flex-direction:row;align-items:center;gap:6px;flex:none;margin-top:6px;}
+.kp-tag-src,.kp-tag-st{display:inline-flex;align-items:center;font-size:11px;font-weight:600;
+  line-height:1;padding:4px 9px;border-radius:6px;letter-spacing:.01em;}
+/* 来源 = 统一灰色小标签 */
+.kp-tag-src{background:var(--surface-warm);color:var(--ink-2);border:1px solid var(--line);}
+/* 发布状态 = 彩色标签(已发=电光靛实底 / 未发=灰描边) */
+.kp-tag-st.tag-jade{background:var(--indigo-soft);color:var(--indigo-ink);}
+.kp-tag-st.tag-line{background:transparent;color:var(--ink-3);border:1px solid var(--line);}
+/* 5.4:卡片统计提示 = 黑底圆角白字(替代系统默认 title) */
+.has-tip{position:relative;}
+.has-tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);
+  background:rgba(24,26,33,.96);color:#fff;font-size:11px;font-weight:500;padding:5px 9px;border-radius:7px;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .14s;z-index:200;box-shadow:var(--sh-md);}
+.has-tip:hover::after{opacity:1;}
+/* 5.3:导入分享 KP 弹窗说明文案居中 */
+.imp-hint{font-size:12px;color:var(--ink-3);margin-top:12px;text-align:center;line-height:1.7;}
+.adm-win .kp-card>.kp-cover{width:66px;height:92px;flex:none;aspect-ratio:auto;border-radius:10px;}
+.adm-win .kp-card .kp-agent{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.adm-win .kp-card .kp-stat{gap:12px;font-size:11.5px;}
+.adm-win .kp-card .kp-stat span{white-space:nowrap;}
 .adm-win .kp-card>.kp-cover .ct{display:none;}
 .adm-win .kp-card>.kp-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;padding:0;}
 .adm-win .kp-card .kp-name{font-size:15px;}
@@ -331,7 +376,15 @@
 .bar-fill{background:var(--indigo);display:block;}
 
 /* \u9876\u90e8\u5bf9\u9f50:\u5de6\u4fa7\u54c1\u724c\u533a\u4e0e\u53f3\u4fa7\u9876\u680f\u7b49\u9ad8(58px) */
-.adm-win .side-brand{height:75px;padding:0 20px;}
-.adm-win .admin-top{height:75px;}
+.adm-win .side-brand{height:58px;padding:0 20px;}
+.adm-win .admin-top{height:58px;}
 .adm-win #crumbS{display:none;}
 .adm-win .admin-crumb b{font-size:18px;margin-right:0;}
+
+/* 二-2:后台登录交互 —— 真实输入框(光标)+ slogan 珊瑚红点 + 去掉记住登录 */
+.login-tag .login-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--amber);margin:0 9px;vertical-align:middle;}
+.field .inp{transition:border-color .15s,box-shadow .15s;}
+.field .inp:focus-within{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(75,87,232,.12);background:#fff;}
+.inp-field{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13.5px;color:var(--ink);font-family:inherit;padding:0;}
+.inp-field::placeholder{color:var(--ink-3);}
+.login-foot-end{justify-content:flex-end;}

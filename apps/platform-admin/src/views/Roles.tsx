@@ -37,17 +37,33 @@ const INIT: Record<string, string[]> = {
   运营: ['dashboard.view', 'kp.manage', 'agent.manage', 'user.view', 'order.view', 'code.manage', 'board.view'],
   上级机构管理员: ['dashboard.view', 'board.view', 'order.view', 'user.view'],
 };
-const ROLES = ['超级管理员', '机构管理员', '运营', '上级机构管理员'];
+// 20:上级机构管理员置顶,其余按创建时间降序(运营最新→超管最早)
+const INIT_ROLES = ['上级机构管理员', '运营', '机构管理员', '超级管理员'];
 const READONLY = new Set(['上级机构管理员']);
 
 export function Roles() {
+  const [roles, setRoles] = useState(INIT_ROLES);
   const [cur, setCur] = useState('超级管理员');
   const [newRole, setNewRole] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
   const [state, setState] = useState<Record<string, Set<string>>>(() => {
     const o: Record<string, Set<string>> = {};
-    for (const r of ROLES) o[r] = new Set(INIT[r]);
+    for (const r of INIT_ROLES) o[r] = new Set(INIT[r]);
     return o;
   });
+
+  // 21:新建角色 —— 左侧列表同步显示(置于置顶项之后,创建时间降序),右侧权限面板全部置空待勾选
+  const createRole = () => {
+    const nm = newRoleName.trim();
+    if (!nm) return toast('请输入角色名称');
+    if (roles.includes(nm)) return toast('角色名称已存在');
+    setRoles((rs) => [rs[0], nm, ...rs.slice(1)]);
+    setState((prev) => ({ ...prev, [nm]: new Set() }));
+    setCur(nm);
+    setNewRoleName('');
+    setNewRole(false);
+    toast('已创建角色，请在右侧勾选权限');
+  };
   const ro = READONLY.has(cur);
   const st = state[cur];
   const toggle = (k: string) => {
@@ -75,7 +91,7 @@ export function Roles() {
             </button>
           </div>
           <div className="rlist">
-            {ROLES.map((r) => (
+            {roles.map((r) => (
               <div key={r} className={'role' + (cur === r ? ' on' : '')} onClick={() => setCur(r)}>
                 {r}
                 {READONLY.has(r) && <span className="lock">只读</span>}
@@ -132,14 +148,14 @@ export function Roles() {
       <Modal
         title="新建角色"
         open={newRole}
-        onClose={() => setNewRole(false)}
+        onClose={() => { setNewRole(false); setNewRoleName(''); }}
         width={440}
         footer={
           <>
-            <button className="btn btn-ghost btn-sm" onClick={() => setNewRole(false)}>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setNewRole(false); setNewRoleName(''); }}>
               取消
             </button>
-            <button className="btn btn-primary btn-sm" onClick={() => { setNewRole(false); toast('已创建角色,请在右侧配置权限'); }}>
+            <button className="btn btn-primary btn-sm" onClick={createRole}>
               创建
             </button>
           </>
@@ -147,7 +163,7 @@ export function Roles() {
       >
         <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
           <div className="lab">角色名称<span className="req">*</span></div>
-          <div className="ctl"><TextInput placeholder="请输入角色名称" /></div>
+          <div className="ctl"><TextInput value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} placeholder="请输入角色名称" /></div>
         </div>
         <div className="fm-row">
           <div className="lab">备注</div>

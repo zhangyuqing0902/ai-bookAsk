@@ -30,19 +30,16 @@ export function CodeBatchDetail() {
         </span>
         <span className="kpd-name">{batch ? batch.name : '批次详情'}</span>
         {batch && <span className="tag-s tag-indigo">{batch.redeemed} / {batch.total} 已兑换</span>}
-      </div>
-      <div className="page-head" style={{ marginTop: 14 }}>
-        <div>
-          <div className="ps">权益：会员 · {batch?.duration} · 批次创建 {batch?.createdAt}</div>
-        </div>
-        <div className="pa">
+        {/* 11.1:权益/批次创建信息放在已兑换标签右侧 */}
+        {batch && <span className="batch-meta">权益：会员 · {batch.duration} · 批次创建 {batch.createdAt}</span>}
+        <span className="kpd-status">
           <button className="btn btn-ghost btn-sm" onClick={() => toast('导出本批次 Excel')}>
             <Icon id="i-dl" w={14} h={14} />
             导出本批次
           </button>
-        </div>
+        </span>
       </div>
-      <DataGrid columns={columns} rows={rows} empty={{ title: '本批次暂无兑换码' }} minWidth={820} />
+      <DataGrid columns={columns} rows={rows} empty={{ title: '本批次暂无兑换码' }} minWidth={820} pageUnit="个" />
     </>
   );
 }

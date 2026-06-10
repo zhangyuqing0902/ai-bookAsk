@@ -18,12 +18,27 @@ export function OrderDetail() {
           <Icon id="i-chevL" />
           返回
         </span>
-        <span className="kpd-name">订单详情</span>
+        {/* 兑换码叫「详情」,其余叫「订单详情」 */}
+        <span className="kpd-name">{o?.type === '兑换码' ? '详情' : '订单详情'}</span>
         {o && <span className={'tag-s ' + o.tag}>{o.type}</span>}
       </div>
 
       {!o ? (
         <div className="card card-pad" style={{ textAlign: 'center', color: 'var(--ink-3)', padding: '60px 24px' }}>订单不存在</div>
+      ) : o.type === '兑换码' ? (
+        // 9.4:兑换码详情对齐前台 —— 极简字段,无订单编号/支付方式/下单付款时间/金额
+        <div style={{ maxWidth: 640 }}>
+          <div className="fm-card">
+            <Row k="类型" v="兑换码核销" />
+            <Row k="兑换码" v={o.code || ''} mono />
+            <Row k="兑换时间" v={o.redeemTime || ''} mono />
+          </div>
+          <div className="fm-card">
+            <div className="fh">兑换权益</div>
+            <Row k="权益" v={o.title} />
+            <Row k="会员时间区间" v={`${o.memberFrom} 至 ${o.memberTo}`} mono />
+          </div>
+        </div>
       ) : (
         <div style={{ maxWidth: 640 }}>
           <div className="fm-card">
@@ -32,6 +47,8 @@ export function OrderDetail() {
             <Row k="订单类型" v={o.type} />
             <Row k="金额" v={'¥' + o.amount} mono />
             <Row k="支付方式" v={o.payMethod} />
+            {/* 9.4:会员订单在支付方式下方标识续费方式 */}
+            {o.type === '会员' && <Row k="续费方式" v={o.autoRenew ? '自动续费' : '手动支付'} />}
             <Row k="订单状态" v={o.status} />
             <Row k="用户" v={o.user} mono />
             <Row k="下单时间" v={o.orderTime} mono />
@@ -47,22 +64,17 @@ export function OrderDetail() {
           {o.type === '永享' && o.media && (
             <div className="fm-card">
               <div className="fh">永享内容</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0' }}>
-                <div className="od-cover" style={{ width: 96, height: 96 }} onClick={() => setPreview(o.media!)}>
+              {/* 9.4:整行可点直接预览,去掉「点击封面预览」文字按钮;8.3:图片与右侧文字垂直对齐 */}
+              <div className="od-yx tap" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 4px', cursor: 'pointer' }} onClick={() => setPreview(o.media!)}>
+                <div className="od-cover" style={{ width: 96, height: 96, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, background: 'var(--surface-warm)', border: '1px solid var(--line-2)', color: 'var(--ink-3)' }}>
                   <Icon id={o.media.kind === 'image' ? 'i-image' : 'i-play'} w={28} h={28} />
                 </div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{o.media.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>关联知识产品 · {o.kp}</div>
-                  <div style={{ fontSize: 12, color: 'var(--indigo-ink)', marginTop: 6, cursor: 'pointer' }} onClick={() => setPreview(o.media!)}>点击封面预览 ›</div>
                 </div>
+                <Icon id="i-chevR" w={18} h={18} style={{ marginLeft: 'auto', color: 'var(--ink-3)' }} />
               </div>
-            </div>
-          )}
-          {o.type === '兑换码' && (
-            <div className="fm-card">
-              <div className="fh">兑换码</div>
-              <Row k="兑换码" v={o.code || ''} mono />
             </div>
           )}
         </div>
@@ -77,7 +89,7 @@ function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
     <div className="fm-row">
       <div className="lab">{k}</div>
       <div className="ctl">
-        <span style={mono ? { fontFamily: 'var(--mono)' } : undefined}>{v}</span>
+        <span style={{ fontSize: 13.5, color: 'var(--ink)', ...(mono ? { fontFamily: 'var(--mono)' } : null) }}>{v}</span>
       </div>
     </div>
   );

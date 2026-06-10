@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, DataGrid, type Col } from '@aba/ui-admin';
 
@@ -13,13 +14,25 @@ interface O {
   time: string;
 }
 const ROWS: O[] = [
-  { no: 'OD20260530140208', org: 'XX 出版社', type: '会员', typeCls: 'tag-amber', amount: 19.9, status: '已支付', user: '138****8888', time: '2026-05-30 14:02:08' },
+  { no: 'OD20260530140208', org: 'XX 出版集团', type: '会员', typeCls: 'tag-amber', amount: 19.9, status: '已支付', user: '138****8888', time: '2026-05-30 14:02:08' },
   { no: 'OD20260530152133', org: 'ZZ 少儿', type: '永享', typeCls: 'tag-indigo', amount: 9.9, status: '已支付', user: 'wx_abc', time: '2026-05-30 15:21:33' },
   { no: 'OD20260529091307', org: 'YY 教育', type: '兑换码', typeCls: 'tag-jade', amount: 0, status: '已核销', user: '139****0000', time: '2026-05-29 09:13:07' },
+  { no: 'OD20260528103412', org: 'XX 出版集团', type: '永享', typeCls: 'tag-indigo', amount: 29.9, status: '已支付', user: 'wx_c01', time: '2026-05-28 10:34:12' },
+  { no: 'OD20260528164509', org: 'YY 教育', type: '会员', typeCls: 'tag-amber', amount: 19.9, status: '已支付', user: '137****5678', time: '2026-05-28 16:45:09' },
+  { no: 'OD20260527093320', org: 'ZZ 少儿', type: '会员', typeCls: 'tag-amber', amount: 198, status: '已支付', user: 'wx_d22', time: '2026-05-27 09:33:20' },
+  { no: 'OD20260527141855', org: 'XX 出版集团', type: '兑换码', typeCls: 'tag-jade', amount: 0, status: '已核销', user: '135****1357', time: '2026-05-27 14:18:55' },
+  { no: 'OD20260526112047', org: 'YY 教育', type: '永享', typeCls: 'tag-indigo', amount: 9.9, status: '已支付', user: 'wx_f44', time: '2026-05-26 11:20:47' },
+  { no: 'OD20260526085533', org: 'ZZ 少儿', type: '会员', typeCls: 'tag-amber', amount: 19.9, status: '已支付', user: '133****2024', time: '2026-05-26 08:55:33' },
+  { no: 'OD20260525170612', org: 'XX 出版集团', type: '永享', typeCls: 'tag-indigo', amount: 19.9, status: '已支付', user: 'wx_i77', time: '2026-05-25 17:06:12' },
+  { no: 'OD20260525134428', org: 'YY 教育', type: '会员', typeCls: 'tag-amber', amount: 19.9, status: '已支付', user: '130****8080', time: '2026-05-25 13:44:28' },
+  { no: 'OD20260524101739', org: 'ZZ 少儿', type: '兑换码', typeCls: 'tag-jade', amount: 0, status: '已核销', user: '136****2468', time: '2026-05-24 10:17:39' },
+  { no: 'OD20260524092214', org: 'XX 出版集团', type: '永享', typeCls: 'tag-indigo', amount: 29.9, status: '已支付', user: 'wx_abc', time: '2026-05-24 09:22:14' },
+  { no: 'OD20260523155902', org: 'YY 教育', type: '会员', typeCls: 'tag-amber', amount: 198, status: '已支付', user: '137****5678', time: '2026-05-23 15:59:02' },
 ];
 
-// 平台超管 · 全域订单（搜索 + 机构/状态筛选 + 金额/时间排序）
+// 平台超管 · 全域订单（搜索 + 机构/状态筛选 + 金额/时间排序 + 详情 + 分页）
 export function GlobalOrders() {
+  const nav = useNavigate();
   const [q, setQ] = useState('');
   const [org, setOrg] = useState('全部');
   const [status, setStatus] = useState('全部');
@@ -47,6 +60,7 @@ export function GlobalOrders() {
     },
     { header: '用户', className: 'mono', cell: (r) => r.user },
     { header: '创建时间', className: 'mono', cell: (r) => r.time, sortValue: (r) => r.time },
+    { header: '操作', cell: (r) => <div className="op-cell"><span className="op" onClick={() => nav('/orders/' + r.no, { state: r })}>详情</span></div> },
   ];
 
   return (
@@ -67,7 +81,7 @@ export function GlobalOrders() {
         <Dropdown label="机构" options={['全部', 'XX 出版社', 'YY 教育', 'ZZ 少儿']} onSelect={setOrg} />
         <Dropdown label="订单状态" options={['全部', '已支付', '已核销']} onSelect={setStatus} />
       </div>
-      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的订单' }} minWidth={920} />
+      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的订单' }} minWidth={1000} pageUnit="单" />
     </>
   );
 }

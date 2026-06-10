@@ -107,9 +107,12 @@
 
 /* ============ 多模态 lightbox ============ */
 .lbx{flex:1;background:#14151C;display:flex;flex-direction:column;}
-.lbx-top{padding:76px 18px 14px;text-align:center;color:rgba(255,255,255,.85);font-size:12px;position:relative;}
+.lbx-top{padding:76px 18px 14px;text-align:center;color:rgba(255,255,255,.85);font-size:12px;position:relative;z-index:6;}
 .lbx-top > span:first-child{display:none;}
-.lbx-top .x{position:absolute;right:26px;top:70px;color:#fff;font-size:17px;line-height:1;cursor:pointer;}
+/* 关闭按钮:放大点击区 + 置顶,确保可点(一-12 修 x 无效) */
+.lbx-top .x{position:absolute;right:18px;top:60px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:18px;line-height:1;cursor:pointer;z-index:7;}
+.lbx-top .x:active{background:rgba(255,255,255,.24);}
 .lbx-main{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:10px;}
 .lbx-img{width:100%;aspect-ratio:1;border-radius:14px;
   background:repeating-linear-gradient(135deg,#2a2c38 0 12px,#23242e 12px 24px);
@@ -128,11 +131,10 @@
 .pw{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:26px 26px 0 0;z-index:7;
   padding:12px 22px 36px;box-shadow:0 -22px 56px -20px rgba(28,26,22,.34);}
 .pw::before{content:"";display:block;width:38px;height:4px;border-radius:3px;background:var(--line);margin:6px auto 18px;}
-.pw-h{display:flex;align-items:center;gap:13px;margin-bottom:20px;}
-.pw-h .lk{width:46px;height:46px;border-radius:13px;background:linear-gradient(140deg,var(--amber-soft),#fff);
-  border:1px solid var(--amber-soft);color:var(--amber-ink);display:flex;align-items:center;justify-content:center;flex:none;}
-.pw-h .lk svg{width:20px;height:20px;}
+/* 付费墙:无锁图标,标题/描述/按钮整体居中 */
+.pw-h{text-align:center;margin-bottom:20px;}
 .pw-h .t{font-family:var(--serif-cjk);}
+.pw-btns{align-items:stretch;}
 
 /* “我的” · 设置式分组卡片(灰色线性图标) */
 .my-sec{font-size:13px;color:var(--ink-3);font-weight:500;padding:20px 18px 9px;}
@@ -151,6 +153,13 @@
 .pw-h .s{font-size:12px;color:var(--ink-2);margin-top:2px;}
 .pw-btns{display:flex;flex-direction:column;gap:11px;}
 .pw-btns .btn{width:100%;justify-content:center;gap:8px;padding:15px;font-size:15px;}
+/* lightbox 内付费墙:浏览到付费内容时,从预览下方滑出的白色 sheet(盖在深色预览之上) */
+.lbx-pw{background:var(--surface);border-radius:22px 22px 0 0;padding:20px 22px 30px;
+  box-shadow:0 -18px 44px -16px rgba(0,0,0,.5);position:relative;z-index:3;
+  animation:slideUp .3s cubic-bezier(.2,.8,.2,1) both;}
+.lbx-pw .pw-h{text-align:center;margin-bottom:18px;}
+.lbx-pw .pw-h .t{font-family:var(--serif-cjk);font-size:15px;font-weight:700;}
+.lbx-pw .pw-h .s{font-size:12px;color:var(--ink-2);margin-top:3px;}
 
 /* ============ 我的 / 会员中心 / 永享 / 兑换码 / 订单 ============ */
 .my-head{padding:18px 18px 14px;display:flex;align-items:center;gap:13px;}
@@ -233,7 +242,8 @@
 .ld-foot .ph{font-size:11.5px;color:var(--ink-2);font-family:var(--mono);margin-top:2px;}
 
 /* toast */
-.toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%) translateY(8px);z-index:20;
+/* 3 秒提示:置于屏幕中上方,用户视线直达(原贴底太靠下) */
+.toast{position:absolute;left:50%;top:92px;transform:translateX(-50%) translateY(-8px);z-index:40;
   background:rgba(28,26,33,.9);color:#fff;font-size:12.5px;padding:9px 16px;border-radius:20px;
   opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -260,7 +270,8 @@
 @keyframes slideR{from{transform:translateX(8%)}to{transform:none}}
 .ov.open .pw{animation:slideUp .34s cubic-bezier(.2,.8,.2,1) both;}
 @keyframes slideUp{from{transform:translateY(14%)}to{transform:none}}
-#ovLbx{top:0;z-index:12;}
+/* 全屏预览须盖过屏幕顶栏(.h5-top:20)与状态条(.statusbar:30),否则右上角 × 被顶栏拦截无法点击 */
+#ovLbx{top:0;z-index:50;}
 #ovLbx .lbx{position:absolute;inset:0;}
 /* 抽屉美化(限在 H5 内 · 卡片化条目) */
 .ov .drawer{border-radius:18px 0 0 18px;border-left:1px solid var(--line);box-shadow:-24px 0 60px -28px rgba(40,46,90,.3);}

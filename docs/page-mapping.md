@@ -13,7 +13,8 @@
 | 编号 | 名称 | 状态 | 路径 / 文件 |
 |---|---|---|---|
 | F-1.1 | 落地页 | ✅ | `/` → `apps/mobile-h5/src/pages/Landing.tsx` |
-| F-1.2 | 微信授权拉起（系统级假态） | ✅ | `/wechat-auth` → `pages/WechatAuth.tsx` |
+| F-1.2 | 微信授权弹窗（微信内打开 H5，授予昵称/头像） | ✅ | `/login/wechat-auth` → `screens/WechatAuth.tsx` |
+| F-1.2.2 | 微信扫码授权页（外部浏览器，open.weixin.qq.com 二维码） | ✅ | `/login/wechat-scan` → `screens/WechatScan.tsx` |
 | F-1.3 | 手机号绑定页 | ✅ | `/phone-bind` → `pages/PhoneBind.tsx` |
 | F-1.4 | 二维码失效落地页 | ✅ | `/qr-invalid` → `pages/QrInvalid.tsx` |
 | F-1.5 | 机构内手机号冲突提示 | ✅ | `pages/PhoneBind.tsx` 内 toast |

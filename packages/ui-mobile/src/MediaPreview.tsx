@@ -87,9 +87,11 @@ function ImageView({ name }: { name: string }) {
 function VideoView({ name }: { name: string }) {
   const dur = 96;
   const { playing, setPlaying, pct, setPct } = usePlayback(dur);
+  const [landscape, setLandscape] = useState(false);
   const started = playing || pct > 0;
+  const skip = (sec: number) => setPct((p) => Math.max(0, Math.min(100, p + (sec / dur) * 100)));
   return (
-    <>
+    <div className={'mp-video-wrap' + (landscape ? ' landscape' : '')}>
       <div className="mp-video">
         <div className="frame">
           {!started ? (
@@ -100,19 +102,29 @@ function VideoView({ name }: { name: string }) {
             <div style={{ color: 'rgba(255,255,255,.6)', fontFamily: 'var(--mono)', fontSize: 12 }}>{name}</div>
           )}
         </div>
-      </div>
-      <div className="mp-bar">
-        <span className="pp" onClick={() => setPlaying((v) => !v)}>
-          <Icon id={playing ? 'i-mic' : 'i-play'} />
-        </span>
-        <div className="mp-track" onClick={(e) => seek(e, setPct)}>
-          <i style={{ width: pct + '%' }} />
+        {/* 控件紧贴视频下方(而非页面最底) */}
+        <div className="mp-bar mp-bar-video">
+          <span className="pp" onClick={() => setPlaying((v) => !v)}>
+            <Icon id={playing ? 'i-pause' : 'i-play'} />
+          </span>
+          <span className="pp sm" onClick={() => skip(-15)} title="后退 15 秒">
+            <Icon id="i-forward" style={{ transform: 'rotate(180deg)' }} />
+          </span>
+          <div className="mp-track" onClick={(e) => seek(e, setPct)}>
+            <i style={{ width: pct + '%' }} />
+          </div>
+          <span className="pp sm" onClick={() => skip(15)} title="快进 15 秒">
+            <Icon id="i-forward" />
+          </span>
+          <span className="mp-time">
+            {fmt((pct / 100) * dur)} / {fmt(dur)}
+          </span>
+          <span className="pp sm" onClick={() => setLandscape((v) => !v)} title="横竖屏切换">
+            <Icon id="i-fullscreen" />
+          </span>
         </div>
-        <span className="mp-time">
-          {fmt((pct / 100) * dur)} / {fmt(dur)}
-        </span>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -135,7 +147,7 @@ function AudioView({ name }: { name: string }) {
       </div>
       <div className="mp-bar" style={{ width: '100%' }}>
         <span className="pp" onClick={() => setPlaying((v) => !v)}>
-          <Icon id={playing ? 'i-mic' : 'i-play'} />
+          <Icon id={playing ? 'i-pause' : 'i-play'} />
         </span>
         <div className="mp-track" onClick={(e) => seek(e, setPct)}>
           <i style={{ width: pct + '%' }} />

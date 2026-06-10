@@ -11,6 +11,7 @@ export type { Col } from './DataGrid';
 export { RangePicker } from './RangePicker';
 export { Dropdown } from './Dropdown';
 export { Modal } from './Modal';
+export { ConfirmDialog } from './ConfirmDialog';
 export { Search, TextInput } from './Fields';
 export { EmptyState, ErrorRetry, TableSkeleton } from './States';
 export { InfoDot } from './InfoDot';

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot } from '@aba/ui-admin';
 
@@ -52,6 +53,7 @@ function CardTitle({ t, info }: { t: string; info: string }) {
 
 // 机构后台 · 数据看板（5 Tab；每个指标含说明+统计区间，指标名带中英文）
 export function DataBoard() {
+  const nav = useNavigate();
   const [tab, setTab] = useState(0);
   const x = ['05-25', '05-26', '05-27', '05-28', '05-29', '05-30', '05-31'];
   return (
@@ -196,16 +198,43 @@ export function DataBoard() {
       {tab === 4 && (
         <div className="grid2" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
           {[
-            { t: '提问数 TOP10', info: '按 KP 被提问条数排序,反映实际被使用的内容。', rows: [['1 心血管', '1.2k'], ['2 儿科', '980'], ['3 内科精要', '760']] },
-            { t: '付费转化贡献 TOP10', info: '按经由该 KP 产生的会员/永享订单贡献排序。', rows: [['1 内科精要', '¥12k'], ['2 心血管', '¥9k'], ['3 外科', '¥5k']] },
-            { t: '永享购买 TOP10', info: '按该 KP 下永享买断订单数排序。', rows: [['1 心血管', '320 单'], ['2 外科', '210 单'], ['3 儿科', '120 单']] },
+            {
+              t: '提问数 TOP10',
+              info: '按 KP 被提问条数排序,反映实际被使用的内容。',
+              // 11.1:补足 top10
+              rows: [
+                ['心血管分册', '1.2k', 1], ['儿科学', '980', 2], ['内科精要', '760', 3], ['外科学', '540', 4],
+                ['妇产科', '430', 5], ['神经内科', '380', 6], ['消化内科', '320', 7], ['呼吸科', '260', 8],
+                ['内分泌', '210', 9], ['皮肤科', '160', 10],
+              ] as [string, string, number][],
+            },
+            {
+              t: '付费转化贡献 TOP10',
+              info: '按经由该 KP 产生的会员/永享订单贡献排序。',
+              rows: [
+                ['内科精要', '¥12k', 3], ['心血管分册', '¥9k', 1], ['外科学', '¥5k', 4], ['儿科学', '¥4.2k', 2],
+                ['妇产科', '¥3.6k', 5], ['神经内科', '¥2.9k', 6], ['消化内科', '¥2.1k', 7], ['呼吸科', '¥1.6k', 8],
+                ['内分泌', '¥1.1k', 9], ['皮肤科', '¥0.8k', 10],
+              ] as [string, string, number][],
+            },
+            {
+              t: '永享购买 TOP10',
+              info: '按该 KP 下永享买断订单数排序。',
+              rows: [
+                ['心血管分册', '320 单', 1], ['外科学', '210 单', 4], ['儿科学', '120 单', 2], ['内科精要', '96 单', 3],
+                ['神经内科', '78 单', 6], ['妇产科', '64 单', 5], ['消化内科', '52 单', 7], ['呼吸科', '41 单', 8],
+                ['内分泌', '33 单', 9], ['皮肤科', '22 单', 10],
+              ] as [string, string, number][],
+            },
           ].map((c) => (
             <div className="chart-card" style={{ margin: 0 }} key={c.t}>
               <CardTitle t={c.t} info={c.info} />
+              {/* 11.2:每个 KP 条目可点进 KP 详情,悬浮高亮;11.1:前 3 名奖牌色突出 */}
               {c.rows.map((r, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 2px', borderTop: i ? '1px solid var(--line-2)' : 'none', fontSize: 13 }}>
-                  <span>{r[0]}</span>
-                  <span className="mono" style={{ color: 'var(--ink-2)' }}>{r[1]}</span>
+                <div key={i} className="rank-row" onClick={() => nav('/kps/' + r[2])} title={'查看「' + r[0] + '」详情'}>
+                  <span className={'rank-no' + (i < 3 ? ' m' + (i + 1) : '')}>{i + 1}</span>
+                  <span className="rank-nm">{r[0]}</span>
+                  <span className="rank-pv">{r[1]}</span>
                 </div>
               ))}
             </div>

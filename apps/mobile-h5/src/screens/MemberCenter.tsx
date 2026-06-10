@@ -95,19 +95,15 @@ export function MemberCenter() {
         <div className="scrim" onClick={() => setConfirm(false)} />
         <div className="pw">
           <div className="pw-h">
-            <div className="lk" style={{ background: 'var(--terra-soft)', color: 'var(--terra)', borderColor: 'var(--terra-soft)' }}>
-              <Icon id="i-bell" />
-            </div>
-            <div>
-              <div className="t">确认取消自动续费?</div>
-              <div className="s">取消后会员有效期至 2026.12.31,到期将不再自动续费。</div>
-            </div>
+            <div className="t">确认取消自动续费?</div>
+            <div className="s">取消后会员有效期至 2026.12.31，到期将不再自动续费。</div>
           </div>
           <div className="pw-btns">
-            <button className="btn btn-ghost" onClick={() => setConfirm(false)}>
+            {/* 主操作=暂不取消(挽留),弱化确认取消为文字次按钮 */}
+            <button className="btn btn-primary" onClick={() => setConfirm(false)}>
               暂不取消
             </button>
-            <button className="btn btn-amber" onClick={doCancel}>
+            <button className="btn btn-text-weak" onClick={doCancel}>
               确认取消
             </button>
           </div>

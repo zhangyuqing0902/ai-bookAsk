@@ -1,35 +1,26 @@
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 
-// 7.3 微信支付结果 · 成功
+// 7.3 支付结果 · 成功（品牌质感落地页；返回=回到掉起支付的那个会话）
 export function PaySuccess() {
   const nav = useNavigate();
   return (
-    <div className="lg" style={{ alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 32px' }}>
-      <div
-        style={{
-          width: 76,
-          height: 76,
-          borderRadius: '50%',
-          background: 'var(--jade-soft)',
-          color: 'var(--jade)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 20,
-        }}
-      >
-        <Icon id="i-check" w={38} h={38} />
+    <div className="lg pay-ok">
+      <div className="pay-ok-badge">
+        <span className="pay-ok-ring r1" />
+        <span className="pay-ok-ring r2" />
+        <span className="pay-ok-check">
+          <Icon id="i-check" w={40} h={40} />
+        </span>
       </div>
-      <div style={{ fontFamily: 'var(--serif-cjk)', fontWeight: 700, fontSize: 21 }}>支付成功</div>
-      <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginTop: 9 }}>会员已开通 / 永享已解锁</div>
-      <button
-        className="btn btn-primary"
-        style={{ marginTop: 30, justifyContent: 'center', padding: '14px 46px' }}
-        onClick={() => nav('/chat')}
-      >
+      <div className="pay-ok-t">支付成功</div>
+      <div className="pay-ok-s">已为你解锁权益，回到刚才的对话继续探索</div>
+      <button className="btn btn-primary pay-ok-btn" onClick={() => nav('/chat', { replace: true })}>
         返回会话
       </button>
+      <div className="pay-ok-link" onClick={() => nav('/me/orders', { replace: true })}>
+        查看订单
+      </div>
     </div>
   );
 }

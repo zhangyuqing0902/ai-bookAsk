@@ -1,17 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
+import { useChatStore, nextMsgId, type ChatMsg } from '../chatStore';
 
 interface Media {
   kind: 'image' | 'audio' | 'video';
   name: string;
   locked: boolean;
 }
-interface Msg {
-  id: number;
-  role: 'user' | 'ai';
-  text: string;
-}
+type Msg = ChatMsg;
 
 const KIND_LABEL: Record<Media['kind'], string> = { image: '图片', audio: '音频', video: '视频' };
 const DEMO_MEDIA: Media[] = [
@@ -31,12 +28,11 @@ const HISTORY = [
   { g: '2026年3月', items: ['本书第 4 章重点内容总结'] },
 ];
 
-let _id = 1;
-
 // 5/6 AI 会话（欢迎态 ↔ 对话态）
 export function Chat() {
   const nav = useNavigate();
-  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const msgs = useChatStore((s) => s.messages);
+  const setMsgs = useChatStore((s) => s.setMessages);
   const [ov, setOv] = useState<null | 'left' | 'src'>(null);
   const [pay, setPay] = useState<Media | null>(null);
   const [lbx, setLbx] = useState<{ items: Media[]; idx: number } | null>(null);
@@ -53,7 +49,7 @@ export function Chat() {
   const send = (q: string) => {
     const text = q.trim();
     if (!text) return;
-    setMsgs((m) => [...m, { id: _id++, role: 'user', text }, { id: _id++, role: 'ai', text: ANSWER }]);
+    setMsgs((m) => [...m, { id: nextMsgId(), role: 'user', text }, { id: nextMsgId(), role: 'ai', text: ANSWER }]);
     setInput('');
     scrollDown();
   };
@@ -181,12 +177,12 @@ export function Chat() {
             />
             <div className="composer-row">
               <div className="composer-chips">
-                <span className={'mini-chip' + (think ? ' on' : '')} onClick={() => setThink((v) => !v)}>
-                  <Icon id="i-spark" />
+                <span className={'mini-chip' + (think ? ' on' : ' grayed')} onClick={() => setThink((v) => !v)}>
+                  <Icon id="i-atom" />
                   深度思考
                 </span>
                 <span className={'mini-chip' + (search ? ' on' : ' grayed')} onClick={() => setSearch((v) => !v)}>
-                  <Icon id="i-search" />
+                  <Icon id="i-globe" />
                   智能搜索
                 </span>
               </div>
@@ -209,27 +205,26 @@ export function Chat() {
         </div>
       </div>
 
-      {/* 短语音输入浮层 */}
+      {/* 短语音输入:只在当前会话下方弹出波浪条(不是新会话),参考图2
+          点击波形区外部 → 关闭动画、恢复输入键盘交互态 */}
       {voice && (
-        <div className="voice-ov">
-          <div className="voice-hint">正在聆听…</div>
-          <div className="voice-tip">松手发送,上滑取消</div>
-          <div className="voice-wave">
-            {Array.from({ length: 28 }).map((_, i) => (
-              <span key={i} style={{ animationDelay: (i % 7) * 0.08 + 's' }} />
-            ))}
+        <>
+          <div className="voice-dismiss" onClick={() => endVoice(true)} />
+          <div className="voice-ov">
+            <div className="voice-tip">松手发送，上滑取消</div>
+            <div className="voice-wave">
+              {Array.from({ length: 28 }).map((_, i) => (
+                <span key={i} style={{ animationDelay: (i % 7) * 0.08 + 's' }} />
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* 左抽屉：搜索 + 分组历史 + 页脚 */}
       <div className={'ov' + (ov === 'left' ? ' open' : '')}>
         <div className="scrim" onClick={() => setOv(null)} />
         <div className="ldrawer">
-          <div className="ld-search">
-            <Icon id="i-search" />
-            搜索对话内容…
-          </div>
           <div
             className="ld-new tap"
             onClick={() => {
@@ -250,8 +245,8 @@ export function Chat() {
                     key={h}
                     onClick={() => {
                       setMsgs([
-                        { id: _id++, role: 'user', text: h },
-                        { id: _id++, role: 'ai', text: ANSWER },
+                        { id: nextMsgId(), role: 'user', text: h },
+                        { id: nextMsgId(), role: 'ai', text: ANSWER },
                       ]);
                       setOv(null);
                     }}
@@ -282,9 +277,9 @@ export function Chat() {
         <div className="scrim" onClick={() => setOv(null)} />
         <div className="drawer">
           <div className="drawer-h">
-            <div className="t">参考来源 (3)</div>
-            <div className="s">按相关度降序 · 不显示数值</div>
+            <div className="t">参考来源</div>
           </div>
+          {/* 上块:知识 KP(同一 KP 内多个命中文件归并展示,最多 2 个,余下用省略号) */}
           <div className="src-item tap" onClick={() => toast('跳转纸书购买链接')}>
             <div className="src-cover">
               <span className="sp" />
@@ -292,58 +287,44 @@ export function Chat() {
             <div className="src-meta">
               <div className="kp">心血管分册 · 第4版</div>
               <div className="fl">ch3-饮食管理.pdf · p.42</div>
-            </div>
-          </div>
-          <div className="src-item tap" onClick={() => toast('无跳转链接')}>
-            <div className="src-cover">
-              <span className="sp" />
-            </div>
-            <div className="src-meta">
-              <div className="kp">心血管分册 · 第4版</div>
               <div className="fl">ch5-药物治疗.pdf · p.88</div>
+              <div className="fl more">…等 4 个文件</div>
             </div>
           </div>
-          <div className="src-item tap" onClick={() => toast('打开来源网页')}>
-            <div className="src-cover web" />
+          {/* 浅灰分隔线:上为知识 KP,下为互联网检索内容 */}
+          <div className="src-divider" />
+          <div className="src-item tap" onClick={() => toast('暂不可查看详情')}>
+            <div className="src-web-ic">
+              <Icon id="i-link" />
+            </div>
             <div className="src-meta">
               <div className="kp">中华医学会 · 指南</div>
-              <div className="fl">hypertension-2024 · web</div>
+              <div className="fl">hypertension-2024.org</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 永享付费墙 */}
-      <div className={'ov' + (pay ? ' open' : '')}>
+      {/* 永享付费墙 · 会话内直接点付费资源时弹出(无 lightbox 时) */}
+      <div className={'ov' + (pay && !lbx ? ' open' : '')}>
         <div className="scrim" onClick={() => setPay(null)} />
-        <div className="pw">
-          <div className="pw-h">
-            <div className="lk">
-              <Icon id="i-lock2" />
-            </div>
-            <div>
-              <div className="t">{pay?.name} · 受限内容</div>
-              <div className="s">开通会员畅享全部,或单独永久解锁此内容</div>
-            </div>
-          </div>
-          <div className="pw-btns">
-            <button className="btn btn-amber" onClick={() => { setPay(null); setLbx(null); nav('/member'); }}>
-              开通会员 · 畅享全部
-            </button>
-            <button className="btn btn-ghost" onClick={() => { setPay(null); toast('微信支付 · 永享已解锁'); }}>
-              ¥9.9 永久解锁此内容
-            </button>
-          </div>
+        <div className="pw pw-center">
+          <PaywallCard
+            media={pay}
+            onMember={() => { setPay(null); nav('/member'); }}
+            onBuy={() => { const n = pay?.name ?? '媒体资源'; setPay(null); nav(`/pay/wechat?amount=9.9&subject=${encodeURIComponent('永享 · ' + n)}`); }}
+          />
         </div>
       </div>
 
-      {/* 多模态 lightbox */}
+      {/* 多模态 lightbox(付费内容的付费墙在 lightbox 内部下方弹出) */}
       {lbx && (
         <Lightbox
           state={lbx}
           setIdx={(i) => setLbx({ ...lbx, idx: i })}
           onClose={() => setLbx(null)}
-          onPay={(m) => setPay(m)}
+          onMember={() => { setLbx(null); nav('/member'); }}
+          onBuy={() => { const n = lbx.items[lbx.idx]?.name ?? '媒体资源'; setLbx(null); nav(`/pay/wechat?amount=9.9&subject=${encodeURIComponent('永享 · ' + n)}`); }}
         />
       )}
 
@@ -351,12 +332,7 @@ export function Chat() {
       <div className={'ov' + (fbk != null ? ' open' : '')}>
         <div className="scrim" onClick={() => setFbk(null)} />
         <div className="pw">
-          <div className="fbk-h">
-            反馈
-            <span className="x tap" onClick={() => setFbk(null)}>
-              <Icon id="i-chevD" w={16} h={16} />
-            </span>
-          </div>
+          <div className="fbk-h">反馈</div>
           <FeedbackBody onSubmit={() => fbk != null && submitFeedback(fbk)} />
         </div>
       </div>
@@ -383,14 +359,22 @@ function AiMsg({
   onPay: (m: Media) => void;
   onFollow: (q: string) => void;
 }) {
-  const [shown, setShown] = useState(0);
+  const animated = useChatStore((s) => s.animated[msg.id]);
+  const markAnimated = useChatStore((s) => s.markAnimated);
+  // 已播放过（如实时电话挂断返回会话）的回答直接整段显示，不再走打字机
+  const [shown, setShown] = useState(animated ? msg.text.length : 0);
   useEffect(() => {
+    if (animated) {
+      setShown(msg.text.length);
+      return;
+    }
     let i = 0;
     const t = setInterval(() => {
       i += 2;
       if (i >= msg.text.length) {
         setShown(msg.text.length);
         clearInterval(t);
+        markAnimated(msg.id);
       } else setShown(i);
     }, 22);
     return () => clearInterval(t);
@@ -407,19 +391,20 @@ function AiMsg({
         {done && (
           <div className="media-zone">
             <div className="mz-k">
-              <span>相关媒体资源</span>
-              <span>按相关度排序</span>
+              <span className="mz-title">相关媒体资源</span>
             </div>
             <div className="media-strip" style={{ overflowX: 'auto' }}>
               {DEMO_MEDIA.map((m, i) =>
                 m.locked ? (
-                  <div className="media-thumb locked tap" key={i} onClick={() => onOpen(DEMO_MEDIA, i)}>
+                  // 会话内直接点付费资源 → 直接弹付费墙(不进预览)
+                  <div className="media-thumb locked tap" key={i} onClick={() => onPay(m)}>
                     <div className="lk">
                       <Icon id="i-lock" />
                       <span className="pr">{KIND_LABEL[m.kind]}</span>
                     </div>
                   </div>
                 ) : (
+                  // 免费/已付费 → 进放大预览(可在预览内翻页,翻到付费内容时预览内弹付费墙)
                   <div className="media-thumb tap" key={i} onClick={() => onOpen(DEMO_MEDIA, i)}>
                     <span className="ph">{m.name}</span>
                   </div>
@@ -437,10 +422,10 @@ function AiMsg({
                 <Icon id="i-copy" />
               </div>
               <div className={'act-ic tap' + (reaction === 'like' ? ' on' : '')} onClick={onLike}>
-                <Icon id="i-like" />
+                <Icon id={reaction === 'like' ? 'i-like-fill' : 'i-like'} />
               </div>
               <div className={'act-ic tap' + (reaction === 'dislike' ? ' on' : '')} onClick={onDislike}>
-                <Icon id="i-like" style={{ transform: 'rotate(180deg)' }} />
+                <Icon id={reaction === 'dislike' ? 'i-like-fill' : 'i-like'} style={{ transform: 'rotate(180deg)' }} />
               </div>
             </div>
             <button className="src-btn" onClick={onSource}>
@@ -464,16 +449,38 @@ function AiMsg({
   );
 }
 
+// 付费墙内容卡片：会话内直接弹 / lightbox 内下方弹 复用同一套
+function PaywallCard({ media, onMember, onBuy }: { media: Media | null; onMember: () => void; onBuy: () => void }) {
+  return (
+    <div className="pw-inner">
+      <div className="pw-h">
+        <div className="t">{media?.name} · 受限内容</div>
+        <div className="s">开通会员畅享全部，或单独永久解锁此内容</div>
+      </div>
+      <div className="pw-btns">
+        <button className="btn btn-amber" onClick={onMember}>
+          开通会员 · 畅享全部
+        </button>
+        <button className="btn btn-ghost" onClick={onBuy}>
+          ¥9.9 永久解锁此内容
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Lightbox({
   state,
   setIdx,
   onClose,
-  onPay,
+  onMember,
+  onBuy,
 }: {
   state: { items: Media[]; idx: number };
   setIdx: (i: number) => void;
   onClose: () => void;
-  onPay: (m: Media) => void;
+  onMember: () => void;
+  onBuy: () => void;
 }) {
   const { items, idx } = state;
   const m = items[idx];
@@ -494,14 +501,9 @@ function Lightbox({
             <Icon id="i-chevL" />
           </div>
           {m.locked ? (
-            <div
-              className="lbx-img"
-              style={{ cursor: 'pointer', flexDirection: 'column', gap: 12 }}
-              onClick={() => onPay(m)}
-            >
+            <div className="lbx-img locked" style={{ flexDirection: 'column', gap: 12 }}>
               <Icon id="i-lock2" w={34} h={34} style={{ color: 'rgba(255,255,255,.85)' }} />
               <div>{m.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--amber-2)' }}>点击解锁此内容</div>
             </div>
           ) : (
             <div className="lbx-img" onClick={() => toast('因版权限制,暂不支持保存下载')}>
@@ -517,6 +519,12 @@ function Lightbox({
             <div key={i} className={'t' + (i === idx ? ' on' : '')} onClick={() => setIdx(i)} />
           ))}
         </div>
+        {/* 翻到付费内容 → 预览界面下方弹出付费墙(盖在预览之上,不被遮挡) */}
+        {m.locked && (
+          <div className="lbx-pw">
+            <PaywallCard media={m} onMember={onMember} onBuy={onBuy} />
+          </div>
+        )}
       </div>
     </div>
   );
