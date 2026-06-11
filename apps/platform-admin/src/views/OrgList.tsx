@@ -132,7 +132,7 @@ export function OrgList() {
         </div>
         <div className="fm-row">
           <div className="lab">上级机构</div>
-          <div className="ctl"><Dropdown label="无（顶级机构）" options={['无（顶级机构）', ...topLevelNames]} /></div>
+          <div className="ctl"><Dropdown label="无（顶级机构）" options={['无（顶级机构）', ...topLevelNames]} style={{ width: 200 }} /></div>
         </div>
         <div className="fm-row">
           <div className="lab">备注</div>

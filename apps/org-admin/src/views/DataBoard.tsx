@@ -55,6 +55,7 @@ function CardTitle({ t, info }: { t: string; info: string }) {
 export function DataBoard() {
   const nav = useNavigate();
   const [tab, setTab] = useState(0);
+  const [rangeLabel, setRangeLabel] = useState('7 日');
   const x = ['05-25', '05-26', '05-27', '05-28', '05-29', '05-30', '05-31'];
   return (
     <>
@@ -63,7 +64,7 @@ export function DataBoard() {
           <div className="pt">数据看板</div>
         </div>
         <div className="pa">
-          <RangePicker presets={['今日', '7 日', '30 日']} defaultActive={1} />
+          <RangePicker presets={['今日', '7 日', '30 日']} defaultActive={1} onChange={(r) => setRangeLabel(r.label)} />
           <button className="btn btn-ghost btn-sm" onClick={() => toast('导出整页')}>
             <Icon id="i-dl" w={14} h={14} />
             导出
@@ -80,13 +81,24 @@ export function DataBoard() {
 
       {tab === 0 && (
         <>
+          {/* 0610:实时总览(存量/累计指标,不随时间筛选变化) */}
+          <div className="dash-section-title">
+            实时总览
+            <span className="dash-realtime-tag">实时</span>
+            <span className="dash-section-sub">· 截至今日的累计 / 存量数据，不随上方时间筛选变化</span>
+          </div>
           <div className="kpi-row">
-            <Kpi lab="累计注册（注册用户）" val="12,480" info="历史累计去重注册 C 端用户数。统计区间：开通至今。" />
-            <Kpi lab="当前会员" val="860" info="当前拥有有效会员权益的去重用户数。实时快照。" />
-            <Kpi lab="累计 GMV（成交总额）" val="86,200" unit="¥" info="已支付订单金额合计(会员+永享)。统计区间：开通至今。" />
+            <Kpi lab="累计注册（注册用户）" val="12,480" info="历史累计去重注册 C 端用户数。统计区间：开通至今（实时快照）。" />
+            <Kpi lab="当前会员" val="860" info="当前拥有有效会员权益的去重用户数。统计口径：实时快照。" />
+            <Kpi lab="累计 GMV（成交总额）" val="86,200" unit="¥" info="已支付订单金额合计(会员+永享)。统计区间：开通至今（实时快照）。" />
             <Kpi lab="当日 DAU（日活跃用户）" val="1,240" info="当日去重活跃用户(登录或提问)。统计区间：自然日 0:00 至当前。" />
           </div>
-          <div className="chart-card">
+          {/* 0610:经营分析(随上方时间区间联动的趋势指标) */}
+          <div className="dash-section-title" style={{ marginTop: 22 }}>
+            经营分析
+            <span className="dash-section-sub">· {rangeLabel}</span>
+          </div>
+          <div className="chart-card" style={{ marginTop: 0 }}>
             <div className="chart-head">
               <CardTitle t="提问量趋势 · 近 7 日" info="每日 C 端提问条数(含追问)。随上方时间区间联动。" />
               <div className="legend">

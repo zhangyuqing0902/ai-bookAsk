@@ -238,7 +238,11 @@ a {
   width: 20px;
   height: 20px;
 }
+/* 0610：侧栏整体抬升层级(z50),收起态 hover 浮出的菜单名小面板不再被右侧表单/表格内容遮盖;
+   仍低于弹窗/抽屉(z60+),不会穿透遮罩 */
 .adm-win .side {
+  position: relative;
+  z-index: 50;
   transition: width 0.2s ease;
   overflow: hidden;
 }
@@ -427,11 +431,9 @@ a {
   display: block;
 }
 
-/* #6 筛选下拉：选中具体值后轻微高亮（默认态＝筛选条件名，不高亮） */
+/* 0610：下拉选中后回显文字用普通 UI 文本色(不使用主题色),仅反映数据变化,框体样式与未选中一致 */
 .sel.sel-on {
-  color: var(--indigo-ink);
-  background: var(--indigo-soft);
-  border-color: var(--indigo);
+  color: var(--ink);
 }
 
 /* #3 主控台分区：实时总览 / 经营分析 段标题与段头 */
@@ -977,15 +979,16 @@ a {
   justify-content: center;
   vertical-align: -4px;
 }
+/* 0610：「PDF」三字母缩小并与 icon 边框留间距(下移到文档主体区,字间距收紧避免溢出) */
 .pdf-ic-tx {
   position: absolute;
   left: 50%;
-  top: 56%;
+  top: 61%;
   transform: translate(-50%, -50%);
   font-family: var(--sans);
-  font-size: 5.2px;
+  font-size: 4px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.02em;
   line-height: 1;
   color: #e5533b;
   pointer-events: none;
@@ -1006,12 +1009,12 @@ a {
   cursor: not-allowed;
   pointer-events: none;
 }
+/* 0610：上传拖拽区降高更紧凑(与切片方式控件左对齐由表单列容器负责) */
 .up-drop {
-  margin-top: 14px;
   border: 1.5px dashed var(--line);
   border-radius: 12px;
   background: var(--surface-warm);
-  padding: 26px 18px;
+  padding: 16px 18px;
   text-align: center;
   color: var(--ink-3);
   cursor: pointer;

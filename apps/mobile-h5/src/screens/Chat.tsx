@@ -76,20 +76,15 @@ export function Chat() {
     toast('已记录反馈,感谢你的帮助');
   };
 
-  // 短语音：按住 → 录音浮层；松手 → 转写并发送
-  const startVoice = async () => {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-      s.getTracks().forEach((t) => t.stop());
-    } catch {
-      /* 演示：忽略权限结果 */
-    }
+  // 0610：单击 / 长按麦克风 → 进入全屏语音输入动画；点击浮层任意位置 → 关闭并发送本次语音问题
+  const openVoice = () => {
     setVoice(true);
+    // 演示：后台静默申请麦克风权限以贴近真实，不阻塞动画浮层（避免权限回调与点击竞态）
+    navigator.mediaDevices?.getUserMedia({ audio: true }).then((s) => s.getTracks().forEach((t) => t.stop())).catch(() => {});
   };
-  const endVoice = (cancel?: boolean) => {
-    if (!voice) return;
+  const sendVoice = () => {
     setVoice(false);
-    if (!cancel) send('高血压怎么控制饮食?');
+    send('高血压怎么控制饮食?');
   };
 
   const openLbx = (items: Media[], idx: number) => setLbx({ items, idx });
@@ -170,7 +165,7 @@ export function Chat() {
           <div className="composer-box">
             <input
               className="ci-input"
-              placeholder="发消息或按住右侧说话…"
+              placeholder="发消息或点击右侧说话…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send(input)}
@@ -191,12 +186,7 @@ export function Chat() {
                   <Icon id="i-up" w={18} h={18} />
                 </div>
               ) : (
-                <div
-                  className="voice-btn tap"
-                  onPointerDown={startVoice}
-                  onPointerUp={() => endVoice(false)}
-                  onPointerLeave={() => endVoice(true)}
-                >
+                <div className="voice-btn tap" onClick={openVoice}>
                   <Icon id="i-mic" w={18} h={18} />
                 </div>
               )}
@@ -205,11 +195,10 @@ export function Chat() {
         </div>
       </div>
 
-      {/* 短语音输入:只在当前会话下方弹出波浪条(不是新会话),参考图2
-          点击波形区外部 → 关闭动画、恢复输入键盘交互态 */}
+      {/* 短语音输入:在当前会话页底部弹出音浪浮层(非全屏新页);点击音浪外任意处 → 关闭并立即发送本次语音问题、触发 AI 回答 */}
       {voice && (
         <>
-          <div className="voice-dismiss" onClick={() => endVoice(true)} />
+          <div className="voice-dismiss" onClick={sendVoice} />
           <div className="voice-ov">
             <div className="voice-tip">松手发送，上滑取消</div>
             <div className="voice-wave">
@@ -422,10 +411,12 @@ function AiMsg({
                 <Icon id="i-copy" />
               </div>
               <div className={'act-ic tap' + (reaction === 'like' ? ' on' : '')} onClick={onLike}>
-                <Icon id={reaction === 'like' ? 'i-like-fill' : 'i-like'} />
+                {/* 0610:点赞后效果用实心点赞图(灰色),未选中保持线性描边 */}
+                <Icon id={reaction === 'like' ? 'i-like-solid' : 'i-like'} />
               </div>
               <div className={'act-ic tap' + (reaction === 'dislike' ? ' on' : '')} onClick={onDislike}>
-                <Icon id={reaction === 'dislike' ? 'i-like-fill' : 'i-like'} style={{ transform: 'rotate(180deg)' }} />
+                {/* 0610:反馈后效果用实心踩图(灰色,本身朝下不需旋转),未选中用线性图旋转 180° */}
+                <Icon id={reaction === 'dislike' ? 'i-dislike-solid' : 'i-like'} style={reaction === 'dislike' ? undefined : { transform: 'rotate(180deg)' }} />
               </div>
             </div>
             <button className="src-btn" onClick={onSource}>

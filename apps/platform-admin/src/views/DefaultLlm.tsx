@@ -141,7 +141,7 @@ export function DefaultLlm() {
         </div>
         <div className="fm-row">
           <div className="lab">厂商</div>
-          <div className="ctl"><Dropdown label={modal?.mode === 'edit' ? rows[modal.idx]?.vendor : '选择厂商'} options={['通义', 'DeepSeek', '智谱', '百川']} style={{ width: 180 }} /></div>
+          <div className="ctl"><Dropdown label={modal?.mode === 'edit' ? rows[modal.idx]?.vendor : '选择厂商'} options={['通义', 'DeepSeek', '智谱', '百川']} style={{ width: 200 }} /></div>
         </div>
         <div className="fm-row">
           <div className="lab">版本号<span className="req">*</span></div>

@@ -11,7 +11,6 @@ import { CUserDetail } from './views/CUserDetail';
 import { Orders } from './views/Orders';
 import { OrderDetail } from './views/OrderDetail';
 import { Codes } from './views/Codes';
-import { CodeBatchDetail } from './views/CodeBatchDetail';
 import { DataBoard } from './views/DataBoard';
 import { CsConfig } from './views/CsConfig';
 import { SysConfig } from './views/SysConfig';
@@ -55,7 +54,6 @@ const TITLES: Record<string, string> = {
   '/orders': '订单管理',
   '/orders/': '订单详情',
   '/codes': '兑换码',
-  '/codes/': '批次详情',
   '/board': '数据看板',
   '/cs': '客服配置',
   '/sys': '系统配置',
@@ -91,7 +89,6 @@ export function App() {
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetail />} />
           <Route path="/codes" element={<Codes />} />
-          <Route path="/codes/:id" element={<CodeBatchDetail />} />
           <Route path="/board" element={<DataBoard />} />
           <Route path="/cs" element={<CsConfig />} />
           <Route path="/sys" element={<SysConfig />} />

@@ -182,9 +182,9 @@ export function KpDetail() {
         <span className="dt" />
         {f.st.text}
         {f.st.kind === 'fail' && f.st.reason && (
-          // 6.6:向量化失败悬浮显示具体原因
-          <span className="has-tip fail-info" data-tip={f.st.reason}>
-            <Icon id="i-file2" w={12} h={12} style={{ verticalAlign: -2 }} />
+          // 0610:向量化失败原因悬浮提示,改用与指标同款的问号 icon
+          <span className="has-tip" data-tip={f.st.reason} style={{ marginLeft: 5, display: 'inline-flex', verticalAlign: -2 }}>
+            <span className="info-dot">?</span>
           </span>
         )}
       </span>
@@ -207,10 +207,13 @@ export function KpDetail() {
         confirmText: '确认删除',
         onOk: () => { setKb((list) => list.filter((x) => x.id !== f.id)); toast('已删除文件'); },
       });
+    // 0610:下载已上传的知识文件内容(各状态文件均可下载,统一放在操作列最前)
+    const dl = <span className="op" onClick={() => toast('已开始下载「' + f.name + '」')}>下载</span>;
     // 4.7:重试只对「向量化失败(fail)」显示;ok 不显示重试,改为上架/下架
     if (f.st.kind === 'ok')
       return (
         <div className="op-cell">
+          {dl}
           <span className="op" onClick={() => { toggleShelf(f); toast(f.shelf ? '已下架,该内容停止被检索' : '已上架,该内容可被检索'); }}>
             {f.shelf ? '下架' : '上架'}
           </span>
@@ -220,6 +223,7 @@ export function KpDetail() {
     if (f.st.kind === 'fail')
       return (
         <div className="op-cell">
+          {dl}
           <span
             className="op"
             onClick={() =>
@@ -236,9 +240,10 @@ export function KpDetail() {
           <span className="op op-danger" onClick={del}>删除</span>
         </div>
       );
-    // ing:处理中,仅可删除
+    // ing:处理中,可下载与删除
     return (
       <div className="op-cell">
+        {dl}
         <span className="op op-danger" onClick={del}>删除</span>
       </div>
     );
@@ -250,10 +255,12 @@ export function KpDetail() {
     { header: '类型', cell: (f) => f.type, sortValue: (f) => TYPE_ORDER[f.type] ?? 9 },
     { header: '切片方式', cell: (f) => f.slice, sortValue: (f) => SLICE_ORDER[f.slice] ?? 9 },
     { header: '处理状态', cell: renderSt, sortValue: (f) => ST_ORDER[f.st.kind] ?? 9 },
-    // 4.7:已向量化成功的文件展示上架/下架状态;其余显示「-」
-    { header: '检索状态', cell: (f) => (f.st.kind === 'ok'
-      ? <span className={'tag-s ' + (f.shelf ? 'tag-jade' : 'tag-line')}>{f.shelf ? '上架' : '下架'}</span>
-      : <span className="muted">-</span>), sortValue: (f) => (f.st.kind === 'ok' ? (f.shelf ? 0 : 1) : 2) },
+    // 0610:已向量化成功的文件展示上架/下架;向量化失败直接显示「下架」(不可检索);处理中显示「-」
+    { header: '检索状态', cell: (f) => {
+      if (f.st.kind === 'ok') return <span className={'tag-s ' + (f.shelf ? 'tag-jade' : 'tag-line')}>{f.shelf ? '上架' : '下架'}</span>;
+      if (f.st.kind === 'fail') return <span className="tag-s tag-line">下架</span>;
+      return <span className="muted">-</span>;
+    }, sortValue: (f) => (f.st.kind === 'ok' ? (f.shelf ? 0 : 1) : f.st.kind === 'fail' ? 1 : 2) },
     { header: '操作', cell: renderOp },
   ];
 
@@ -427,8 +434,8 @@ export function KpDetail() {
             </div>
             <div className="fm-row">
               <div className="lab">关联 Agent</div>
-              {/* 4.4:下拉宽度与本表单其它输入框一致(填满 .ctl 整行) */}
-              <div className="ctl"><Dropdown label="李医生" options={['李医生', '王老师', '机构 Agent']} style={{ width: '100%' }} /></div>
+              {/* 0610:下拉宽度收敛为与表单其他选择控件一致(200px),不再填满整行 */}
+              <div className="ctl"><Dropdown label="李医生" options={['李医生', '王老师', '机构 Agent']} style={{ width: 200 }} /></div>
             </div>
             {/* 4.3:基础信息表单底部保存按钮 */}
             <div className="fm-row" style={{ justifyContent: 'flex-end' }}>
@@ -628,7 +635,7 @@ export function KpDetail() {
         </div>
         <div className="fm-row">
           <div className="lab">权益模式</div>
-          <div className="ctl"><Dropdown label="首扫绑定,后扫引导" options={['首扫绑定,后扫引导', '无权益']} /></div>
+          <div className="ctl"><Dropdown label="首扫绑定,后扫引导" options={['首扫绑定,后扫引导', '无权益']} style={{ width: 200 }} /></div>
         </div>
         <div className="fm-row">
           <div className="lab">生成数量<span className="req">*</span></div>
@@ -653,11 +660,11 @@ export function KpDetail() {
         <div className="modal-overflow-mark" />
         <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
           <div className="lab">同步模式</div>
-          <div className="ctl"><Dropdown label="实时同步" options={['实时同步', '独立快照']} /></div>
+          <div className="ctl"><Dropdown label="实时同步" options={['实时同步', '独立快照']} style={{ width: 200 }} /></div>
         </div>
         <div className="fm-row">
           <div className="lab">有效期</div>
-          <div className="ctl"><Dropdown label="7 天" options={['1 天', '7 天', '30 天', '永久']} /></div>
+          <div className="ctl"><Dropdown label="7 天" options={['1 天', '7 天', '30 天', '永久']} style={{ width: 200 }} /></div>
         </div>
         <div className="fm-row">
           <div className="lab">导入次数上限</div>
@@ -762,35 +769,41 @@ function UploadModal({ open, onClose, onDone }: { open: boolean; onClose: () => 
       <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
         <div className="lab">切片方式</div>
         <div className="ctl">
-          <Dropdown label="语义（推荐）" options={['章节', '语义（推荐）', '字数']} onSelect={(v) => setSlice(v.replace('（推荐）', ''))} />
+          <Dropdown label="语义（推荐）" options={['章节', '语义（推荐）', '字数']} onSelect={(v) => setSlice(v.replace('（推荐）', ''))} style={{ width: 200 }} />
         </div>
       </div>
       {/* 点击选择 + 拖拽上传;input 不用 webkitdirectory(不支持文件夹嵌套) */}
       <input ref={inputRef} type="file" multiple accept="*/*" style={{ display: 'none' }} onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
-      <div
-        className={'up-drop' + (drag ? ' on' : '')}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={(e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files); }}
-      >
-        <Icon id="i-up" w={22} h={22} />
-        <div className="up-drop-t">点击选择 或 拖拽文件到此处</div>
-        <div className="up-drop-s">支持文档 / 图片 / 音频 / 视频多文件混传，不支持文件夹</div>
-      </div>
-      {files.length > 0 && (
-        <div className="up-list">
-          {files.map((f) => (
-            <div className="up-item" key={f.id}>
-              {fileIcon(f.icon)}
-              <span className="up-item-nm">{f.name}</span>
-              <span className="up-item-bar"><i style={{ width: f.prog + '%' }} /></span>
-              <span className="up-item-pct mono">{f.prog >= 100 ? '完成' : f.prog + '%'}</span>
-              <span className="up-item-x" onClick={(e) => { e.stopPropagation(); setFiles((fs) => fs.filter((x) => x.id !== f.id)); }}>✕</span>
+      {/* 0610:上传区放进表单列容器,与上方「切片方式」控件左对齐(空 label 占位) */}
+      <div className="fm-row" style={{ borderTop: 'none', paddingTop: 0 }}>
+        <div className="lab" />
+        <div className="ctl">
+          <div
+            className={'up-drop' + (drag ? ' on' : '')}
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={(e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files); }}
+          >
+            <Icon id="i-up" w={22} h={22} />
+            <div className="up-drop-t">点击选择 或 拖拽文件到此处</div>
+            <div className="up-drop-s">支持文档 / 图片 / 音频 / 视频多文件混传，不支持文件夹</div>
+          </div>
+          {files.length > 0 && (
+            <div className="up-list">
+              {files.map((f) => (
+                <div className="up-item" key={f.id}>
+                  {fileIcon(f.icon)}
+                  <span className="up-item-nm">{f.name}</span>
+                  <span className="up-item-bar"><i style={{ width: f.prog + '%' }} /></span>
+                  <span className="up-item-pct mono">{f.prog >= 100 ? '完成' : f.prog + '%'}</span>
+                  <span className="up-item-x" onClick={(e) => { e.stopPropagation(); setFiles((fs) => fs.filter((x) => x.id !== f.id)); }}>✕</span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
-      )}
+      </div>
     </Modal>
   );
 }

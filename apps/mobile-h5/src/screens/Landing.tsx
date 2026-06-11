@@ -61,9 +61,7 @@ export function Landing() {
             <a onClick={(e) => { e.stopPropagation(); nav('/agreement/privacy'); }}>《隐私政策》</a>
           </span>
         </div>
-        <div className="lg-scan tap" onClick={() => nav('/login/wechat-scan')}>
-          在浏览器中打开？扫码登录
-        </div>
+        {/* 0610：移除「在浏览器中打开？扫码登录」入口，外部浏览器扫码授权场景仅在功能清单保留说明 */}
       </div>
     </div>
   );

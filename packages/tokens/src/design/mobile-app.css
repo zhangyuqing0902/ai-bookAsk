@@ -229,7 +229,7 @@ body,
   color: var(--ink-2);
 }
 
-/* —— 答案操作：点赞/反馈默认=灰色线性描边;激活态=靛蓝填充 —— */
+/* —— 答案操作：点赞/反馈默认=灰色线性描边;激活态=灰色填充(非主题色,参考图1) —— */
 .act-ic {
   color: var(--ink-3);
 }
@@ -242,11 +242,11 @@ body,
   background: var(--surface);
 }
 .act-ic.on {
-  color: var(--indigo);
+  color: var(--ink-2);
 }
 .act-ic.on svg {
-  fill: var(--indigo);
-  stroke: var(--indigo);
+  fill: var(--ink-2);
+  stroke: var(--ink-2);
 }
 .src-btn {
   display: inline-flex;
@@ -592,36 +592,38 @@ body,
   color: var(--ink-3);
 }
 
-/* —— 语音输入:仅在当前会话下方弹出(覆盖输入区),非全屏新页面(一-10) —— */
-/* 点击波形区外部关闭动画的透明捕获层 */
+/* —— 短语音输入:在当前会话页底部弹出音浪浮层(非全屏新页) —— */
+/* 点击音浪外任意处关闭并发送的透明捕获层(铺满屏,位于音浪带之下) */
 .voice-dismiss {
   position: absolute;
   inset: 0;
   z-index: 59;
 }
+/* 音浪带:底边实色=会话底色(--paper),向上多级渐隐为透明 + 遮罩 + 背景模糊,
+   与 AI 会话背景自然过渡、不割裂 */
 .voice-ov {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 60;
-  padding: 54px 0 36px;
-  /* 与会话底(--paper)同色系平滑过渡:上沿渐隐 + 模糊,衔接自然不割裂 */
-  background: linear-gradient(
-    to top,
-    var(--paper) 0%,
-    var(--paper) 50%,
-    rgba(251, 252, 254, 0.92) 74%,
-    rgba(251, 252, 254, 0.6) 88%,
-    rgba(251, 252, 254, 0)
-  );
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  -webkit-mask-image: linear-gradient(to top, #000 70%, transparent);
-  mask-image: linear-gradient(to top, #000 70%, transparent);
+  padding: 60px 0 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: linear-gradient(
+    to top,
+    var(--paper) 0%,
+    var(--paper) 46%,
+    rgba(251, 252, 254, 0.94) 66%,
+    rgba(251, 252, 254, 0.72) 82%,
+    rgba(251, 252, 254, 0.36) 92%,
+    rgba(251, 252, 254, 0) 100%
+  );
+  -webkit-backdrop-filter: blur(7px);
+  backdrop-filter: blur(7px);
+  -webkit-mask-image: linear-gradient(to top, #000 72%, transparent);
+  mask-image: linear-gradient(to top, #000 72%, transparent);
   animation: voiceRise 0.28s ease both;
 }
 @keyframes voiceRise {
@@ -636,8 +638,9 @@ body,
 }
 .voice-tip {
   font-size: 13px;
-  color: var(--ink-2);
+  color: var(--ink-3);
   margin-bottom: 22px;
+  letter-spacing: 0.02em;
 }
 .voice-wave {
   display: flex;
@@ -705,13 +708,13 @@ body,
 }
 
 /* —— 我的永享：媒体预览（图/音/视） —— */
-/* 内容整体上移到界面中上方(原 center 偏中下,不便观看):垂直 flex-start + 顶部间距,水平仍居中 */
+/* 0610：内容垂直居中、略偏上(底部留白把居中点上抬一点),不再贴顶过高 */
 .mp-img {
   flex: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: 8%;
+  padding-bottom: 7%;
   overflow: hidden;
 }
 .mp-img .ph {
@@ -727,14 +730,14 @@ body,
   font-size: 12px;
   transition: transform 0.2s;
 }
-/* 视频:整体上移到中上方,控件紧贴视频下方(一-12) */
+/* 视频:垂直居中略偏上,控件紧贴视频下方(一-12) */
 .mp-video-wrap {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding-top: 8%;
+  justify-content: center;
+  padding-bottom: 7%;
   width: 100%;
   min-height: 0;
 }
@@ -836,15 +839,15 @@ body,
   min-width: 78px;
   text-align: right;
 }
-/* 音频：播客式音浪(内容上移到中上方) */
+/* 音频：播客式音浪(垂直居中略偏上) */
 .mp-audio {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 26px;
-  padding: 8% 26px 0;
+  padding: 0 26px 7%;
 }
 .mp-audio .cover {
   width: 150px;

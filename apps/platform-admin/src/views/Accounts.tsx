@@ -65,9 +65,10 @@ export function Accounts() {
     { header: '账户名', className: 'strong', cell: (r) => r.name },
     { header: '姓名', cell: (r) => r.person },
     { header: '所属机构', cell: (r) => r.org },
-    { header: '上级机构', cell: (r) => (r.parent === '—' ? <span className="muted">—</span> : r.parent) },
-    { header: '角色', cell: (r) => <span className={'tag-s ' + r.roleCls}>{r.role}</span> },
-    { header: '状态', cell: (r) => <span className={'tag-s ' + r.statusCls}>{r.status}</span> },
+    // 0610:上级机构 / 角色 / 状态 三列支持点击表头排序
+    { header: '上级机构', cell: (r) => (r.parent === '—' ? <span className="muted">—</span> : r.parent), sortValue: (r) => r.parent },
+    { header: '角色', cell: (r) => <span className={'tag-s ' + r.roleCls}>{r.role}</span>, sortValue: (r) => r.role },
+    { header: '状态', cell: (r) => <span className={'tag-s ' + r.statusCls}>{r.status}</span>, sortValue: (r) => r.status },
     {
       header: '操作',
       cell: (r) => (
