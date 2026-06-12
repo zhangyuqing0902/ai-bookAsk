@@ -4,9 +4,9 @@ import { APP_META, type AppKey } from './data';
 
 // 线上部署域名（Vercel 等）。留空则回退到当前 origin（同端跳转始终可用）。
 const PROD_BASES: Record<AppKey, string> = {
-  mobile: '',
-  org: '',
-  platform: '',
+  mobile: 'https://ai-book-ask-mobile-h5.zhangyuqing.top',
+  org: 'https://ai-book-ask-org-admin.zhangyuqing.top',
+  platform: 'https://ai-book-ask-platform-admin.zhangyuqing.top',
 };
 
 function isDev(): boolean {
