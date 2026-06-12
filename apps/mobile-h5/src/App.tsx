@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { IconSprite } from '@aba/ui';
 import { PhoneStage } from '@aba/ui-mobile';
+import { Prototypes } from './screens/Prototypes';
 import { Landing } from './screens/Landing';
 import { PhoneLogin } from './screens/PhoneLogin';
 import { WechatBind } from './screens/WechatBind';
@@ -23,13 +24,20 @@ import { QrInvalid } from './screens/QrInvalid';
 import { Agreement } from './screens/Agreement';
 import { AccountRebind } from './screens/AccountRebind';
 
-export function App() {
+// /prototypes 脱手机框、电脑端全宽渲染；其余路由维持手机外框。
+function Shell() {
+  const { pathname } = useLocation();
+  if (pathname === '/prototypes') {
+    return (
+      <Routes>
+        <Route path="/prototypes" element={<Prototypes />} />
+      </Routes>
+    );
+  }
   return (
-    <BrowserRouter>
-      <IconSprite />
-      <PhoneStage>
-        <Routes>
-          <Route path="/" element={<Landing />} />
+    <PhoneStage>
+      <Routes>
+        <Route path="/" element={<Landing />} />
           <Route path="/login/phone" element={<PhoneLogin />} />
           <Route path="/login/wechat-bind" element={<WechatBind />} />
           <Route path="/login/wechat-auth" element={<WechatAuth />} />
@@ -52,7 +60,15 @@ export function App() {
           <Route path="/agreement/:type" element={<Agreement />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </PhoneStage>
+    </PhoneStage>
+  );
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <IconSprite />
+      <Shell />
     </BrowserRouter>
   );
 }

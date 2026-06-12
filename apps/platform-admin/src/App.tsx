@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
-import { IconSprite, ToastHost } from '@aba/ui';
+import { BrowserRouter, Routes, Route, Outlet, useNavigate } from 'react-router-dom';
+import { IconSprite, ToastHost, PrototypeList } from '@aba/ui';
 import { AdminShell, AdminLogin, UserMenu, type NavGroup } from '@aba/ui-admin';
 import { Dashboard } from './views/Dashboard';
 import { OrgList } from './views/OrgList';
@@ -38,6 +38,7 @@ const NAV: NavGroup[] = [
       { to: '/roles', label: '角色权限', icon: 'i-key' },
     ],
   },
+  { group: '评审工具', items: [{ to: '/prototypes', label: '原型清单', icon: 'i-grid' }] },
 ];
 
 const TITLES: Record<string, string> = {
@@ -52,7 +53,13 @@ const TITLES: Record<string, string> = {
   '/model': '模型用量',
   '/llm': '默认 LLM 模型配置',
   '/roles': '角色权限',
+  '/prototypes': '原型清单',
 };
+
+function Prototypes() {
+  const nav = useNavigate();
+  return <PrototypeList current="platform" onSameApp={(p) => nav(p)} />;
+}
 
 function Shell() {
   return (
@@ -85,6 +92,7 @@ export function App() {
           <Route path="/model" element={<ModelUsage />} />
           <Route path="/llm" element={<DefaultLlm />} />
           <Route path="/roles" element={<Roles />} />
+          <Route path="/prototypes" element={<Prototypes />} />
           <Route path="*" element={<Placeholder />} />
         </Route>
       </Routes>

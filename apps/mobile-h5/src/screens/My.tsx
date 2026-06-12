@@ -115,6 +115,20 @@ export function My() {
             </div>
           </div>
 
+          <div className="my-sec">评审工具</div>
+          <div className="mlist">
+            <div className="mrow tap" onClick={() => nav('/prototypes')}>
+              <span className="mi">
+                <Icon id="i-grid" />
+              </span>
+              <span className="ml">原型清单</span>
+              <span className="mv">三端</span>
+              <span className="mc">
+                <Icon id="i-chevR" />
+              </span>
+            </div>
+          </div>
+
           <div className="mlist" style={{ marginTop: 18 }}>
             <div
               className="mrow tap"

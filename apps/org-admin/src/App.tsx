@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
-import { IconSprite, ToastHost } from '@aba/ui';
+import { BrowserRouter, Routes, Route, Outlet, useNavigate } from 'react-router-dom';
+import { IconSprite, ToastHost, PrototypeList } from '@aba/ui';
 import { AdminShell, AdminLogin, UserMenu, type NavGroup } from '@aba/ui-admin';
 import { Dashboard } from './views/Dashboard';
 import { KpList } from './views/KpList';
@@ -41,6 +41,7 @@ const NAV: NavGroup[] = [
       { to: '/sys', label: '系统配置', icon: 'i-gear' },
     ],
   },
+  { group: '评审工具', items: [{ to: '/prototypes', label: '原型清单', icon: 'i-grid' }] },
 ];
 
 const TITLES: Record<string, string> = {
@@ -57,7 +58,13 @@ const TITLES: Record<string, string> = {
   '/board': '数据看板',
   '/cs': '客服配置',
   '/sys': '系统配置',
+  '/prototypes': '原型清单',
 };
+
+function Prototypes() {
+  const nav = useNavigate();
+  return <PrototypeList current="org" onSameApp={(p) => nav(p)} />;
+}
 
 function Shell() {
   return (
@@ -92,6 +99,7 @@ export function App() {
           <Route path="/board" element={<DataBoard />} />
           <Route path="/cs" element={<CsConfig />} />
           <Route path="/sys" element={<SysConfig />} />
+          <Route path="/prototypes" element={<Prototypes />} />
           <Route path="*" element={<Placeholder />} />
         </Route>
       </Routes>
