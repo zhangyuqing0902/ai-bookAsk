@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { Modal, TextInput } from '@aba/ui-admin';
 
-// 平台超管 · 角色权限（按模块分组、一行两个、上级机构管理员只读）。逻辑移植自 proto-admin.js。
+// 平台超管 · 角色权限。0613：每个功能点改为「无 / 只读 / 可操作」三态，替代角色级只读，按功能粒度控制读写。
 const PERM_MODULES: { g: string; items: [string, string, string][] }[] = [
   { g: '主控台', items: [['dashboard.view', '查看主控台', 'i-grid']] },
   {
@@ -31,50 +31,51 @@ const PERM_MODULES: { g: string; items: [string, string, string][] }[] = [
   },
 ];
 const ALL = PERM_MODULES.flatMap((m) => m.items.map((i) => i[0]));
-const INIT: Record<string, string[]> = {
-  超级管理员: ALL,
-  机构管理员: ALL.filter((k) => k !== 'agent.prompt.edit'),
-  运营: ['dashboard.view', 'kp.manage', 'agent.manage', 'user.view', 'order.view', 'code.manage', 'board.view'],
-  上级机构管理员: ['dashboard.view', 'board.view', 'order.view', 'user.view'],
+
+type Lvl = 'none' | 'read' | 'write';
+const LVLS: { k: Lvl; t: string }[] = [
+  { k: 'none', t: '无' },
+  { k: 'read', t: '只读' },
+  { k: 'write', t: '可操作' },
+];
+const fill = (keys: string[], lvl: Lvl): Record<string, Lvl> => Object.fromEntries(keys.map((k) => [k, lvl]));
+
+// 各内置角色的功能点三态（缺省 = 无权限）
+const INIT: Record<string, Record<string, Lvl>> = {
+  超级管理员: fill(ALL, 'write'),
+  机构管理员: fill(ALL.filter((k) => k !== 'agent.prompt.edit'), 'write'),
+  运营: { 'dashboard.view': 'read', 'kp.manage': 'write', 'agent.manage': 'write', 'user.view': 'read', 'order.view': 'read', 'code.manage': 'write', 'board.view': 'read' },
+  // 原「只读角色」= 所有可见功能均设为「仅查看」的普通角色（不再特殊硬编码）
+  上级机构管理员: { 'dashboard.view': 'read', 'board.view': 'read', 'order.view': 'read', 'user.view': 'read' },
 };
-// 20:上级机构管理员置顶,其余按创建时间降序(运营最新→超管最早)
 const INIT_ROLES = ['上级机构管理员', '运营', '机构管理员', '超级管理员'];
-const READONLY = new Set(['上级机构管理员']);
 
 export function Roles() {
   const [roles, setRoles] = useState(INIT_ROLES);
   const [cur, setCur] = useState('超级管理员');
   const [newRole, setNewRole] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
-  const [state, setState] = useState<Record<string, Set<string>>>(() => {
-    const o: Record<string, Set<string>> = {};
-    for (const r of INIT_ROLES) o[r] = new Set(INIT[r]);
+  const [state, setState] = useState<Record<string, Record<string, Lvl>>>(() => {
+    const o: Record<string, Record<string, Lvl>> = {};
+    for (const r of INIT_ROLES) o[r] = { ...INIT[r] };
     return o;
   });
 
-  // 21:新建角色 —— 左侧列表同步显示(置于置顶项之后,创建时间降序),右侧权限面板全部置空待勾选
   const createRole = () => {
     const nm = newRoleName.trim();
     if (!nm) return toast('请输入角色名称');
     if (roles.includes(nm)) return toast('角色名称已存在');
     setRoles((rs) => [rs[0], nm, ...rs.slice(1)]);
-    setState((prev) => ({ ...prev, [nm]: new Set() }));
+    setState((prev) => ({ ...prev, [nm]: {} }));
     setCur(nm);
     setNewRoleName('');
     setNewRole(false);
-    toast('已创建角色，请在右侧勾选权限');
+    toast('已创建角色，请在右侧逐项设置权限');
   };
-  const ro = READONLY.has(cur);
-  const st = state[cur];
-  const toggle = (k: string) => {
-    if (ro) return;
-    setState((prev) => {
-      const s = new Set(prev[cur]);
-      if (s.has(k)) s.delete(k);
-      else s.add(k);
-      return { ...prev, [cur]: s };
-    });
-  };
+
+  const st = state[cur] ?? {};
+  const setLvl = (k: string, lvl: Lvl) => setState((prev) => ({ ...prev, [cur]: { ...prev[cur], [k]: lvl } }));
+
   return (
     <>
       <div className="page-head">
@@ -94,55 +95,50 @@ export function Roles() {
             {roles.map((r) => (
               <div key={r} className={'role' + (cur === r ? ' on' : '')} onClick={() => setCur(r)}>
                 {r}
-                {READONLY.has(r) && <span className="lock">只读</span>}
               </div>
             ))}
           </div>
         </div>
-        <div className={'perm-panel' + (ro ? ' ro' : '')}>
+        <div className="perm-panel">
           <div className="pp-h">
-            <div className="pp-role">
-              {cur} · 权限 {ro && <span className="ro-badge">只读</span>}
-            </div>
-            {!ro && (
-              <button className="btn btn-primary btn-sm" onClick={() => toast('已保存权限')}>
-                保存
-              </button>
-            )}
+            <div className="pp-role">{cur} · 权限</div>
+            <button className="btn btn-primary btn-sm" onClick={() => toast('已保存权限')}>
+              保存
+            </button>
           </div>
           <div style={{ color: 'var(--ink-3)', fontSize: 12 }}>
-            {ro ? '该角色为只读 · 仅展示其拥有的权限' : '按机构后台模块勾选该角色可用的权限点'}
+            每个功能点可设「无 / 只读 / 可操作」三态 —— 按功能粒度控制读写，替代角色级只读。
           </div>
-          {PERM_MODULES.map((m) => {
-            const items = ro ? m.items.filter((it) => st.has(it[0])) : m.items;
-            if (!items.length) return null;
-            return (
-              <div className="perm-group" key={m.g}>
-                <div className="pg-h">{m.g}</div>
-                <div className="pg-grid">
-                  {items.map((it) => {
-                    const on = st.has(it[0]);
-                    return (
-                      <div className="perm-item" key={it[0]}>
-                        <div className="pi-l">
-                          <span className="pi-ic">
-                            <Icon id={it[2]} />
-                          </span>
-                          <div>
-                            <div className="pi-t">{it[1]}</div>
-                            <div className="pi-k">{it[0]}</div>
-                          </div>
-                        </div>
-                        <div className={'cbx' + (on ? ' on' : '')} onClick={() => toggle(it[0])}>
-                          <Icon id="i-check" />
+          {PERM_MODULES.map((m) => (
+            <div className="perm-group" key={m.g}>
+              <div className="pg-h">{m.g}</div>
+              <div className="pg-grid">
+                {m.items.map((it) => {
+                  const lvl = st[it[0]] ?? 'none';
+                  return (
+                    <div className="perm-item" key={it[0]}>
+                      <div className="pi-l">
+                        <span className="pi-ic">
+                          <Icon id={it[2]} />
+                        </span>
+                        <div>
+                          <div className="pi-t">{it[1]}</div>
+                          <div className="pi-k">{it[0]}</div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="lvl-seg">
+                        {LVLS.map((L) => (
+                          <b key={L.k} className={lvl === L.k ? 'on ' + L.k : ''} onClick={() => setLvl(it[0], L.k)}>
+                            {L.t}
+                          </b>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
       <Modal

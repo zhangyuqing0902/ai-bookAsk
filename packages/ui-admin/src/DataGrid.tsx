@@ -77,6 +77,8 @@ export function DataGrid<T,>({
   const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
   const curPage = Math.min(page, pageCount);
   const visible = paged ? sorted.slice((curPage - 1) * pageSize, curPage * pageSize) : sorted;
+  // 0613：操作列固定右侧——识别 header 为「操作」的列，给其 th/td 加 sticky 类
+  const opIdx = columns.findIndex((c) => c.header === '操作');
 
   return (
     <>
@@ -87,7 +89,7 @@ export function DataGrid<T,>({
               {columns.map((c, i) => (
                 <th
                   key={i}
-                  className={c.sortValue ? 'sortable' + (sortIdx === i ? ' ' + dir : '') : undefined}
+                  className={[c.sortValue ? 'sortable' + (sortIdx === i ? ' ' + dir : '') : '', i === opIdx ? 'dg-op' : ''].filter(Boolean).join(' ') || undefined}
                   onClick={() => clickSort(i)}
                 >
                   {c.header}
@@ -105,7 +107,7 @@ export function DataGrid<T,>({
             {visible.map((row, ri) => (
               <tr key={ri}>
                 {columns.map((c, ci) => (
-                  <td key={ci} className={c.className}>
+                  <td key={ci} className={[c.className || '', ci === opIdx ? 'dg-op' : ''].filter(Boolean).join(' ') || undefined}>
                     {c.cell(row)}
                   </td>
                 ))}

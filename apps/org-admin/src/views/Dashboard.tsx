@@ -89,6 +89,20 @@ export function Dashboard() {
             <Icon id="i-user" w={16} h={16} />
           </div>
         </div>
+        <div className="kpi">
+          <div className="lab">
+            累计退款 / 退款率
+            <InfoDot text="历史累计已成功退款金额；退款率 = 退款金额 ÷ GMV。GMV 已扣减退款。统计区间：开通至今。" />
+          </div>
+          <div className="val">
+            <span className="u">¥</span>
+            {n(1860)}
+            <span style={{ fontSize: 13, color: 'var(--ink-3)', fontWeight: 400, marginLeft: 6 }}>· 2.1%</span>
+          </div>
+          <div className="ic" style={{ background: 'rgba(229,83,59,.12)', color: 'var(--terra)' }}>
+            <Icon id="i-dl" w={16} h={16} />
+          </div>
+        </div>
       </div>
 
       {/* 经营分析（随时间筛选联动） */}

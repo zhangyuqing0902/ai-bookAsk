@@ -3,14 +3,21 @@ import { persist } from 'zustand/middleware';
 import type { Conversation, Order, Role, User } from './types';
 import { DEFAULT_ORG_ID, ORGS, KPS, SEED_CONVERSATIONS, SEED_ORDERS } from './data';
 
-const buildUser = (orgId: string, role: Role): User => {
+const buildUser = (orgId: string, role: Role, phoneBound = true): User => {
   const base: User = {
     id: 'user_demo',
     orgId,
     openId: 'wx_demo_open_id_xxxx',
-    phone: role === 'guest' ? undefined : '138****1234',
-    nickname: '姐姐',
+    phone: role === 'guest' || !phoneBound ? undefined : '138****1234',
+    nickname: '微信昵称A',
     avatar: undefined,
+    gender: 'female',
+    region: '上海市 · 浦东新区',
+    bookGrants: [
+      { kpId: 'kp_cardio', scannedAt: '2026-05-20', grant: 'member' },
+      { kpId: 'kp_endo', scannedAt: '2026-04-08', grant: 'member' },
+      { kpId: 'kp_xie', scannedAt: '2026-02-15', grant: 'forever' },
+    ],
     membership: { userId: 'user_demo', orgId, state: 'none', autoRenew: false },
     permanentGrants: [],
   };
@@ -47,11 +54,19 @@ interface DemoStore {
   // 演示开关
   paymentSetting: PaymentSetting;
   showDemoConsole: boolean;
+  // 0613 登录演示：浏览器环境（微信内 / 非微信）+ 手机号绑定态
+  wechatEnv: boolean;
+  phoneBound: boolean;
   // 操作
   setRole: (r: Role) => void;
   setOrg: (orgId: string) => void;
   setPaymentSetting: (s: Partial<PaymentSetting>) => void;
   toggleDemoConsole: () => void;
+  setWechatEnv: (v: boolean) => void;
+  wechatLogin: () => void;
+  phoneLogin: () => void;
+  bindPhone: () => void;
+  updateProfile: (patch: Partial<Pick<User, 'gender' | 'region' | 'avatar' | 'nickname'>>) => void;
   resetAll: () => void;
   // 业务操作
   upsertConversation: (c: Conversation) => void;
@@ -67,24 +82,63 @@ interface DemoStore {
 const initialState = (role: Role = 'free', orgId: string = DEFAULT_ORG_ID) => ({
   role,
   orgId,
-  user: buildUser(orgId, role),
+  user: buildUser(orgId, role, true),
   conversations: SEED_CONVERSATIONS,
   orders: SEED_ORDERS,
   paymentSetting: { result: 'success' as const, delayMs: 2400 },
   showDemoConsole: true,
+  wechatEnv: true,
+  phoneBound: true,
 });
 
 export const useDemoStore = create<DemoStore>()(
   persist(
     (set, get) => ({
       ...initialState(),
-      setRole: (role) =>
-        set({ role, user: buildUser(get().orgId, role) }),
+      setRole: (role) => {
+        const s = get();
+        const fresh = buildUser(s.orgId, role, s.phoneBound);
+        // 仅按角色切换会员 / 永享，保留身份信息（微信 / 手机号 / 昵称 / 头像 / 性别 / 地区 / 纸书）
+        set({
+          role,
+          user: {
+            ...fresh,
+            openId: s.user.openId,
+            phone: s.user.phone,
+            nickname: s.user.nickname,
+            avatar: s.user.avatar,
+            gender: s.user.gender,
+            region: s.user.region,
+            bookGrants: s.user.bookGrants,
+          },
+        });
+      },
       setOrg: (orgId) =>
-        set({ orgId, user: buildUser(orgId, get().role) }),
+        set({ orgId, user: buildUser(orgId, get().role, get().phoneBound) }),
       setPaymentSetting: (s) =>
         set({ paymentSetting: { ...get().paymentSetting, ...s } }),
       toggleDemoConsole: () => set({ showDemoConsole: !get().showDemoConsole }),
+      setWechatEnv: (v) => set({ wechatEnv: v }),
+      // 微信授权成功：带回头像 / 昵称 / 性别 / 地区；手机号未绑（H5 无法获取手机号）
+      wechatLogin: () =>
+        set((s) => ({
+          phoneBound: false,
+          user: {
+            ...s.user,
+            openId: 'wx_demo_open_id_xxxx',
+            nickname: '微信昵称A',
+            gender: 'female',
+            region: '上海市 · 浦东新区',
+            phone: undefined,
+          },
+        })),
+      // 手机号验证码登录：不获取 / 绑定微信信息
+      phoneLogin: () =>
+        set((s) => ({ phoneBound: true, user: { ...s.user, openId: undefined, phone: '138****1234' } })),
+      // 绑定 / 换绑手机号成功
+      bindPhone: () =>
+        set((s) => ({ phoneBound: true, user: { ...s.user, phone: '138****1234' } })),
+      updateProfile: (patch) => set((s) => ({ user: { ...s.user, ...patch } })),
       resetAll: () => set(initialState(get().role, get().orgId)),
       upsertConversation: (c) =>
         set({
@@ -145,7 +199,8 @@ export const useDemoStore = create<DemoStore>()(
     }),
     {
       name: 'aba-demo',
-      version: 1,
+      // 0613：User 结构新增 gender/region/bookGrants 与登录演示开关，bump 版本以重置过期持久态
+      version: 2,
     },
   ),
 );

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@aba/ui';
+import { usePhoneGate } from '../usePhoneGate';
 
-// 11 开通会员（两档互斥，无年付）
+// 11 开通会员（两档互斥，无年付）。0613：充值会员前校验手机号绑定。
 export function Member() {
   const nav = useNavigate();
+  const { guard, gate } = usePhoneGate();
   const [plan, setPlan] = useState(0);
   const amount = plan === 0 ? '9.9' : '19.9';
   const pay = () => {
@@ -65,7 +67,7 @@ export function Member() {
                   已阅读并同意<a href="#">《自动续费协议》</a>
                 </span>
               </div>
-              <button className="btn btn-amber" style={{ width: '100%', justifyContent: 'center', padding: 14 }} onClick={pay}>
+              <button className="btn btn-amber" style={{ width: '100%', justifyContent: 'center', padding: 14 }} onClick={guard(pay)}>
                 立即开通
               </button>
               <div className="grace-note">可随时退订 · 到期前 72h 宽限期</div>
@@ -73,6 +75,7 @@ export function Member() {
           </div>
         </div>
       </div>
+      {gate}
     </>
   );
 }

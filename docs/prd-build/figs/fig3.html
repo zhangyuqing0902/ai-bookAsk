@@ -1,0 +1,32 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'PingFang SC','Noto Sans SC',system-ui,-apple-system,'Microsoft YaHei',sans-serif;background:#fff;color:#14182a;-webkit-font-smoothing:antialiased}
+.wrap{display:inline-block;padding:30px 32px;background:#fff;min-width:200px}
+.fig-title{font-size:20px;font-weight:800;margin:0 0 4px;letter-spacing:.3px}
+.fig-sub{font-size:13px;color:#9aa0b4;margin:0 0 22px}
+.layer{display:flex;align-items:stretch;gap:14px;margin-bottom:13px}
+.layer-label{flex:0 0 104px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:13px;font-weight:700;color:#3730a3;background:#eef0fb;border-radius:10px;padding:8px 6px;line-height:1.4}
+.layer-body{flex:1;display:flex;gap:12px}
+.lb-box{flex:1;border:1.5px solid #e3e5ee;border-radius:12px;padding:13px 15px;background:#fff}
+.lb-box.full{flex:1}
+.lb-box .t{font-weight:700;font-size:14.5px}
+.lb-box .s{font-size:12px;color:#5b6178;margin-top:5px;line-height:1.6}
+.lb-box .port{font-size:11px;color:#4f46e5;font-weight:700;font-family:'DM Mono',ui-monospace,monospace;margin-left:6px}
+.accent-i{border-left:5px solid #4f46e5!important}
+.accent-a{border-left:5px solid #ff7a5c!important}
+.accent-j{border-left:5px solid #15b080!important}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;max-width:1110px}
+.step{position:relative;border:1.5px solid #e3e5ee;border-radius:12px;padding:11px 13px;background:#fff;width:158px;margin:7px 0;display:flex;flex-direction:column;justify-content:center}
+.step .st-t{font-weight:700;font-size:13.5px;line-height:1.35}
+.step .st-s{font-size:11.5px;color:#5b6178;margin-top:4px;line-height:1.5}
+.conn{display:flex;align-items:center;color:#c2c7ee;font-size:20px;font-weight:800;padding:0 7px}
+.legend{margin-top:20px;font-size:12px;color:#5b6178;display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:7px;vertical-align:middle}
+.note{margin-top:16px;font-size:12px;color:#5b6178;background:#f6f7fb;border-radius:8px;padding:11px 13px;max-width:1040px;line-height:1.65}
+.note b{color:#14182a}
+.rel{margin-top:18px;font-size:12.5px;color:#5b6178;line-height:1.95;max-width:1240px;columns:2;column-gap:40px}
+.rel b{color:#3730a3}
+
+  .wrap{width:1180px}</style></head><body><div class="wrap">
+  <div class="fig-title">图 3 · 关键旅程 A：C 端读者「扫码 → 提问 → 付费 → 解锁」</div><div class="fig-sub">前台 H5 金链条；决策点以橙色标注</div>
+  <div class="flow"><div class="step accent-i"><div class="st-t">扫码 / 链接进入</div><div class="st-s">带 KP 标识</div></div><div class="conn">›</div><div class="step"><div class="st-t">落地页</div><div class="st-s">icon + slogan + 登录</div></div><div class="conn">›</div><div class="step accent-a"><div class="st-t">微信授权 / 手机号登录</div><div class="st-s">游客可只读浏览</div></div><div class="conn">›</div><div class="step"><div class="st-t">绑定 / 合并手机号</div><div class="st-s">可「暂不绑定」</div></div><div class="conn">›</div><div class="step"><div class="st-t">AI 会话页</div><div class="st-s">Agent 形象 + 3 条入门示例</div></div><div style="flex-basis:100%;height:0"></div><div class="step"><div class="st-t">输入提问</div><div class="st-s">文字 / 语音；深度思考·智能搜索开关</div></div><div class="conn">›</div><div class="step"><div class="st-t">流式答案</div><div class="st-s">打字机 + 多模态卡 + 溯源 + 追问</div></div><div class="conn">›</div><div class="step accent-a"><div class="st-t">点受限内容锁</div><div class="st-s">会员视频 / 永享音频</div></div><div class="conn">›</div><div class="step accent-a"><div class="st-t">付费墙</div><div class="st-s">会员 / 永享 / 兑换码</div></div><div class="conn">›</div><div class="step"><div class="st-t">微信支付过场</div><div class="st-s">收银台确认</div></div><div style="flex-basis:100%;height:0"></div><div class="step"><div class="st-t">支付成功页</div><div class="st-s">品牌质感对勾</div></div><div class="conn">›</div><div class="step accent-j"><div class="st-t">返回原会话 · 解锁</div><div class="st-s">锁标消失，权益即时生效</div></div><div class="conn">›</div><div class="step"><div class="st-t">我的</div><div class="st-s">会员中心 / 永享 / 订单 / 历史</div></div><div class="conn">›</div><div class="step accent-i"><div class="st-t">实时电话语音</div><div class="st-s">会员专属</div></div></div><div class="note"><b>权益即时性：</b>支付成功写入会员权益或永享授权后，返回的正是发起支付的那个会话（非新会话），同一张卡片锁标立即消失。<b>游客补发：</b>未登录时输入的问题，登录成功后自动补发并触发回答。</div></div></body></html>

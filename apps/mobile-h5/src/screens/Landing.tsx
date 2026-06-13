@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
+import { useDemoStore } from '@aba/mock';
 
 // 1 登录落地页：知识核动效 + 名称 + slogan + 机构来源 + 协议勾选
+// 0613：按打开环境分流微信登录——微信内 → 官方授权弹窗；浏览器 → 扫码授权页。
 export function Landing() {
   const nav = useNavigate();
   const [agreed, setAgreed] = useState(false);
+  const wechatEnv = useDemoStore((s) => s.wechatEnv);
+  const setWechatEnv = useDemoStore((s) => s.setWechatEnv);
 
   const guard = (fn: () => void) => () => {
     if (!agreed) {
@@ -14,7 +18,7 @@ export function Landing() {
     }
     fn();
   };
-  const wechat = guard(() => nav('/login/wechat-auth'));
+  const wechat = guard(() => nav(wechatEnv ? '/login/wechat-auth' : '/login/wechat-scan'));
 
   return (
     <div className="lg lg-landing">
@@ -61,7 +65,14 @@ export function Landing() {
             <a onClick={(e) => { e.stopPropagation(); nav('/agreement/privacy'); }}>《隐私政策》</a>
           </span>
         </div>
-        {/* 0610：移除「在浏览器中打开？扫码登录」入口，外部浏览器扫码授权场景仅在功能清单保留说明 */}
+        {/* 演示环境切换：放在协议下方、不抢主流程；明确标注仅演示用，避免业务方误会为上线功能 */}
+        <div className="env-demo">
+          <span className="env-demo-tag">仅用于演示 · 环境切换（非上线功能）</span>
+          <div className="env-seg">
+            <b className={wechatEnv ? 'on' : ''} onClick={() => setWechatEnv(true)}>微信内打开</b>
+            <b className={!wechatEnv ? 'on' : ''} onClick={() => setWechatEnv(false)}>浏览器打开</b>
+          </div>
+        </div>
       </div>
     </div>
   );

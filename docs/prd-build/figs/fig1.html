@@ -1,0 +1,69 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'PingFang SC','Noto Sans SC',system-ui,-apple-system,'Microsoft YaHei',sans-serif;background:#fff;color:#14182a;-webkit-font-smoothing:antialiased}
+.wrap{display:inline-block;padding:30px 32px;background:#fff;min-width:200px}
+.fig-title{font-size:20px;font-weight:800;margin:0 0 4px;letter-spacing:.3px}
+.fig-sub{font-size:13px;color:#9aa0b4;margin:0 0 22px}
+.layer{display:flex;align-items:stretch;gap:14px;margin-bottom:13px}
+.layer-label{flex:0 0 104px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:13px;font-weight:700;color:#3730a3;background:#eef0fb;border-radius:10px;padding:8px 6px;line-height:1.4}
+.layer-body{flex:1;display:flex;gap:12px}
+.lb-box{flex:1;border:1.5px solid #e3e5ee;border-radius:12px;padding:13px 15px;background:#fff}
+.lb-box.full{flex:1}
+.lb-box .t{font-weight:700;font-size:14.5px}
+.lb-box .s{font-size:12px;color:#5b6178;margin-top:5px;line-height:1.6}
+.lb-box .port{font-size:11px;color:#4f46e5;font-weight:700;font-family:'DM Mono',ui-monospace,monospace;margin-left:6px}
+.accent-i{border-left:5px solid #4f46e5!important}
+.accent-a{border-left:5px solid #ff7a5c!important}
+.accent-j{border-left:5px solid #15b080!important}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;max-width:1110px}
+.step{position:relative;border:1.5px solid #e3e5ee;border-radius:12px;padding:11px 13px;background:#fff;width:158px;margin:7px 0;display:flex;flex-direction:column;justify-content:center}
+.step .st-t{font-weight:700;font-size:13.5px;line-height:1.35}
+.step .st-s{font-size:11.5px;color:#5b6178;margin-top:4px;line-height:1.5}
+.conn{display:flex;align-items:center;color:#c2c7ee;font-size:20px;font-weight:800;padding:0 7px}
+.legend{margin-top:20px;font-size:12px;color:#5b6178;display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:7px;vertical-align:middle}
+.note{margin-top:16px;font-size:12px;color:#5b6178;background:#f6f7fb;border-radius:8px;padding:11px 13px;max-width:1040px;line-height:1.65}
+.note b{color:#14182a}
+.rel{margin-top:18px;font-size:12.5px;color:#5b6178;line-height:1.95;max-width:1240px;columns:2;column-gap:40px}
+.rel b{color:#3730a3}
+
+  .wrap{width:1180px}</style></head><body><div class="wrap">
+  <div class="fig-title">图 1 · 三端业务架构</div><div class="fig-sub">AI 问书 围绕「内容资产 → 知识变现」的三端业务全景</div>
+  
+<div class="layer">
+  <div class="layer-label">使用者</div>
+  <div class="layer-body">
+    <div class="lb-box accent-i"><div class="t">C 端读者</div><div class="s">扫书后封底二维码 / 链接进入，向书提问</div></div>
+    <div class="lb-box accent-i"><div class="t">机构运营</div><div class="s">出版社编辑 / 运营 / 客服 / 财务</div></div>
+    <div class="lb-box accent-i"><div class="t">平台超管</div><div class="s">平台运营方，统管机构与大模型</div></div>
+  </div>
+</div>
+<div class="layer">
+  <div class="layer-label">三端应用</div>
+  <div class="layer-body">
+    <div class="lb-box accent-j"><div class="t">机构前台 H5</div><div class="s">AI 问答 · 多模态答案 · 内容溯源 · 付费墙 · 会员 / 永享 · 实时语音</div></div>
+    <div class="lb-box accent-j"><div class="t">机构后台</div><div class="s">内容 KP 化 · Agent 人设 · 知识库 · 定价权益 · 二维码 · 经营看板 · 用户管理</div></div>
+    <div class="lb-box accent-j"><div class="t">平台超管</div><div class="s">机构管理 · 账户与角色 · 大模型配置 · 数据中心 · 全局策略</div></div>
+  </div>
+</div>
+<div class="layer">
+  <div class="layer-label">业务能力</div>
+  <div class="layer-body">
+    <div class="lb-box full"><div class="t">支撑三端的核心业务能力</div><div class="s">AI 智能问答　·　知识库检索与溯源　·　内容变现（会员订阅 / 永享买断 / 兑换码）　·　二维码触达与绑定　·　数据经营与看板　·　Agent 人设　·　多机构与上下级管理</div></div>
+  </div>
+</div>
+<div class="layer">
+  <div class="layer-label">业务闭环</div>
+  <div class="layer-body">
+    <div class="lb-box full accent-a"><div class="t">内容变现价值流</div><div class="s">内容资产　→　KP 化加工　→　二维码触达读者　→　AI 问答互动　→　触发付费转化　→　机构收益（资金直达机构账户）</div></div>
+  </div>
+</div>
+<div class="layer">
+  <div class="layer-label">外部协作</div>
+  <div class="layer-body">
+    <div class="lb-box"><div class="t">微信</div><div class="s">登录授权 · 微信支付</div></div>
+    <div class="lb-box"><div class="t">大模型 LLM</div><div class="s">平台默认 / 机构自配</div></div>
+    <div class="lb-box"><div class="t">联网检索</div><div class="s">受机构联网开关约束</div></div>
+  </div>
+</div>
+</div></body></html>

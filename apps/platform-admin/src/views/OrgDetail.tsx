@@ -3,8 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Dropdown, TextInput, InfoDot, pickFile, ACCEPT } from '@aba/ui-admin';
 
-const TABS = ['基本资料', '机构配置', '用量看板'];
-const SUBTABS = ['LLM 配置', '联网配置', '微信支付'];
+const TABS = ['基本资料', '机构配置', '用量看板', '品牌外观'];
+const SUBTABS = ['LLM 配置', '联网配置', '微信配置'];
+
+// 0613：机构套餐预设（KP 数 / 存储 GB / 月度 Token），定制版手填
+const PLANS: Record<string, { kp: string; storage: string; token: string }> = {
+  基础版: { kp: '10', storage: '20', token: '5000万' },
+  专业版: { kp: '50', storage: '100', token: '2亿' },
+  旗舰版: { kp: '200', storage: '500', token: '10亿' },
+  定制版: { kp: '', storage: '', token: '' },
+};
 
 // 13.6:用量看板卡片(顶部色条 + 标题 + 指标行分隔 + 数值强调)
 function UsageCard({ title, rows }: { title: string; rows: [string, string, string][] }) {
@@ -35,6 +43,10 @@ export function OrgDetail() {
   const [tab, setTab] = useState(0);
   const [sub, setSub] = useState(0);
   const [net, setNet] = useState(true);
+  const [plan, setPlan] = useState('专业版');
+  const [quota, setQuota] = useState(PLANS['专业版']);
+  const [primary, setPrimary] = useState('#4B57E8');
+  const [secondary, setSecondary] = useState('#8B6CF6');
 
   return (
     <>
@@ -74,6 +86,35 @@ export function OrgDetail() {
           <div className="fm-row">
             <div className="lab">备注</div>
             <div className="ctl"><TextInput placeholder="选填" style={{ maxWidth: 420 }} /></div>
+          </div>
+          <div className="fm-row">
+            <div className="lab">套餐</div>
+            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Dropdown label={plan} options={['基础版', '专业版', '旗舰版', '定制版']} onSelect={(v) => { setPlan(v); if (PLANS[v] && v !== '定制版') setQuota(PLANS[v]); }} style={{ width: 180 }} />
+              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>选套餐一键填充下方配额，可手动微调</span>
+            </div>
+          </div>
+          <div className="fm-row">
+            <div className="lab">KP 数量上限</div>
+            <div className="ctl"><TextInput value={quota.kp} onChange={(e) => setQuota({ ...quota, kp: e.target.value })} placeholder="不限填 0" style={{ maxWidth: 160 }} /></div>
+          </div>
+          <div className="fm-row">
+            <div className="lab">存储空间上限</div>
+            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <TextInput value={quota.storage} onChange={(e) => setQuota({ ...quota, storage: e.target.value })} style={{ maxWidth: 120 }} />
+              <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>GB（累计上限）</span>
+            </div>
+          </div>
+          <div className="fm-row">
+            <div className="lab">月度 Token 额度</div>
+            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <TextInput value={quota.token} onChange={(e) => setQuota({ ...quota, token: e.target.value })} placeholder="如 2亿" style={{ maxWidth: 160 }} />
+              <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>按计费周期（月）重置</span>
+            </div>
+          </div>
+          <div className="fm-row">
+            <div className="lab">服务有效期</div>
+            <div className="ctl"><TextInput defaultValue="2026-06-01 至 2027-05-31" style={{ maxWidth: 280 }} /></div>
           </div>
           <div className="fm-row">
             <div className="lab">状态</div>
@@ -142,11 +183,28 @@ export function OrgDetail() {
             {sub === 2 && (
               <>
                 <div className="fh">
-                  微信支付 <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 13 }}>当前状态 </span>
-                  <span className="tag-s tag-indigo">已配置</span>
+                  微信配置 <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 13 }}>用于微信登录 / 网页授权 / 支付 / 退款 / 自动续费</span>
+                </div>
+                {/* 微信公众号：微信登录 + 网页授权获取头像/昵称/性别/地区 */}
+                <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', margin: '8px 0 2px' }}>微信公众号</div>
+                <div className="fm-row">
+                  <div className="lab">公众号 AppID</div>
+                  <div className="ctl"><TextInput defaultValue="wx0123456789abcdef" style={{ maxWidth: 320 }} /></div>
                 </div>
                 <div className="fm-row">
-                  <div className="lab">商户号</div>
+                  <div className="lab">AppSecret</div>
+                  <div className="ctl"><TextInput defaultValue="••••••••••••••6c2e" style={{ maxWidth: 320 }} /></div>
+                </div>
+                <div className="fm-row">
+                  <div className="lab">网页授权回调域名</div>
+                  <div className="ctl"><TextInput defaultValue="ai-book-ask-mobile-h5.zhangyuqing.top" style={{ maxWidth: 380 }} /></div>
+                </div>
+                {/* 微信支付：支付 / 退款 / 自动续费 */}
+                <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', margin: '14px 0 2px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  微信支付 <span className="tag-s tag-indigo">已配置</span>
+                </div>
+                <div className="fm-row">
+                  <div className="lab">商户号 MchID</div>
                   <div className="ctl"><TextInput defaultValue="1900012345" style={{ maxWidth: 320 }} /></div>
                 </div>
                 <div className="fm-row">
@@ -154,17 +212,19 @@ export function OrgDetail() {
                   <div className="ctl"><TextInput defaultValue="••••••••••••3a7f" style={{ maxWidth: 320 }} /></div>
                 </div>
                 <div className="fm-row">
-                  <div className="lab">证书</div>
+                  <div className="lab">商户证书</div>
                   <div className="ctl">
-                    {/* 13.5:上传按钮加宽(文案不溢出)+ 保存按钮放其下方、与之左对齐 */}
                     <div className="upbox" style={{ maxWidth: 360 }} onClick={() => pickFile(ACCEPT.cert, (n) => toast('已选择 ' + n))}>
                       <Icon id="i-up" />
                       <div className="nowrap">apiclient_cert.pem（已上传 · 点击替换）</div>
                     </div>
-                    <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => toast('已保存')}>
-                      保存
-                    </button>
                   </div>
+                </div>
+                <div className="hint" style={{ margin: '6px 0 12px' }}>提示：公众号 AppID 需与商户号建立绑定关系（JSAPI 支付 / 退款的前置条件）。</div>
+                <div>
+                  <button className="btn btn-primary btn-sm" onClick={() => toast('已保存微信配置')}>
+                    保存
+                  </button>
                 </div>
               </>
             )}
@@ -209,6 +269,56 @@ export function OrgDetail() {
               ['平均响应', '1.8s', '单次调用首字返回平均耗时。统计区间：近 7 天。'],
             ]}
           />
+          <UsageCard
+            title="配额用量（已用 / 上限）"
+            rows={[
+              ['KP 数', '30 / 50', '已创建 KP 数 / 套餐 KP 上限，接近上限将预警。'],
+              ['存储', '62 / 100 GB', '已用存储 / 套餐存储上限（累计）。'],
+              ['本月 Token', '1.2亿 / 2亿', '本计费周期已用 Token / 月度额度，按月重置。'],
+            ]}
+          />
+        </div>
+      )}
+
+      {tab === 3 && (
+        <div className="fm-card">
+          <div className="fm-row" style={{ borderTop: 'none' }}>
+            <div className="lab">机构 Logo</div>
+            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: `linear-gradient(135deg,${primary},${secondary})` }} />
+              <button className="btn btn-ghost btn-sm" onClick={() => pickFile(ACCEPT.image, () => toast('已上传 Logo · 已智能取色'))}>
+                <Icon id="i-up" w={14} h={14} />
+                上传 Logo（智能取色）
+              </button>
+            </div>
+          </div>
+          <div className="fm-row">
+            <div className="lab">主视觉色</div>
+            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input type="color" value={primary} onChange={(e) => setPrimary(e.target.value)} style={{ width: 42, height: 30, border: 'none', background: 'none', cursor: 'pointer' }} />
+              <span className="mono" style={{ fontSize: 13 }}>{primary}</span>
+            </div>
+          </div>
+          <div className="fm-row">
+            <div className="lab">辅助视觉色</div>
+            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input type="color" value={secondary} onChange={(e) => setSecondary(e.target.value)} style={{ width: 42, height: 30, border: 'none', background: 'none', cursor: 'pointer' }} />
+              <span className="mono" style={{ fontSize: 13 }}>{secondary}</span>
+            </div>
+          </div>
+          <div className="fm-row">
+            <div className="lab">渐变预览</div>
+            <div className="ctl">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', background: `radial-gradient(120% 120% at 30% 25%,#fff,rgba(255,255,255,0) 42%),linear-gradient(150deg,${primary},${secondary})` }} />
+                <div style={{ flex: 1, maxWidth: 320, height: 36, borderRadius: 10, background: `linear-gradient(90deg,${primary},${secondary})` }} />
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 8 }}>主→辅渐变将应用于该机构前台品牌球、主强调色与机构后台主色（原型先落前台品牌球 + 主强调色，全量主题化作后续）。</div>
+            </div>
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <button className="btn btn-primary btn-sm" onClick={() => toast('已保存品牌外观')}>保存</button>
+          </div>
         </div>
       )}
     </>

@@ -9,6 +9,7 @@ import { GlobalUsers } from './views/GlobalUsers';
 import { GlobalUserDetail } from './views/GlobalUserDetail';
 import { GlobalOrders } from './views/GlobalOrders';
 import { GlobalOrderDetail } from './views/GlobalOrderDetail';
+import { GlobalKps } from './views/GlobalKps';
 import { ModelUsage } from './views/ModelUsage';
 import { DefaultLlm } from './views/DefaultLlm';
 import { Roles } from './views/Roles';
@@ -28,6 +29,7 @@ const NAV: NavGroup[] = [
     items: [
       { to: '/users', label: '全域用户', icon: 'i-user' },
       { to: '/orders', label: '全域订单', icon: 'i-doc' },
+      { to: '/global-kps', label: '全域 KP', icon: 'i-cube' },
       { to: '/model', label: '模型用量', icon: 'i-chip' },
     ],
   },
@@ -50,6 +52,7 @@ const TITLES: Record<string, string> = {
   '/users/': '用户详情',
   '/orders': '全域订单',
   '/orders/': '订单详情',
+  '/global-kps': '全域 KP',
   '/model': '模型用量',
   '/llm': '默认 LLM 模型配置',
   '/roles': '角色权限',
@@ -89,6 +92,7 @@ export function App() {
           <Route path="/users/:id" element={<GlobalUserDetail />} />
           <Route path="/orders" element={<GlobalOrders />} />
           <Route path="/orders/:id" element={<GlobalOrderDetail />} />
+          <Route path="/global-kps" element={<GlobalKps />} />
           <Route path="/model" element={<ModelUsage />} />
           <Route path="/llm" element={<DefaultLlm />} />
           <Route path="/roles" element={<Roles />} />

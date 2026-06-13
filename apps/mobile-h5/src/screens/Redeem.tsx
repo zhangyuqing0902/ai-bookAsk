@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
+import { usePhoneGate } from '../usePhoneGate';
 
-// 15 兑换码（手输 + 拍照 OCR）
+// 15 兑换码（手输 + 拍照 OCR）。0613：核销前校验手机号绑定。
 export function Redeem() {
   const nav = useNavigate();
+  const { guard, gate } = usePhoneGate();
   const [code, setCode] = useState('');
+  const doRedeem = () => (code.trim() ? toast('兑换成功 · 会员已到账') : toast('请先输入兑换码'));
   return (
     <>
       <div className="h5-top">
@@ -31,7 +34,9 @@ export function Redeem() {
                 value={code}
                 autoFocus
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && code.trim() && toast('兑换成功 · 会员已到账')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && code.trim()) guard(doRedeem)();
+                }}
               />
               <div className="cam tap" onClick={() => toast('调起相机 / 相册')}>
                 <Icon id="i-camera" />
@@ -40,7 +45,7 @@ export function Redeem() {
             <button
               className="btn btn-primary"
               style={{ width: '100%', justifyContent: 'center', padding: 14, opacity: code.trim() ? 1 : 0.5 }}
-              onClick={() => (code.trim() ? toast('兑换成功 · 会员已到账') : toast('请先输入兑换码'))}
+              onClick={guard(doRedeem)}
             >
               立即兑换
             </button>
@@ -48,6 +53,7 @@ export function Redeem() {
           </div>
         </div>
       </div>
+      {gate}
     </>
   );
 }

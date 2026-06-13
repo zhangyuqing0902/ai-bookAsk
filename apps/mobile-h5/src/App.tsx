@@ -14,6 +14,8 @@ import { Member } from './screens/Member';
 import { MemberCenter } from './screens/MemberCenter';
 import { My } from './screens/My';
 import { Yongxiang } from './screens/Yongxiang';
+import { MyBooks } from './screens/MyBooks';
+import { Profile } from './screens/Profile';
 import { Redeem } from './screens/Redeem';
 import { Orders } from './screens/Orders';
 import { OrderDetail } from './screens/OrderDetail';
@@ -49,6 +51,8 @@ function Shell() {
           <Route path="/member/center" element={<MemberCenter />} />
           <Route path="/me" element={<My />} />
           <Route path="/me/yongxiang" element={<Yongxiang />} />
+          <Route path="/me/books" element={<MyBooks />} />
+          <Route path="/me/profile" element={<Profile />} />
           <Route path="/me/redeem" element={<Redeem />} />
           <Route path="/me/orders" element={<Orders />} />
           <Route path="/me/orders/:id" element={<OrderDetail />} />

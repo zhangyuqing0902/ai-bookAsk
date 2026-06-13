@@ -3,13 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 import { MediaView, type MediaItem } from '@aba/ui-admin';
 import { AORDERS } from '../data/orders';
+import { useRefundStore } from '../refundStore';
 
-// 机构后台 · 订单详情（共性基础信息 + 类型个性化信息）
+// 机构后台 · 订单详情（共性基础信息 + 类型个性化信息）。0613：退款状态 + 退款时间线。
 export function OrderDetail() {
   const nav = useNavigate();
   const { id } = useParams();
   const [preview, setPreview] = useState<MediaItem | null>(null);
   const o = AORDERS.find((x) => x.id === id);
+  const rf = useRefundStore((s) => (o ? s.refunds[o.id] : undefined));
 
   return (
     <>
@@ -49,11 +51,36 @@ export function OrderDetail() {
             <Row k="支付方式" v={o.payMethod} />
             {/* 9.4:会员订单在支付方式下方标识续费方式 */}
             {o.type === '会员' && <Row k="续费方式" v={o.autoRenew ? '自动续费' : '手动支付'} />}
-            <Row k="订单状态" v={o.status} />
+            <Row k="订单状态" v={rf ? rf.status : o.status} />
             <Row k="用户" v={o.user} mono />
             <Row k="下单时间" v={o.orderTime} mono />
             <Row k="付款时间" v={o.payTime} mono />
           </div>
+
+          {rf && (
+            <div className="fm-card">
+              <div className="fh">退款信息</div>
+              <Row k="退款状态" v={rf.status} />
+              <Row k="已退金额" v={'¥' + rf.refundedAmount.toFixed(2)} mono />
+              <Row k="退回账户" v={rf.account} />
+              <div className="fm-row" style={{ alignItems: 'flex-start' }}>
+                <div className="lab">退款时间线</div>
+                <div className="ctl">
+                  <div className="rf-timeline">
+                    {rf.timeline.map((e, i) => (
+                      <div className="rf-ev" key={i}>
+                        <span className="rf-dot" />
+                        <div>
+                          <div className="rf-label">{e.label}</div>
+                          <div className="rf-time mono">{e.time}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {o.type === '会员' && (
             <div className="fm-card">

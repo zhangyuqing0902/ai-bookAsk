@@ -11,7 +11,7 @@ export function AgentDetail() {
   // #16:Agent 类型为只读属性。用户创建/编辑的均为普通;机构 Agent 由平台初始化(此处演示普通)
   // 注:此处为 mock 固定值,真实场景由 agent.type 决定;用 string 避免字面量收窄导致比较告警
   const agentType: string = '普通';
-  const [crop, setCrop] = useState<null | 'avatar' | 'form'>(null);
+  const [crop, setCrop] = useState<null | 'avatar'>(null);
   // 8.3:TTS 参考音 —— 未上传显示上传按钮,已上传显示播放条(本页默认演示已上传效果)
   const [ttsUploaded, setTtsUploaded] = useState(!isNew);
   const [ttsPlaying, setTtsPlaying] = useState(false);
@@ -39,16 +39,6 @@ export function AgentDetail() {
               <button className="btn btn-ghost btn-sm" onClick={() => pickFile(ACCEPT.image, () => setCrop('avatar'))}>
                 <Icon id="i-up" w={14} h={14} />
                 上传 png/gif/jpg
-              </button>
-            </div>
-          </div>
-          <div className="fm-row">
-            <div className="lab">形象图 9:16</div>
-            <div className="ctl ae-up">
-              <div className="ae-form9" />
-              <button className="btn btn-ghost btn-sm" onClick={() => pickFile(ACCEPT.image, () => setCrop('form'))}>
-                <Icon id="i-up" w={14} h={14} />
-                上传形象图
               </button>
             </div>
           </div>
@@ -122,21 +112,11 @@ export function AgentDetail() {
               </span>
             </div>
           </div>
-          <div className="card card-pad">
-            <div className="block-t">
-              AI 会话引导问题示例 <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 13 }}>系统按关联 KP 动态展示</span>
-            </div>
-            <div style={{ lineHeight: 2, fontSize: 13, color: 'var(--ink-2)' }}>
-              · 冠脉造影前抗凝怎么管?
-              <br />· 心衰一线利尿怎么选?
-              <br />· 第 4 章重点是什么?
-            </div>
-          </div>
         </div>
       </div>
 
       <Modal
-        title={crop === 'avatar' ? '裁剪头像' : '裁剪形象图（9:16）'}
+        title="裁剪头像"
         open={!!crop}
         onClose={() => setCrop(null)}
         width={420}
@@ -148,10 +128,10 @@ export function AgentDetail() {
         }
       >
         <div className="crop-box">
-          <div className="frame" style={crop === 'avatar' ? { inset: '40px 110px', borderRadius: '50%' } : undefined} />
+          <div className="frame" style={{ inset: '40px 110px', borderRadius: '50%' }} />
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center' }}>
-          拖动调整裁剪区域 · {crop === 'avatar' ? '输出圆形头像' : '输出 9:16 形象图'}
+          拖动调整裁剪区域 · 输出圆形头像
         </div>
       </Modal>
     </>

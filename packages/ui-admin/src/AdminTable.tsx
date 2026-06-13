@@ -52,6 +52,20 @@ function sortTable(th: HTMLElement) {
   rows.forEach((r) => tb.appendChild(r));
 }
 
+// 0613：操作列固定右侧——给 header 文本为「操作」的列 th/td 加 sticky 类
+function stickyOpColumn(root: HTMLElement) {
+  root.querySelectorAll('table.tbl').forEach((table) => {
+    const ths = [...table.querySelectorAll('thead th')] as HTMLElement[];
+    const opIdx = ths.findIndex((th) => (th.textContent || '').trim() === '操作');
+    if (opIdx < 0) return;
+    ths[opIdx].classList.add('dg-op');
+    (table.querySelectorAll('tbody tr') as NodeListOf<HTMLTableRowElement>).forEach((tr) => {
+      const cell = tr.cells[opIdx];
+      if (cell) cell.classList.add('dg-op');
+    });
+  });
+}
+
 export function AdminTable({
   children,
   className,
@@ -69,7 +83,10 @@ export function AdminTable({
     return () => clearTimeout(t);
   }, []);
   useEffect(() => {
-    if (!loading && ref.current) autoSortable(ref.current);
+    if (!loading && ref.current) {
+      autoSortable(ref.current);
+      stickyOpColumn(ref.current);
+    }
   }, [loading]);
   const onClick = (e: React.MouseEvent) => {
     const th = (e.target as HTMLElement).closest('th.sortable') as HTMLElement | null;

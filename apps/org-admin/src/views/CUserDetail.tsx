@@ -43,7 +43,7 @@ export function CUserDetail() {
             微信昵称A <span className="tag-s tag-amber">会员</span>
           </div>
           <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 6, fontFamily: 'var(--mono)' }}>手机号 138****8888 · 微信号 wx_abc</div>
-          <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 5 }}>活跃度：近 30 天提问 42 次 · 最近活跃 2026-06-06</div>
+          <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 5 }}>地区 上海 · 浦东 ｜ 性别 女 ｜ 活跃度：近 30 天提问 42 次 · 最近活跃 2026-06-06</div>
         </div>
       </div>
 

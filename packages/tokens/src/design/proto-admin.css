@@ -59,6 +59,25 @@
 .op-cell{display:inline-flex;align-items:center;gap:16px;}
 .op-danger{color:var(--terra)!important;}
 .tbl .muted{color:var(--ink-3);}
+/* 0613：操作列固定在表格右侧（横向滚动时不被滑走），中间字段可横向滚动 */
+.tbl th.dg-op,.tbl td.dg-op{position:sticky;right:0;background:var(--surface);box-shadow:-9px 0 11px -9px rgba(40,46,90,.16);}
+.tbl th.dg-op{z-index:3;}
+.tbl td.dg-op{z-index:1;}
+.tbl tbody tr:hover td.dg-op{background:var(--surface-warm);}
+/* 0613：角色权限三态选择器（无 / 只读 / 可操作） */
+.lvl-seg{display:inline-flex;background:var(--surface-warm);border:1px solid var(--line);border-radius:9px;padding:2px;flex:none;}
+.lvl-seg b{font-size:11.5px;font-weight:500;color:var(--ink-3);padding:4px 10px;border-radius:7px;cursor:pointer;transition:.12s;white-space:nowrap;}
+.lvl-seg b.on{color:#fff;}
+.lvl-seg b.on.none{background:var(--ink-3);}
+.lvl-seg b.on.read{background:var(--amber);}
+.lvl-seg b.on.write{background:var(--indigo);}
+/* 0613：订单退款时间线 */
+.rf-timeline{display:flex;flex-direction:column;gap:14px;padding:4px 0;}
+.rf-ev{display:flex;gap:10px;position:relative;}
+.rf-ev .rf-dot{width:9px;height:9px;border-radius:50%;background:var(--indigo);flex:none;margin-top:3px;position:relative;z-index:1;}
+.rf-ev:not(:last-child)::before{content:"";position:absolute;left:4px;top:13px;bottom:-15px;width:1px;background:var(--line);}
+.rf-ev .rf-label{font-size:13px;color:var(--ink);line-height:1.4;}
+.rf-ev .rf-time{font-size:11.5px;color:var(--ink-3);margin-top:3px;}
 
 /* 过滤条 */
 .filter{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}

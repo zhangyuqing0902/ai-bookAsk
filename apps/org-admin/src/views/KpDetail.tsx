@@ -337,7 +337,7 @@ export function KpDetail() {
       </span>
     ) },
     { header: '模式', cell: (s) => s.mode, sortValue: (s) => s.mode },
-    { header: '时效', cell: (s) => s.ttl, sortValue: (s) => s.ttlOrder },
+    { header: '链接分享有效期', cell: (s) => s.ttl, sortValue: (s) => s.ttlOrder },
     { header: '消费 / 上限', className: 'mono', cell: (s) => s.used },
     { header: '状态', cell: (s) => <span className={'tag-s ' + s.statusCls}>{s.status}</span>, sortValue: (s) => s.status },
     { header: '操作', cell: (s) => (s.canCancel ? (
@@ -715,13 +715,13 @@ export function KpDetail() {
 // 切片方式 + 点击/拖拽多文件(图音视混传,不支持文件夹嵌套) + 每文件进度条 + 全部完成后「进入知识库」
 interface UpFile { id: number; name: string; icon: string; prog: number }
 function UploadModal({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: (names: string[], slice: string) => void }) {
-  const [slice, setSlice] = useState('语义');
+  const slice = '语义'; // 0613：去掉切片方式选择，直接上传，系统默认语义切片
   const [files, setFiles] = useState<UpFile[]>([]);
   const [drag, setDrag] = useState(false);
   const seq = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const reset = () => { setFiles([]); setSlice('语义'); };
+  const reset = () => { setFiles([]); };
   const close = () => { reset(); onClose(); };
 
   // 模拟上传进度(setTimeout 递增)
@@ -766,12 +766,7 @@ function UploadModal({ open, onClose, onDone }: { open: boolean; onClose: () => 
         </>
       }
     >
-      <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
-        <div className="lab">切片方式</div>
-        <div className="ctl">
-          <Dropdown label="语义（推荐）" options={['章节', '语义（推荐）', '字数']} onSelect={(v) => setSlice(v.replace('（推荐）', ''))} style={{ width: 200 }} />
-        </div>
-      </div>
+      {/* 0613：去掉「切片方式」选择，直接上传（系统默认语义切片） */}
       {/* 点击选择 + 拖拽上传;input 不用 webkitdirectory(不支持文件夹嵌套) */}
       <input ref={inputRef} type="file" multiple accept="*/*" style={{ display: 'none' }} onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
       {/* 0610:上传区放进表单列容器,与上方「切片方式」控件左对齐(空 label 占位) */}

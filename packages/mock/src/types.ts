@@ -6,6 +6,8 @@ export type AssetTag = 'free' | 'member' | 'forever';
 
 export type AssetType = 'image' | 'audio' | 'video';
 
+export type Gender = 'male' | 'female' | 'unknown';
+
 export type Granularity = 'book' | 'series' | 'expert' | 'domain' | 'custom';
 
 export interface Organization {
@@ -165,6 +167,14 @@ export interface PermanentGrant {
   grantedAt: string;
 }
 
+/** 扫线下纸书二维码解锁的知识 KP 权益（前台「我的纸书」）。
+ *  grant=member：免费用户即可畅享该 KP 内非永享内容；grant=forever：含永享内容。 */
+export interface BookGrant {
+  kpId: string;
+  scannedAt: string; // YYYY-MM-DD 扫码绑定时间
+  grant: 'member' | 'forever';
+}
+
 export type OrderType = 'membership' | 'permanent' | 'redeem';
 export type OrderStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'canceled';
 
@@ -236,6 +246,11 @@ export interface User {
   phone?: string;
   nickname?: string;
   avatar?: string;
+  /** 性别 / 地区：微信环境由网页授权带回，非微信环境用户在个人资料自填 */
+  gender?: Gender;
+  region?: string;
+  /** 扫纸书码解锁的知识 KP（前台「我的纸书」） */
+  bookGrants?: BookGrant[];
   membership: Membership;
   permanentGrants: PermanentGrant[];
 }

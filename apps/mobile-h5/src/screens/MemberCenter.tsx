@@ -4,6 +4,20 @@ import { Icon, toast } from '@aba/ui';
 
 const GRAD_BG = 'linear-gradient(176deg,#F0F3FE 0%,#F4F1FC 46%,#FDF4F1 100%)';
 
+// 0613：免费 vs 会员 权益对比，强化付费价值感
+const CMP_ROWS: { label: string; free: boolean | string; member: boolean | string }[] = [
+  { label: '基础知识问答', free: true, member: true },
+  { label: '受限 图 / 音 / 视内容', free: false, member: true },
+  { label: '实时电话语音问答', free: false, member: true },
+  { label: '更快响应 · 优先排队', free: false, member: true },
+  { label: '永享内容', free: '单独购买', member: '单独购买' },
+];
+
+function Cell({ v }: { v: boolean | string }) {
+  if (typeof v === 'string') return <span className="c sm">{v}</span>;
+  return v ? <span className="c yes">✓</span> : <span className="c no">✗</span>;
+}
+
 // 12 会员中心（会员态）
 export function MemberCenter() {
   const nav = useNavigate();
@@ -17,7 +31,8 @@ export function MemberCenter() {
   };
   const reopen = () => {
     setAutoRenew(true);
-    toast('已开启自动续费');
+    // 0613：开启自动续费 → 3 秒 tips，告知提前 3 天短信提醒
+    toast('已开启自动续费 · 将于到期前 3 天短信提醒', 3000);
   };
 
   return (
@@ -53,20 +68,20 @@ export function MemberCenter() {
               </div>
             </div>
           </div>
-          <div className="my-sec">会员权益</div>
-          <div className="mlist">
-            <div className="benefit">
-              <Icon id="i-check" />
-              解锁全部受限图 / 音 / 视内容
+          <div className="my-sec">免费 vs 会员 · 权益对比</div>
+          <div className="cmp">
+            <div className="cmp-row head">
+              <span>权益</span>
+              <span className="cmp-col" style={{ color: 'var(--ink-3)' }}>免费</span>
+              <span className="cmp-col" style={{ color: 'var(--amber)' }}>会员</span>
             </div>
-            <div className="benefit">
-              <Icon id="i-check" />
-              实时电话语音问答
-            </div>
-            <div className="benefit" style={{ borderBottom: 'none' }}>
-              <Icon id="i-check" />
-              更快的响应与优先排队
-            </div>
+            {CMP_ROWS.map((r) => (
+              <div className="cmp-row" key={r.label}>
+                <span>{r.label}</span>
+                <Cell v={r.free} />
+                <Cell v={r.member} />
+              </div>
+            ))}
           </div>
           <div style={{ padding: '20px 16px' }}>
             {autoRenew ? (
@@ -86,6 +101,7 @@ export function MemberCenter() {
                 自动续费
               </button>
             )}
+            <div className="auto-tip">自动续费将于到期前 3 天短信提醒，可随时取消</div>
           </div>
         </div>
       </div>

@@ -3,7 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot } from '@aba/ui-admin';
 
-const TABS = ['总览', '用户分析', '提问分析', '转化分析', '热门 KP'];
+const TABS = ['总览', '用户分析', '提问分析', '转化分析', '热门 KP', '答案反馈'];
+
+// 0613：答案反馈明细（前台点踩 / 反馈记录，供运营迭代知识库）
+const FEEDBACK = [
+  { q: '高血压能不能喝咖啡？', tag: '没有帮助', cls: 'tag-line', kp: '李医生 · 心血管分册', time: '2026-06-06 20:11' },
+  { q: '这个剂量是不是写错了？', tag: '虚假信息', cls: 'tag-amber', kp: '李医生 · 内科精要', time: '2026-06-06 15:42' },
+  { q: '回答太笼统了，没解决问题', tag: '没有帮助', cls: 'tag-line', kp: '王老师 · 儿科学', time: '2026-06-05 11:23' },
+  { q: '这个建议有点危险', tag: '有害 / 不安全', cls: 'tag-amber', kp: '李医生 · 外科学', time: '2026-06-05 09:08' },
+  { q: '答非所问', tag: '其他', cls: 'tag-line', kp: '机构 Agent', time: '2026-06-04 17:50' },
+];
 
 function Kpi({ lab, val, unit, delta, info }: { lab: string; val: string; unit?: string; delta?: string; info: string }) {
   return (
@@ -151,6 +160,16 @@ export function DataBoard() {
               </div>
             </div>
           </div>
+          <div className="grid2" style={{ marginTop: 16 }}>
+            <div className="chart-card" style={{ margin: 0 }}>
+              <CardTitle t="地区分布" info="C 端用户按地区（省 / 市）分组占比。统计区间：随时间区间。" />
+              <Bars data={[{ nm: '上海', pct: 100, color: 'var(--indigo)', pv: '24%' }, { nm: '北京', pct: 82, color: 'var(--indigo)', pv: '19%' }, { nm: '广东', pct: 70, color: 'var(--jade)', pv: '17%' }, { nm: '江浙', pct: 58, color: 'var(--amber)', pv: '14%' }, { nm: '其他', pct: 44, color: 'var(--ink-3)', pv: '26%' }]} />
+            </div>
+            <div className="chart-card" style={{ margin: 0 }}>
+              <CardTitle t="性别分布" info="C 端用户按性别分组占比（微信授权带回，未授权归为「未知」）。统计区间：随时间区间。" />
+              <Bars data={[{ nm: '女', pct: 100, color: 'var(--terra)', pv: '54%' }, { nm: '男', pct: 78, color: 'var(--indigo)', pv: '41%' }, { nm: '未知', pct: 12, color: 'var(--ink-3)', pv: '5%' }]} />
+            </div>
+          </div>
         </>
       )}
 
@@ -172,6 +191,10 @@ export function DataBoard() {
               ]}
             />
           </div>
+          <div className="chart-card">
+            <CardTitle t="提问领域分布" info="按 KP / 领域聚合的提问占比，识别用户最关心的领域。统计区间：随时间区间。" />
+            <Bars data={[{ nm: '心血管', pct: 100, color: 'var(--indigo)', pv: '28%' }, { nm: '脑科学 / 卒中', pct: 76, color: 'var(--indigo)', pv: '21%' }, { nm: '超声', pct: 58, color: 'var(--jade)', pv: '16%' }, { nm: '心理', pct: 44, color: 'var(--amber)', pv: '12%' }, { nm: '内分泌', pct: 33, color: 'var(--amber)', pv: '9%' }, { nm: '其他', pct: 50, color: 'var(--ink-3)', pv: '14%' }]} />
+          </div>
         </>
       )}
 
@@ -188,9 +211,9 @@ export function DataBoard() {
               <CardTitle t="会员漏斗" info="看到会员页 → 点击购买 → 完成支付 的转化漏斗。统计区间：随时间区间。" />
               <Bars
                 data={[
-                  { nm: '看到会员页', pct: 100, color: 'var(--indigo)', pv: '5,000' },
-                  { nm: '点击购买', pct: 28, color: 'var(--indigo)', pv: '1,400' },
-                  { nm: '完成支付', pct: 17, color: 'var(--jade)', pv: '860' },
+                  { nm: '看到会员页', pct: 100, color: 'var(--indigo)', pv: '100%' },
+                  { nm: '点击购买', pct: 28, color: 'var(--indigo)', pv: '28%' },
+                  { nm: '完成支付', pct: 17, color: 'var(--jade)', pv: '17%' },
                 ]}
               />
             </div>
@@ -198,8 +221,8 @@ export function DataBoard() {
               <CardTitle t="永享转化" info="触发永享墙 → 完成购买 的转化。统计区间：随时间区间。" />
               <Bars
                 data={[
-                  { nm: '触发永享墙', pct: 100, color: 'var(--amber)', pv: '1,200' },
-                  { nm: '完成购买', pct: 15, color: 'var(--amber)', pv: '180' },
+                  { nm: '触发永享墙', pct: 100, color: 'var(--amber)', pv: '100%' },
+                  { nm: '完成购买', pct: 15, color: 'var(--amber)', pv: '15%' },
                 ]}
               />
             </div>
@@ -211,7 +234,7 @@ export function DataBoard() {
         <div className="grid2" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
           {[
             {
-              t: '提问数 TOP10',
+              t: '被提问数 TOP10',
               info: '按 KP 被提问条数排序,反映实际被使用的内容。',
               // 11.1:补足 top10
               rows: [
@@ -252,6 +275,42 @@ export function DataBoard() {
             </div>
           ))}
         </div>
+      )}
+
+      {tab === 5 && (
+        <>
+          <div className="kpi-row">
+            <Kpi lab="答案点赞率" val="86%" info="点赞数 ÷ 答案总数。统计区间：随时间区间。" />
+            <Kpi lab="点踩 / 反馈率" val="3.2%" info="点踩（含反馈）数 ÷ 答案总数。统计区间：随时间区间。" />
+            <Kpi lab="累计反馈条数" val="412" info="C 端用户提交的答案反馈累计条数。统计区间：开通至今。" />
+            <Kpi lab="待处理反馈" val="18" info="尚未被运营标记处理的反馈条数。" />
+          </div>
+          <div className="chart-card">
+            <CardTitle t="反馈明细" info="前台答案点踩 / 反馈记录，供运营定位问题、迭代知识库。" />
+            <div className="tbl-wrap" style={{ boxShadow: 'none', border: 'none', padding: 0, marginTop: 8 }}>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>问题</th>
+                    <th>反馈标签</th>
+                    <th>关联 Agent / KP</th>
+                    <th>提交时间</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FEEDBACK.map((f, i) => (
+                    <tr key={i}>
+                      <td>{f.q}</td>
+                      <td><span className={'tag-s ' + f.cls}>{f.tag}</span></td>
+                      <td>{f.kp}</td>
+                      <td className="mono">{f.time}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </>
   );

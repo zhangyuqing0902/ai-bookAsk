@@ -4,7 +4,7 @@ import { TextInput } from '@aba/ui-admin';
 
 // 机构后台 · 系统配置（会员价格 + 回答策略）
 export function SysConfig() {
-  const [strategy, setStrategy] = useState(2);
+  const [strategy, setStrategy] = useState(1);
   return (
     <>
       <div className="page-head">
@@ -47,14 +47,15 @@ export function SysConfig() {
         </div>
         <div className="radio-list" style={{ padding: '6px 0 16px' }}>
           {[
-            '直接由大模型回答',
-            '直接告知「知识库暂无此资料」相关话术',
-            '大模型回答并告知「此为大模型生成、非 AI 问书知识库内容」相关话术',
-          ].map((t, i) => (
+            { t: '严谨模式', d: '仅用知识库，未检索到则回答「暂无相关资料」（医疗 / 合规敏感场景）' },
+            { t: '透明兜底（默认）', d: '未命中时由大模型补充，并标注「此为大模型生成、非知识库」' },
+            { t: '流畅模式', d: '未命中时由大模型直接补充，不额外标注来源' },
+          ].map((o, i) => (
             <div key={i} className={'radio-opt' + (strategy === i ? ' on' : '')} onClick={() => setStrategy(i)}>
               <div className="rd" />
               <div>
-                <div className="rt">{t}</div>
+                <div className="rt">{o.t}</div>
+                <div className="rs" style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 2 }}>{o.d}</div>
               </div>
             </div>
           ))}

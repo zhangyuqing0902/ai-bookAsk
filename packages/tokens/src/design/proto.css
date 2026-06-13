@@ -286,4 +286,95 @@
 
 /* 顶栏右侧操作可点提示 */
 .tap{cursor:pointer;}
+
+/* ───────── 0613 前台精修 ───────── */
+/* 落地页演示环境切换（0613-2：移到协议下方、加仅演示标识、克制不抢主流程） */
+.env-demo{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:7px;opacity:.92;}
+.env-demo-tag{font-size:10.5px;color:var(--ink-3);background:var(--surface-warm);border:1px dashed var(--line);border-radius:999px;padding:3px 11px;letter-spacing:.02em;}
+.env-seg{display:flex;justify-content:center;background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:3px;width:max-content;margin:0 auto 18px;box-shadow:var(--sh-sm);}
+.env-seg b{font-size:12px;font-weight:600;color:var(--ink-3);padding:7px 16px;border-radius:999px;cursor:pointer;transition:.15s;white-space:nowrap;}
+.env-seg b.on{background:var(--indigo);color:#fff;}
+
+/* 0613-2：非微信扫码登录页美化（内嵌二维码，去中央 Logo） */
+.wxscan2{display:flex;flex-direction:column;align-items:center;text-align:center;padding:34px 24px 40px;min-height:calc(100% - 46px);
+  background:linear-gradient(176deg,#F0F3FE 0%,#F4F1FC 46%,#FDF4F1 100%);}
+.wxscan2-orb{width:54px;height:54px;margin-bottom:14px;}
+.wxscan2-name{font-family:var(--serif-cjk);font-weight:800;font-size:22px;color:var(--ink);letter-spacing:.02em;}
+.wxscan2-sub{font-size:13px;color:var(--ink-2);margin-top:9px;}
+.wxscan2-qrwrap{position:relative;margin:26px 0 16px;width:200px;height:200px;}
+.wxscan2-frame{position:relative;width:200px;height:200px;padding:18px;background:#fff;border-radius:18px;box-sizing:border-box;
+  box-shadow:0 14px 34px -16px rgba(40,46,90,.3);border:1px solid var(--line);transition:filter .3s;}
+.wxscan2-frame.dim{filter:blur(3px) opacity(.55);}
+.wxscan2-frame .wxscan-qrgrid{width:100%;height:100%;}
+.wxscan2-frame .cnr{position:absolute;width:18px;height:18px;border:2.5px solid var(--indigo);}
+.wxscan2-frame .cnr.tl{top:7px;left:7px;border-right:0;border-bottom:0;border-radius:6px 0 0 0;}
+.wxscan2-frame .cnr.tr{top:7px;right:7px;border-left:0;border-bottom:0;border-radius:0 6px 0 0;}
+.wxscan2-frame .cnr.bl{bottom:7px;left:7px;border-right:0;border-top:0;border-radius:0 0 0 6px;}
+.wxscan2-frame .cnr.br{bottom:7px;right:7px;border-left:0;border-top:0;border-radius:0 0 6px 0;}
+.wxscan2-tip{font-size:13px;color:var(--ink-2);margin-top:4px;}
+.wxscan2-back{font-size:13px;color:var(--indigo-ink);font-weight:600;margin-top:20px;}
+
+/* 列表页搜索条 */
+.h5srch{display:flex;align-items:center;gap:9px;margin:12px 14px 2px;background:var(--surface);
+  border:1px solid var(--line);border-radius:12px;padding:11px 13px;box-shadow:var(--sh-sm);}
+.h5srch svg{width:16px;height:16px;color:var(--ink-3);flex:none;}
+.h5srch input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:14px;color:var(--ink);}
+.h5srch input::placeholder{color:var(--ink-3);}
+.h5srch-x{color:var(--ink-3);font-size:13px;padding:0 2px;}
+
+/* 文件类型筛选 chips */
+.fchips{display:flex;gap:8px;padding:10px 14px 2px;flex-wrap:wrap;}
+.fchip{font-size:12.5px;font-weight:500;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:6px 15px;cursor:pointer;transition:.15s;}
+.fchip.on{background:var(--indigo-soft);border-color:rgba(75,87,232,.3);color:var(--indigo-ink);font-weight:700;}
+
+/* 列表空态 */
+.h5empty{text-align:center;color:var(--ink-3);font-size:13px;line-height:1.9;padding:54px 24px;}
+
+/* 会员 免费 vs 会员 对比表 */
+.cmp{margin:6px 16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--sh-sm);}
+.cmp-row{display:grid;grid-template-columns:1fr 60px 60px;align-items:center;padding:13px 16px;font-size:13.5px;color:var(--ink);}
+.cmp-row:not(:first-child){border-top:1px solid var(--line-2);}
+.cmp-row.head{background:var(--surface-warm);padding:10px 16px;font-size:12px;color:var(--ink-3);font-weight:600;}
+.cmp-col{text-align:center;font-weight:700;font-size:12px;}
+.cmp-row .c{text-align:center;font-weight:700;}
+.cmp-row .c.yes{color:var(--jade);}
+.cmp-row .c.no{color:var(--ink-3);}
+.cmp-row .c.sm{font-size:11px;font-weight:500;color:var(--ink-3);}
+
+/* 自动续费提示 */
+.auto-tip{text-align:center;font-size:11.5px;color:var(--ink-3);margin-top:12px;line-height:1.6;}
+
+/* 手机号占用提示页图标 */
+.occ-ic{width:60px;height:60px;border-radius:18px;margin:8px auto 0;background:var(--terra-soft,rgba(229,83,59,.12));
+  color:var(--terra);display:flex;align-items:center;justify-content:center;}
+
+/* 第三方跳转倒计时卡片 */
+.cd-card{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);z-index:9;width:250px;
+  background:var(--surface);border-radius:20px;padding:24px 22px 18px;text-align:center;
+  box-shadow:0 26px 64px -22px rgba(40,46,90,.45);animation:cdPop .26s cubic-bezier(.2,.8,.2,1) both;}
+@keyframes cdPop{from{opacity:0;transform:translate(-50%,-46%) scale(.92);}to{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+.cd-ic{width:46px;height:46px;border-radius:14px;margin:0 auto;background:var(--indigo-soft);color:var(--indigo-ink);
+  display:flex;align-items:center;justify-content:center;}
+.cd-t{font-family:var(--serif-cjk);font-weight:700;font-size:15px;color:var(--ink);margin-top:13px;}
+.cd-url{font-size:12px;color:var(--ink-2);font-family:var(--mono);margin-top:5px;}
+.cd-num{font-family:var(--mono);font-weight:700;font-size:38px;color:var(--indigo-ink);margin:6px 0 2px;line-height:1;}
+.cd-s{font-size:11.5px;color:var(--ink-3);margin-bottom:8px;}
+
+/* 我的纸书 */
+.bk-tip{font-size:12px;color:var(--ink-3);line-height:1.6;padding:8px 16px 2px;}
+.bk-cover{aspect-ratio:1;position:relative;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(150deg,#7c8bf5,#4b57e8);color:#fff;}
+.bk-init{font-family:var(--serif-cjk);font-weight:700;font-size:34px;color:rgba(255,255,255,.95);}
+/* 0613-2：纸书卡片重排——名称固定两行高、扫码时间钉底对齐 */
+.bk-meta{padding:10px 11px 11px;display:flex;flex-direction:column;}
+.bk-name{font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.35;height:34px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.bk-date{font-size:11px;color:var(--ink-3);margin-top:7px;}
+.bk-badge{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:700;color:#fff;
+  background:var(--amber);border-radius:6px;padding:2px 7px;}
+
+/* 个人资料头像 */
+.prof-av{width:34px;height:34px;border-radius:50%;flex:none;
+  background:radial-gradient(120% 120% at 30% 25%,#fff,rgba(255,255,255,0) 40%),linear-gradient(150deg,#7c8bf5,#4b57e8);}
 .statusbar .r span{font-size:12px;}

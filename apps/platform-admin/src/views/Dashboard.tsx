@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { LineChart, RangePicker, InfoDot } from '@aba/ui-admin';
+import { LineChart, RangePicker, Dropdown, InfoDot } from '@aba/ui-admin';
 import { platformDaily, platformSnapshot, rangeMetrics } from '@aba/mock';
 
 // 平台后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
 export function Dashboard() {
   const [days, setDays] = useState(7);
   const [rangeLabel, setRangeLabel] = useState('近 7 天');
+  const [org, setOrg] = useState('全部机构');
+  const scope = org === '全部机构' ? '全平台' : org;
   const cur = rangeMetrics(platformDaily, days);
   const prev = rangeMetrics(platformDaily, days, days);
   const n = (x: number) => x.toLocaleString('en-US');
@@ -32,6 +34,7 @@ export function Dashboard() {
           <div className="pt">主控台</div>
         </div>
         <div className="pa">
+          <Dropdown label="全部机构" options={['全部机构', 'XX 出版社', 'YY 教育', 'ZZ 少儿', 'AA 文化集团']} onSelect={setOrg} style={{ minWidth: 140 }} />
           <button className="btn btn-ghost btn-sm" onClick={() => toast('导出报表')}>
             <Icon id="i-dl" w={14} h={14} />
             导出
@@ -43,7 +46,7 @@ export function Dashboard() {
       <div className="dash-section-title">
         实时总览
         <span className="dash-realtime-tag">实时</span>
-        <span className="dash-section-sub">· 全平台截至今日的累计 / 存量数据，不随下方时间筛选变化</span>
+        <span className="dash-section-sub">· {scope}截至今日的累计 / 存量数据，不随下方时间筛选变化</span>
       </div>
       <div className="kpi-row">
         <div className="kpi">
@@ -95,7 +98,7 @@ export function Dashboard() {
       <div className="dash-section-head">
         <div className="dash-section-title" style={{ margin: 0 }}>
           经营分析
-          <span className="dash-section-sub">· 全平台 · {rangeLabel}</span>
+          <span className="dash-section-sub">· {scope} · {rangeLabel}</span>
         </div>
         <RangePicker
           presets={['今日', '近 7 天', '30 天']}

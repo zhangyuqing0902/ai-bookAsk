@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon, toast } from '@aba/ui';
+import { Icon } from '@aba/ui';
+import { ServiceSheet } from '../ServiceSheet';
 
-// 4 手机号冲突 · 本人验证
+// 4 手机号已被占用提示（0613：删除「账号合并」逻辑，改为占用死胡同提示——不做合并）
+// 场景：微信欲绑定的手机号在本机构已被其他账号 / 微信绑定；A、B 两微信绑同号亦走此提示。
 export function Conflict() {
   const nav = useNavigate();
-  const [code, setCode] = useState('');
-  const submit = () => {
-    if (!/^\d{6}$/.test(code)) return toast('请输入 6 位验证码');
-    nav('/chat');
-  };
+  const [service, setService] = useState(false);
   return (
     <>
       <div className="h5-top">
@@ -17,37 +15,38 @@ export function Conflict() {
           <Icon id="i-chevL" w={22} h={22} />
         </div>
         <div className="center">
-          <div className="ttl">验证本人</div>
+          <div className="ttl">手机号已被占用</div>
         </div>
         <div className="grp" />
       </div>
       <div className="lg lg-auth">
-        <div className="lg-form">
-          <div className="lg-h">该手机号已存在</div>
-          <div className="lg-s">是否为本人?通过验证码校验后将合并绑定</div>
-          <div className="pf">
-            <label>手机号</label>
-            <div className="pin" style={{ color: 'var(--ink)' }}>
-              <Icon id="i-phone" />
-              138****8888
-            </div>
+        <div className="lg-form" style={{ textAlign: 'center' }}>
+          <div className="occ-ic">
+            <Icon id="i-phone" w={26} h={26} />
           </div>
-          <div className="pf">
-            <label>验证码</label>
-            <div className="pin">
-              <Icon id="i-lock" />
-              <input inputMode="numeric" maxLength={6} placeholder="请输入验证码" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
-              <span className="get" onClick={() => toast('验证码已发送')}>获取验证码</span>
-            </div>
+          <div className="lg-h" style={{ marginTop: 14 }}>
+            该手机号已被其他账号绑定
           </div>
-          <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 14, marginTop: 8 }} disabled={!code} onClick={submit}>
-            确认本人 · 合并绑定
+          <div className="lg-s" style={{ marginBottom: 22 }}>
+            手机号 <b style={{ color: 'var(--ink)', fontFamily: 'var(--mono)' }}>138****8888</b> 已被占用。
+            <br />
+            请更换其他手机号绑定，如有疑问请联系平台客服。
+          </div>
+          <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 14 }} onClick={() => nav(-1)}>
+            更换手机号
           </button>
-          <div style={{ textAlign: 'center', marginTop: 16, fontSize: 12.5 }} className="tap" onClick={() => nav(-1)}>
-            <span style={{ color: 'var(--ink-2)' }}>不是本人 · 重填手机号</span>
-          </div>
+          <button
+            className="btn btn-ghost"
+            style={{ width: '100%', justifyContent: 'center', padding: 14, marginTop: 12 }}
+            onClick={() => setService(true)}
+          >
+            联系平台客服
+          </button>
         </div>
       </div>
+
+      {/* 联系客服 sheet（复用「我的」同款，含客服二维码） */}
+      <ServiceSheet open={service} onClose={() => setService(false)} />
     </>
   );
 }

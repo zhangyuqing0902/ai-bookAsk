@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { useChatStore, nextMsgId, type ChatMsg } from '../chatStore';
+import { usePhoneGate } from '../usePhoneGate';
 
 interface Media {
   kind: 'image' | 'audio' | 'video';
@@ -31,6 +32,8 @@ const HISTORY = [
 // 5/6 AI 会话（欢迎态 ↔ 对话态）
 export function Chat() {
   const nav = useNavigate();
+  const { guard, gate } = usePhoneGate();
+  const [jump, setJump] = useState<{ url: string; n: number } | null>(null);
   const msgs = useChatStore((s) => s.messages);
   const setMsgs = useChatStore((s) => s.setMessages);
   const [ov, setOv] = useState<null | 'left' | 'src'>(null);
@@ -45,6 +48,18 @@ export function Chat() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scrollDown = () => setTimeout(() => scrollRef.current?.scrollTo({ top: 1e9, behavior: 'smooth' }), 60);
+
+  // 0613：参考来源为第三方网站时，跳转前 3 秒倒计时过渡
+  useEffect(() => {
+    if (!jump) return;
+    if (jump.n <= 0) {
+      toast('正在打开外部来源…');
+      setJump(null);
+      return;
+    }
+    const t = setTimeout(() => setJump((j) => (j ? { ...j, n: j.n - 1 } : null)), 1000);
+    return () => clearTimeout(t);
+  }, [jump]);
 
   const send = (q: string) => {
     const text = q.trim();
@@ -269,7 +284,7 @@ export function Chat() {
             <div className="t">参考来源</div>
           </div>
           {/* 上块:知识 KP(同一 KP 内多个命中文件归并展示,最多 2 个,余下用省略号) */}
-          <div className="src-item tap" onClick={() => toast('跳转纸书购买链接')}>
+          <div className="src-item tap" onClick={() => { setOv(null); setJump({ url: '纸书购买链接', n: 3 }); }}>
             <div className="src-cover">
               <span className="sp" />
             </div>
@@ -282,7 +297,13 @@ export function Chat() {
           </div>
           {/* 浅灰分隔线:上为知识 KP,下为互联网检索内容 */}
           <div className="src-divider" />
-          <div className="src-item tap" onClick={() => toast('暂不可查看详情')}>
+          <div
+            className="src-item tap"
+            onClick={() => {
+              setOv(null);
+              setJump({ url: 'hypertension-2024.org', n: 3 });
+            }}
+          >
             <div className="src-web-ic">
               <Icon id="i-link" />
             </div>
@@ -301,7 +322,7 @@ export function Chat() {
           <PaywallCard
             media={pay}
             onMember={() => { setPay(null); nav('/member'); }}
-            onBuy={() => { const n = pay?.name ?? '媒体资源'; setPay(null); nav(`/pay/wechat?amount=9.9&subject=${encodeURIComponent('永享 · ' + n)}`); }}
+            onBuy={guard(() => { const n = pay?.name ?? '媒体资源'; setPay(null); nav(`/pay/wechat?amount=9.9&subject=${encodeURIComponent('永享 · ' + n)}`); })}
           />
         </div>
       </div>
@@ -313,7 +334,7 @@ export function Chat() {
           setIdx={(i) => setLbx({ ...lbx, idx: i })}
           onClose={() => setLbx(null)}
           onMember={() => { setLbx(null); nav('/member'); }}
-          onBuy={() => { const n = lbx.items[lbx.idx]?.name ?? '媒体资源'; setLbx(null); nav(`/pay/wechat?amount=9.9&subject=${encodeURIComponent('永享 · ' + n)}`); }}
+          onBuy={guard(() => { const n = lbx.items[lbx.idx]?.name ?? '媒体资源'; setLbx(null); nav(`/pay/wechat?amount=9.9&subject=${encodeURIComponent('永享 · ' + n)}`); })}
         />
       )}
 
@@ -325,6 +346,27 @@ export function Chat() {
           <FeedbackBody onSubmit={() => fbk != null && submitFeedback(fbk)} />
         </div>
       </div>
+
+      {/* 三能力手机号绑定门槛弹窗 */}
+      {gate}
+
+      {/* 0613：第三方来源跳转 3 秒倒计时过渡 */}
+      {jump && (
+        <div className="ov open">
+          <div className="scrim" onClick={() => setJump(null)} />
+          <div className="cd-card">
+            <div className="cd-ic">
+              <Icon id="i-globe" w={26} h={26} />
+            </div>
+            <div className="cd-t">即将跳转至外部页面</div>
+            <div className="cd-num">{jump.n}</div>
+            <div className="cd-s">{jump.n} 秒后自动打开 · 内容由第三方提供</div>
+            <button className="btn btn-text-weak" style={{ width: '100%', justifyContent: 'center', marginTop: 6 }} onClick={() => setJump(null)}>
+              取消跳转
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

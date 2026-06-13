@@ -74,7 +74,7 @@ export function OrgList() {
     { header: '状态', cell: (r) => <span className={'tag-s ' + r.statusCls}>{r.status}</span>, sortValue: (r) => r.status },
     { header: '上级机构', cell: (r) => (r.parentId === null ? <span className="muted">—</span> : nameOf(r.parentId)) },
     { header: 'LLM 配置', cell: (r) => r.llm, sortValue: (r) => r.llm },
-    { header: '微信支付', cell: (r) => <span className={'tag-s ' + r.payCls}>{r.pay}</span>, sortValue: (r) => r.pay },
+    { header: '微信配置', cell: (r) => <span className={'tag-s ' + r.payCls}>{r.pay}</span>, sortValue: (r) => r.pay },
     {
       header: '操作',
       cell: (r) => (
@@ -137,6 +137,13 @@ export function OrgList() {
         <div className="fm-row">
           <div className="lab">备注</div>
           <div className="ctl"><TextInput placeholder="选填" /></div>
+        </div>
+        <div className="fm-row">
+          <div className="lab">套餐 / 配额</div>
+          <div className="ctl">
+            <Dropdown label="专业版" options={['基础版', '专业版', '旗舰版', '定制版']} style={{ width: 200 }} />
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 5 }}>专业版：KP 50 · 存储 100GB · 月度 Token 2亿（创建后可在机构详情微调）</div>
+          </div>
         </div>
         <div className="fm-row">
           <div className="lab">LLM 配置</div>

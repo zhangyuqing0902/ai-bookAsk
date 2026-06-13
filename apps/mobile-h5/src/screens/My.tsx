@@ -1,11 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
+import { useDemoStore } from '@aba/mock';
+import { ServiceSheet } from '../ServiceSheet';
 
 // 13 我的主页（设置式分组白卡 + 灰色线性图标）+ 联系客服 sheet
+// 0613：头部 / 手机号绑定态随 store 动态；新增「我的纸书」「个人资料」入口；未绑手机号显示「绑定手机号」。
 export function My() {
   const nav = useNavigate();
   const [service, setService] = useState(false);
+  const user = useDemoStore((s) => s.user);
+  const phoneBound = useDemoStore((s) => s.phoneBound);
+
+  const isMember = user.membership.state === 'active' || user.membership.state === 'grace';
+  const bookCount = user.bookGrants?.length ?? 0;
+
   return (
     <>
       <div className="h5-top">
@@ -19,14 +28,18 @@ export function My() {
       </div>
       <div className="pg">
         <div className="scrollY">
-          <div className="my-head">
+          <div className="my-head tap" onClick={() => nav('/me/profile')}>
             <div className="av" />
-            <div>
+            <div style={{ flex: 1 }}>
               <div className="nm">
-                微信昵称A <span className="tag-s tag-amber">会员</span>
+                {user.nickname || '未设置昵称'}
+                {isMember && <span className="tag-s tag-amber">会员</span>}
               </div>
-              <div className="ph">138****8888</div>
+              <div className="ph">{phoneBound && user.phone ? user.phone : '未绑定手机号'}</div>
             </div>
+            <span className="mc">
+              <Icon id="i-chevR" w={18} h={18} />
+            </span>
           </div>
 
           <div className="my-sec">会员</div>
@@ -36,7 +49,7 @@ export function My() {
                 <Icon id="i-crownO" />
               </span>
               <span className="ml">会员中心</span>
-              <span className="mv">已开通</span>
+              <span className="mv">{isMember ? '已开通' : '未开通'}</span>
               <span className="mc">
                 <Icon id="i-chevR" />
               </span>
@@ -50,7 +63,17 @@ export function My() {
                 <Icon id="i-lock" />
               </span>
               <span className="ml">我的永享</span>
-              <span className="mv">3</span>
+              <span className="mv">6</span>
+              <span className="mc">
+                <Icon id="i-chevR" />
+              </span>
+            </div>
+            <div className="mrow tap" onClick={() => nav('/me/books')}>
+              <span className="mi">
+                <Icon id="i-qr" />
+              </span>
+              <span className="ml">我的纸书</span>
+              <span className="mv">{bookCount}</span>
               <span className="mc">
                 <Icon id="i-chevR" />
               </span>
@@ -77,15 +100,37 @@ export function My() {
 
           <div className="my-sec">账户与帮助</div>
           <div className="mlist">
-            <div className="mrow tap" onClick={() => nav('/account')}>
+            <div className="mrow tap" onClick={() => nav('/me/profile')}>
               <span className="mi">
-                <Icon id="i-phone" />
+                <Icon id="i-user" />
               </span>
-              <span className="ml">换绑手机号</span>
+              <span className="ml">个人资料</span>
               <span className="mc">
                 <Icon id="i-chevR" />
               </span>
             </div>
+            {phoneBound ? (
+              <div className="mrow tap" onClick={() => nav('/account')}>
+                <span className="mi">
+                  <Icon id="i-phone" />
+                </span>
+                <span className="ml">换绑手机号</span>
+                <span className="mc">
+                  <Icon id="i-chevR" />
+                </span>
+              </div>
+            ) : (
+              <div className="mrow tap" onClick={() => nav('/login/wechat-bind?from=me')}>
+                <span className="mi">
+                  <Icon id="i-phone" />
+                </span>
+                <span className="ml">绑定手机号</span>
+                <span className="mv" style={{ color: 'var(--terra)' }}>未绑定</span>
+                <span className="mc">
+                  <Icon id="i-chevR" />
+                </span>
+              </div>
+            )}
             <div className="mrow tap" onClick={() => setService(true)}>
               <span className="mi">
                 <Icon id="i-headset" />
@@ -152,34 +197,8 @@ export function My() {
         </div>
       </div>
 
-      {/* 联系客服 sheet */}
-      <div className={'ov' + (service ? ' open' : '')}>
-        <div className="scrim" onClick={() => setService(false)} />
-        <div className="pw">
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'var(--serif-cjk)', fontWeight: 700, fontSize: 16 }}>联系客服</div>
-            <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 6 }}>扫码添加客服企微,或电话 / 邮件联系</div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '20px 0 8px' }}>
-            <div
-              style={{
-                width: 150,
-                height: 150,
-                borderRadius: 14,
-                background: 'repeating-linear-gradient(135deg,#E7EAF2 0 8px,#EEF1F7 8px 16px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--ink-3)',
-              }}
-            >
-              <Icon id="i-qr" w={40} h={40} />
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>客服电话 400-800-8888</div>
-            <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>客服邮箱 help@aiwenshu.com</div>
-          </div>
-        </div>
-      </div>
+      {/* 联系客服 sheet（复用共享组件） */}
+      <ServiceSheet open={service} onClose={() => setService(false)} />
     </>
   );
 }
