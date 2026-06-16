@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon, toast, FileTypeIcon, type FileKind } from '@aba/ui';
+import { Icon, toast, FileTypeIcon, appBase, type FileKind } from '@aba/ui';
 import { Search, TextInput } from './Fields';
 import { Dropdown } from './Dropdown';
 import { DataGrid, type Col } from './DataGrid';
@@ -11,7 +11,6 @@ import { pickFile, ACCEPT } from './Upload';
 const TABS = [
   { id: 'base', label: '基础信息' },
   { id: 'kb', label: '知识库' },
-  { id: 'yx', label: '永享' },
   { id: 'price', label: '定价与权益' },
   { id: 'qr', label: '二维码' },
   { id: 'share', label: '分享' },
@@ -43,26 +42,22 @@ interface KbFile {
   slice: string;
   // 4.7:已向量化成功(ok)的文件带上架/下架状态(shelf);上架=可被检索
   shelf?: boolean;
+  // 权益改造:图/音/视可设永享价(数字=永享内容;null/undefined=非永享);文档(word/pdf)恒无永享
+  price?: number | null;
   st: { kind: string; text: string; prog?: number; reason?: string };
 }
 const KB0: KbFile[] = [
   { id: 1, name: 'ch3-饮食管理.pdf', icon: 'i-file', type: '文档', slice: '语义', shelf: true, st: { kind: 'ok', text: '已向量化' } },
   { id: 2, name: 'ch5-药物治疗.pdf', icon: 'i-file', type: '文档', slice: '章节', st: { kind: 'ing', text: '向量化中 60%', prog: 60 } },
   { id: 3, name: '诊疗指南.docx', icon: 'i-doc', type: '文档', slice: '字数', shelf: false, st: { kind: 'ok', text: '已向量化' } },
-  { id: 4, name: '心电图示例.png', icon: 'i-image', type: '图片', slice: '—', shelf: true, st: { kind: 'ok', text: '已向量化' } },
+  { id: 4, name: '心电图示例.png', icon: 'i-image', type: '图片', slice: '—', shelf: true, price: 9.9, st: { kind: 'ok', text: '已向量化' } },
   // 4.6:音视频提取字幕后自动向量化(直接 ok),不再有「待确认字幕」步骤
-  { id: 5, name: '专题讲座.mp3', icon: 'i-sound', type: '音频', slice: '—', shelf: true, st: { kind: 'ok', text: '已向量化' } },
-  { id: 6, name: '手术演示.mp4', icon: 'i-play', type: '视频', slice: '—', st: { kind: 'fail', text: '向量化失败', reason: '文件解析失败：视频时长超过 60 分钟上限,请压缩或分段后重传' } },
+  { id: 5, name: '专题讲座.mp3', icon: 'i-sound', type: '音频', slice: '—', shelf: true, price: null, st: { kind: 'ok', text: '已向量化' } },
+  { id: 6, name: '手术演示.mp4', icon: 'i-play', type: '视频', slice: '—', price: 29.9, st: { kind: 'fail', text: '向量化失败', reason: '文件解析失败：视频时长超过 60 分钟上限,请压缩或分段后重传' } },
 ];
 const TYPE_ORDER: Record<string, number> = { 文档: 0, 图片: 1, 音频: 2, 视频: 3 };
 const ST_ORDER: Record<string, number> = { ing: 2, ok: 3, fail: 4 };
-
-interface Yx { name: string; icon: string; type: string; price: number | null }
-const YX: Yx[] = [
-  { name: '心电图示例.png', icon: 'i-image', type: '图片', price: 9.9 },
-  { name: '专题讲座.mp3', icon: 'i-sound', type: '音频', price: null },
-  { name: '手术演示.mp4', icon: 'i-play', type: '视频', price: 29.9 },
-];
+// 权益改造:原独立「永享」Tab 取消,永享并入知识库列表按文件管理(KbFile.price)
 // 4.8:二维码包 —— 含可读包号(pkg) + 扫描统计;ID = QR-{KP编号}-{包号}-{序号}
 interface Qr {
   name: string;
@@ -74,6 +69,7 @@ interface Qr {
   rescans: number | null; // 后扫数量
 }
 const KP_CODE = 'KP012'; // 当前 KP 全平台唯一编号(心血管分册)
+const FRONT_ORG = 'xx-press'; // 演示机构标识(该 KP 所属机构 slug),用于拼前台访问地址
 const QR: Qr[] = [
   { name: '心血管首发批次', pkg: 'B01', mode: '首扫绑定,后扫引导', qty: 100, totalScans: 8642, firstScans: 6210, rescans: 2432 },
   { name: '内部测试码', pkg: 'B02', mode: '无权益', qty: 1, totalScans: 38, firstScans: null, rescans: 38 },
@@ -118,6 +114,12 @@ type Confirm = { title: string; desc: ReactNode; danger?: boolean; confirmText?:
 // listBase 适配两端「删除后返回列表」的路由（机构 /kps、平台 /global-kps）。
 export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
   const nav = useNavigate();
+  // 复制该 KP 的 C 端前台访问地址：随当前环境自动生成(本地按端口、线上按部署域名),并携带机构 + KP 标识
+  const frontUrl = `${appBase('mobile')}/chat?org=${FRONT_ORG}&kp=${KP_CODE}`;
+  const copyFront = () => {
+    navigator.clipboard?.writeText(frontUrl);
+    toast('已复制前台访问地址');
+  };
   const [tab, setTab] = useState<TabId>('base');
   const [price, setPrice] = useState(0);
   const [cover, setCover] = useState(true);
@@ -126,6 +128,8 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
 
   const [kbQ, setKbQ] = useState('');
   const [kbFmt, setKbFmt] = useState('全部');
+  const [kbYx, setKbYx] = useState('全部'); // 一-4:永享状态筛选
+  const [kbTier, setKbTier] = useState('全部'); // 一-5:基础权益(免费/会员)筛选
   // 4.5/4.6/4.7:知识库文件列表交由 state 管理(支持新增上传 / 上架下架切换)
   const [kb, setKb] = useState<KbFile[]>(KB0);
   const kbId = useRef(100);
@@ -148,9 +152,6 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
     }, 900);
     return () => clearTimeout(t);
   }, [kb]);
-  const [yxQ, setYxQ] = useState('');
-  const [yxFmt, setYxFmt] = useState('全部');
-  const [yxPrice, setYxPrice] = useState('全部');
   const [qrQ, setQrQ] = useState('');
   const [qrMode, setQrMode] = useState('全部');
   const [shareMode, setShareMode] = useState('全部');
@@ -158,8 +159,10 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
 
   // 弹窗状态
   const [confirm, setConfirm] = useState<Confirm | null>(null);
-  const [priceModal, setPriceModal] = useState<Yx | null>(null);
-  const [previewYx, setPreviewYx] = useState<Yx | null>(null);
+  // 权益改造:永享设价/预览改为对知识库文件(KbFile)操作;priceInput 受控真正写入永享价
+  const [priceModal, setPriceModal] = useState<KbFile | null>(null);
+  const [priceInput, setPriceInput] = useState('');
+  const [previewYx, setPreviewYx] = useState<KbFile | null>(null);
   const [qrView, setQrView] = useState<Qr | null>(null);
   // 4.8.1:二维码包详情抽屉的内部筛选
   const [qrcAcc, setQrcAcc] = useState('');
@@ -190,6 +193,13 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
   // 4.7:上架/下架切换(仅 ok 文件)
   const toggleShelf = (f: KbFile) =>
     setKb((list) => list.map((x) => (x.id === f.id ? { ...x, shelf: !x.shelf } : x)));
+  // 权益改造:仅图/音/视有永享(预览 + 设/编永享价);文档(word/pdf)无
+  const isMedia = (f: KbFile) => f.type !== '文档';
+  // 一-5:基础权益(联动定价 price:0免费/1会员)——word/pdf 恒免费;图音视跟 KP 基础权益
+  const baseTier = (f: KbFile) => (isMedia(f) && price === 1 ? '会员' : '免费');
+  // 一-7:综合权益(永享优先)——图音视设永享价=永享;否则按基础权益。权益筛选用此,避免永享被「会员」筛选搜出
+  const fileTier = (f: KbFile) => (isMedia(f) && f.price != null ? '永享' : baseTier(f));
+  const openPrice = (f: KbFile) => { setPriceModal(f); setPriceInput(f.price != null ? String(f.price) : ''); };
   const renderOp = (f: KbFile) => {
     const del = () =>
       setConfirm({
@@ -201,6 +211,11 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
       });
     // 0610:下载已上传的知识文件内容(各状态文件均可下载,统一放在操作列最前)
     const dl = <span className="op" onClick={() => toast('已开始下载「' + f.name + '」')}>下载</span>;
+    // 权益改造:图/音/视额外提供 预览 + 设置/编辑永享价(文档无此两项)
+    // 一-2:预览移到列表缩略图列,操作列只保留设价
+    const mediaOps = isMedia(f) ? (
+      <span className="op" onClick={() => openPrice(f)}>{f.price != null ? '编辑永享价' : '设置永享价'}</span>
+    ) : null;
     // 4.7:重试只对「向量化失败(fail)」显示;ok 不显示重试,改为上架/下架
     if (f.st.kind === 'ok')
       return (
@@ -209,6 +224,7 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
           <span className="op" onClick={() => { toggleShelf(f); toast(f.shelf ? '已下架,该内容停止被检索' : '已上架,该内容可被检索'); }}>
             {f.shelf ? '下架' : '上架'}
           </span>
+          {mediaOps}
           <span className="op op-danger" onClick={del}>删除</span>
         </div>
       );
@@ -229,6 +245,7 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
           >
             重试
           </span>
+          {mediaOps}
           <span className="op op-danger" onClick={del}>删除</span>
         </div>
       );
@@ -236,15 +253,35 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
     return (
       <div className="op-cell">
         {dl}
+        {mediaOps}
         <span className="op op-danger" onClick={del}>删除</span>
       </div>
     );
   };
 
-  const kbRows = kb.filter((f) => (!kbQ || f.name.includes(kbQ)) && (kbFmt === '全部' || f.type === kbFmt));
+  const kbRows = kb.filter(
+    (f) =>
+      (!kbQ || f.name.includes(kbQ)) &&
+      (kbFmt === '全部' || f.type === kbFmt) &&
+      // 一-4:永享状态筛选(图音视设价=永享,其余=非永享)
+      (kbYx === '全部' || (kbYx === '永享') === (isMedia(f) && f.price != null)) &&
+      // 一-5:基础权益筛选(免费/会员)
+      (kbTier === '全部' || fileTier(f) === kbTier),
+  );
   const kbCols: Col<KbFile>[] = [
     { header: '文件名', className: 'strong', cell: (f) => (<>{fileIcon(f.icon)} {f.name}</>) },
     { header: '类型', cell: (f) => f.type, sortValue: (f) => TYPE_ORDER[f.type] ?? 9 },
+    // 一-2:预览列——图音视显缩略图、点击直接预览(同原永享列);文档显「—」
+    { header: '预览', cell: (f) => (isMedia(f)
+      ? <span className="yx-thumb" onClick={() => setPreviewYx(f)}><Icon id={f.icon === 'i-image' ? 'i-image' : 'i-play'} w={15} h={15} /></span>
+      : <span className="muted">—</span>) },
+    // 一-5:权益列——综合显示 免费/会员/永享(联动定价 price);设了永享价显「永享 ¥X」
+    { header: '权益', cell: (f) => {
+      if (isMedia(f) && f.price != null) return <span className="tag-s" style={{ color: 'var(--terra)', borderColor: 'var(--terra)' }}>永享 ¥{f.price}</span>;
+      return baseTier(f) === '会员'
+        ? <span className="tag-s tag-amber">会员</span>
+        : <span className="tag-s tag-line">免费</span>;
+    }, sortValue: (f) => (isMedia(f) && f.price != null ? 2 : baseTier(f) === '会员' ? 1 : 0) },
     { header: '处理状态', cell: renderSt, sortValue: (f) => ST_ORDER[f.st.kind] ?? 9 },
     // 0610:已向量化成功的文件展示上架/下架;向量化失败直接显示「下架」(不可检索);处理中显示「-」
     { header: '检索状态', cell: (f) => {
@@ -255,28 +292,7 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
     { header: '操作', cell: renderOp },
   ];
 
-  // —— 永享 ——
-  const yxRows = YX.filter(
-    (y) => (!yxQ || y.name.includes(yxQ)) && (yxFmt === '全部' || y.type === yxFmt) && (yxPrice === '全部' || (yxPrice === '已设价') === (y.price !== null)),
-  );
-  const yxCols: Col<Yx>[] = [
-    // 6.8:字段名「文件名」+ icon,规则同知识库
-    { header: '文件名', className: 'strong', cell: (y) => (<>{fileIcon(y.icon)} {y.name}</>) },
-    { header: '类型', cell: (y) => y.type, sortValue: (y) => TYPE_ORDER[y.type] ?? 9 },
-    // 6.8:预览列展示缩略图,点击放大查看(只查看不删除)
-    { header: '预览', cell: (y) => (
-      <span className="yx-thumb" onClick={() => setPreviewYx(y)}>
-        <Icon id={y.icon === 'i-image' ? 'i-image' : 'i-play'} w={15} h={15} />
-      </span>
-    ) },
-    // 6.9:未设价显示「-」,无文字
-    { header: '永享价', cell: (y) => (y.price === null ? <span className="muted">-</span> : <span className="mono">¥{y.price}</span>), sortValue: (y) => y.price ?? -1 },
-    { header: '操作', cell: (y) => (
-      <div className="op-cell">
-        <span className="op" onClick={() => setPriceModal(y)}>{y.price === null ? '设置价格' : '编辑价格'}</span>
-      </div>
-    ) },
-  ];
+  // —— 永享已并入知识库列表(KbFile.price)按文件管理,原独立 yxCols/yxRows 移除 ——
 
   // —— 二维码 ——
   const qrRows = QR.filter((r) => (!qrQ || r.name.includes(qrQ)) && (qrMode === '全部' || r.mode === qrMode));
@@ -429,6 +445,37 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
               {/* 0610:下拉宽度收敛为与表单其他选择控件一致(200px),不再填满整行 */}
               <div className="ctl"><Dropdown label="李医生" options={['李医生', '王老师', '机构 Agent']} style={{ width: 200 }} /></div>
             </div>
+            {/* 前台访问地址:只读 + 复制,链接随当前环境自动生成(本地端口 / 线上域名),携带机构 + KP */}
+            <div className="fm-row">
+              <div className="lab" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                前台访问地址
+                {/* 5.3:说明移到问号 hover 面板(无序两行不换行);删字段下方长文案 */}
+                <span className="kp-tip">
+                  <span className="info-dot">?</span>
+                  <span className="kp-tip-pop">
+                    <ul>
+                      <li>C 端用户访问本机构该 KP 的前台地址</li>
+                      <li>随当前环境（本地 / 线上）自动生成</li>
+                    </ul>
+                  </span>
+                </span>
+              </div>
+              <div className="ctl">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span
+                    className="mono"
+                    title={frontUrl}
+                    style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: 'var(--paper)', border: '1px solid var(--line-2)', borderRadius: 8, padding: '7px 10px', color: 'var(--ink-2)' }}
+                  >
+                    {frontUrl}
+                  </span>
+                  <button className="btn btn-ghost btn-sm" style={{ flex: 'none' }} onClick={copyFront}>
+                    <Icon id="i-copy" w={14} h={14} />
+                    复制链接
+                  </button>
+                </div>
+              </div>
+            </div>
             {/* 4.3:基础信息表单底部保存按钮 */}
             <div className="fm-row" style={{ justifyContent: 'flex-end' }}>
               <button className="btn btn-primary btn-sm" onClick={() => toast('已保存')}>保存</button>
@@ -440,9 +487,12 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
       {tab === 'kb' && (
         <>
           <div className="filter">
-            <Search placeholder="搜索文件名" minWidth={220} value={kbQ} onChange={setKbQ} />
-            {/* 6.7:默认显示「全部」,不带字段名 */}
+            <Search placeholder="搜索文件名" minWidth={200} value={kbQ} onChange={setKbQ} />
             <Dropdown label="全部" options={['全部', '文档', '图片', '音频', '视频']} onSelect={setKbFmt} />
+            {/* 一-5:权益状态筛选(免费/会员) */}
+            <Dropdown label="权益" options={['全部', '免费', '会员']} onSelect={setKbTier} />
+            {/* 一-4:永享状态筛选 */}
+            <Dropdown label="永享" options={['全部', '永享', '非永享']} onSelect={setKbYx} />
             <div className="grow" />
             {/* 6.5:文案 */}
             <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>上传即向量化，发布知识 KP 需至少一份已向量化完成的知识内容</span>
@@ -453,19 +503,6 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
             </button>
           </div>
           <DataGrid columns={kbCols} rows={kbRows} empty={{ title: '没有匹配的文件' }} />
-        </>
-      )}
-
-      {tab === 'yx' && (
-        <>
-          <div className="filter">
-            <Search placeholder="搜索文件名" minWidth={220} value={yxQ} onChange={setYxQ} />
-            <Dropdown label="全部" options={['全部', '图片', '音频', '视频']} onSelect={setYxFmt} />
-            <Dropdown label="全部" options={['全部', '已设价', '未设价']} onSelect={setYxPrice} />
-            <div className="grow" />
-            <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>新增 / 删除永享内容请在「知识库」Tab 操作</span>
-          </div>
-          <DataGrid columns={yxCols} rows={yxRows} empty={{ title: '没有匹配的内容' }} />
         </>
       )}
 
@@ -482,6 +519,17 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
               {/* 6.10/0614:文案详化，消除歧义 */}
               <div><div className="rt">会员</div><div className="rs">仅会员可查看此知识 KP 的图 / 音 / 视媒体资源；文字内容不受会员身份限制（免费 / 会员均可浏览）；「永享」标记内容仍需单独计价购买。</div></div>
             </div>
+          </div>
+          {/* 一-6:权益模型说明块(淡紫底,无序不换行)——避免运营/产品过段时间遗忘 */}
+          <div style={{ background: 'rgba(139,108,246,.10)', border: '1px solid rgba(139,108,246,.22)', borderRadius: 10, padding: '11px 14px' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 7 }}>权益模型说明（免费 / 会员 / 永享）</div>
+            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, lineHeight: 1.95, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>
+              <li><b>免费</b>：所有用户可查看该 KP 全部非永享内容（文字 / 图片 / 音频 / 视频）</li>
+              <li><b>会员</b>：仅会员可看图 / 音 / 视媒体，文字内容不受会员身份限制</li>
+              <li><b>永享</b>：图 / 音 / 视可单独标价买断，无论 KP 免费还是会员都需单独付费</li>
+              <li>即使 KP 设为会员，其中标了永享价的图 / 音 / 视也<b>必须永享付费才能看</b>，会员身份不例外</li>
+              <li>免费/会员 与 永享 是<b>两套相互独立</b>的权益模型，互不覆盖、各自计费</li>
+            </ul>
           </div>
         </div>
       )}
@@ -549,16 +597,29 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
         <div style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center' }}>拖动裁剪框调整区域 · 输出 9:16 封面</div>
       </Modal>
 
-      {/* —— 永享设置价格弹窗(6.9) —— */}
+      {/* —— 设置/编辑永享价弹窗(权益改造:对知识库图音视文件,真正写入 KbFile.price) —— */}
       <Modal
-        title={priceModal?.price === null ? '设置永享价格' : '编辑永享价格'}
+        title={priceModal?.price != null ? '编辑永享价' : '设置永享价'}
         open={priceModal !== null}
         onClose={() => setPriceModal(null)}
-        width={400}
+        width={420}
         footer={
           <>
             <button className="btn btn-ghost btn-sm" onClick={() => setPriceModal(null)}>取消</button>
-            <button className="btn btn-primary btn-sm" onClick={() => { setPriceModal(null); toast('价格已保存,立即生效'); }}>保存</button>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                if (!priceModal) return;
+                const v = priceInput.trim();
+                const num = v === '' ? null : Number(v);
+                if (v !== '' && (!isFinite(num as number) || (num as number) <= 0)) { toast('请输入正确的永享价'); return; }
+                setKb((list) => list.map((x) => (x.id === priceModal.id ? { ...x, price: num } : x)));
+                setPriceModal(null);
+                toast(num == null ? '已清空永享价 · 恢复为非永享' : '永享价已保存,立即生效');
+              }}
+            >
+              保存
+            </button>
           </>
         }
       >
@@ -568,19 +629,27 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
         </div>
         <div className="fm-row">
           <div className="lab">永享价（元）<span className="req">*</span></div>
-          <div className="ctl"><TextInput defaultValue={priceModal?.price != null ? String(priceModal.price) : ''} placeholder="如 9.9" /></div>
+          <div className="ctl"><TextInput value={priceInput} onChange={(e) => setPriceInput(e.target.value)} placeholder="如 9.9" /></div>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>修改价格成功后将立即生效。</div>
+        {/* 一-3:说明块移到「永享价」下方,无序 4 条,淡紫底 */}
+        <div style={{ background: 'rgba(139,108,246,.10)', border: '1px solid rgba(139,108,246,.22)', borderRadius: 10, padding: '10px 14px', marginTop: 14 }}>
+          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12.5, lineHeight: 1.9, color: 'var(--ink-2)' }}>
+            <li>永享内容需单独付费，无论该 KP 是免费还是会员</li>
+            <li>免费用户无需先开通会员即可直接购买</li>
+            <li>免费/会员 与 永享 是两套相互独立的权益模型</li>
+            <li>留空保存即清除永享价，恢复为非永享，修改后立即生效</li>
+          </ul>
+        </div>
       </Modal>
 
-      {/* —— 永享内容预览弹窗(6.8:后台 UI,只查看不删除) —— */}
+      {/* —— 内容预览弹窗(权益改造:知识库图音视点「预览」) —— */}
       <Modal title="内容预览" open={previewYx !== null} onClose={() => setPreviewYx(null)} width={460}>
         <div className="yx-preview">
           <div className="yx-preview-stage">
             <Icon id={previewYx?.icon === 'i-image' ? 'i-image' : 'i-play'} w={40} h={40} style={{ color: 'var(--ink-3)' }} />
           </div>
           <div className="yx-preview-name">{previewYx?.name}</div>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{previewYx?.type} · 仅查看，删除请在「知识库」Tab 操作</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{previewYx?.type} · 仅查看</div>
         </div>
       </Modal>
 

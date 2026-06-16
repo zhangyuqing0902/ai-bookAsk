@@ -524,16 +524,19 @@ a {
 }
 
 /* 0615-2：新建订阅弹窗 · 套餐竖排左对齐列表（替代横向卡片，修复变形） */
+/* 5.1:套餐增至 6 个,弹窗套餐列表改 2 列网格(纵向卡片:名 + 规格),更紧凑清晰 */
 .sub-plan-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
 }
 .sub-plan-row {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   cursor: pointer;
@@ -550,17 +553,37 @@ a {
   font-size: 13.5px;
   font-weight: 700;
   color: var(--ink);
-  width: 56px;
-  flex: none;
 }
 .sub-plan-row .spr-spec {
-  flex: 1;
-  font-size: 12.5px;
+  font-size: 10.5px;
   color: var(--ink-2);
+  line-height: 1.4;
+  white-space: nowrap;
 }
 .sub-plan-row.on svg {
+  position: absolute;
+  top: 9px;
+  right: 10px;
   color: var(--indigo-ink);
 }
+/* 5.1:额度行——每额度可填数字或切「不限」(定制版可混合) */
+.quota-edit { display: flex; gap: 16px; flex-wrap: nowrap; align-items: center; }
+.quota-cell { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.quota-cell .quota-unit { font-size: 13px; color: var(--ink-3); }
+/* 2:不限版额度禁止输入,静态显「不限」(灰底禁用感,高度对齐输入框 inp2 11px) */
+.quota-cell .quota-unlim-static { display: inline-flex; align-items: center; justify-content: center; width: 72px; padding: 11px 0; font-size: 13px; font-weight: 600; color: var(--ink-3); background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+/* 三-3:不限态——主题色淡底胶囊,完整文案「知识KP不限」,点击恢复输入 */
+/* 三-3:不限态胶囊高度对齐输入框(inp2 padding 11px),消除高度不一致 */
+.quota-cell .quota-unlim-val { display: inline-flex; align-items: center; font-weight: 700; color: var(--indigo-ink); font-size: 13px; line-height: 1.3; background: var(--indigo-soft); border: 1px solid var(--indigo); border-radius: 10px; padding: 11px 14px; cursor: pointer; }
+/* 三-3:不限切换——主题色描边(非绿) */
+.quota-cell .quota-unlim-tog { font-size: 11px; padding: 3px 9px; border-radius: 9px; border: 1px solid var(--line); color: var(--ink-3); cursor: pointer; transition: 0.15s; }
+.quota-cell .quota-unlim-tog:hover { border-color: var(--indigo); color: var(--indigo-ink); }
+/* 5.3:前台访问地址说明——问号 hover 面板,无序两行不换行 */
+.kp-tip { position: relative; display: inline-flex; cursor: help; }
+.kp-tip-pop { position: absolute; left: -8px; top: calc(100% + 7px); z-index: 200; background: rgba(24,26,33,.96); border-radius: 8px; box-shadow: var(--sh-md); padding: 7px 12px; display: none; }
+.kp-tip:hover .kp-tip-pop { display: block; }
+.kp-tip-pop ul { margin: 0; padding-left: 15px; }
+.kp-tip-pop li { white-space: nowrap; font-size: 11.5px; color: #fff; line-height: 1.75; }
 /* 0615-2：弹窗底部说明（引用风格淡主题底板，过长换行用无序点） */
 .sub-tip {
   margin-top: 10px;
@@ -874,7 +897,8 @@ a {
 .fm-card:has(.info:hover),
 .chart-card:has(.info:hover),
 .page-head:has(.info:hover),
-.kpd-head:has(.info:hover) {
+.kpd-head:has(.info:hover),
+.cursub-card:has(.info:hover) {
   position: relative;
   z-index: 200;
   overflow: visible;
@@ -1002,7 +1026,7 @@ a {
   padding: 12px 0;
 }
 .modal-card .fm-row .lab {
-  width: 92px;
+  width: 72px;
   text-align: right;
 }
 

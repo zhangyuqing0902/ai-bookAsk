@@ -268,7 +268,10 @@ body{
 .side-brand .wm .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .side-org{font-size:11px;color:var(--side-text-dim);margin-top:3px;font-family:var(--mono);letter-spacing:.04em;}
 .side{border-right:1px solid var(--side-line);}
-.side-nav{flex:1;overflow:hidden;padding:14px 12px;display:flex;flex-direction:column;gap:2px;}
+.side-nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:14px 12px;display:flex;flex-direction:column;gap:2px;}
+.side-nav::-webkit-scrollbar{width:6px;}
+.side-nav::-webkit-scrollbar-thumb{background:rgba(23,26,33,.14);border-radius:6px;}
+.side-nav::-webkit-scrollbar-track{background:transparent;}
 .nav-group{font-size:10.5px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;
   color:var(--side-text-dim);padding:14px 12px 7px;}
 .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;
@@ -319,6 +322,8 @@ body{
 .hero-sub{text-align:center;font-size:12.5px;color:var(--ink-2);letter-spacing:.02em;
   display:flex;align-items:center;justify-content:center;gap:8px;}
 .hero-sub .d{width:3px;height:3px;border-radius:50%;background:var(--amber);}
+/* 3.4:欢迎态全库检索透明说明(淡靛底小字,居中) */
+.kb-scope{align-self:center;margin-top:10px;font-size:11.5px;color:var(--indigo-ink);background:var(--indigo-soft);border-radius:13px;padding:5px 14px;letter-spacing:.02em;}
 .ex-list{margin-top:22px;display:flex;flex-direction:column;gap:11px;}
 .ex-q{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px;
   display:flex;align-items:center;gap:12px;box-shadow:var(--sh-sm);cursor:pointer;transition:.16s;}
@@ -358,6 +363,8 @@ body{
   align-items:center;justify-content:center;color:#fff;flex-direction:column;gap:3px;}
 .media-thumb .lk svg{width:16px;height:16px;}
 .media-thumb .lk .pr{font-size:10px;font-weight:700;font-family:var(--mono);}
+/* 权益改造:受限媒体封面右上角权益标签(会员/永享) */
+.media-tier{position:absolute;top:5px;right:5px;z-index:3;font-size:10px;font-weight:700;color:#fff;padding:1px 7px;border-radius:6px;letter-spacing:.02em;line-height:1.5;}
 .media-nav{position:absolute;right:8px;bottom:8px;display:flex;gap:5px;}
 .media-nav i{width:22px;height:22px;border-radius:50%;background:var(--surface);border:1px solid var(--line);
   display:flex;align-items:center;justify-content:center;color:var(--ink-2);box-shadow:var(--sh-sm);}

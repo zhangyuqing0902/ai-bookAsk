@@ -14,9 +14,14 @@ const buildUser = (orgId: string, role: Role, phoneBound = true): User => {
     gender: 'female',
     region: '上海市 · 浦东新区',
     bookGrants: [
-      { kpId: 'kp_cardio', scannedAt: '2026-05-20', grant: 'member' },
-      { kpId: 'kp_endo', scannedAt: '2026-04-08', grant: 'member' },
-      { kpId: 'kp_xie', scannedAt: '2026-02-15', grant: 'forever' },
+      // 首扫绑定:已解锁该 KP 会员级权益(可看免费+会员内容,永享仍单独购买)
+      { kpId: 'kp_cardio', scannedAt: '2026-05-20', unlocked: true, grant: 'member' },
+      { kpId: 'kp_endo', scannedAt: '2026-04-08', unlocked: true, grant: 'member' },
+      { kpId: 'kp_xie', scannedAt: '2026-02-15', unlocked: true, grant: 'forever' },
+      // 后扫引导:扫过但未获权益(进会话可体验,付费内容需单独付费)
+      { kpId: 'kp_pediatrics_series', scannedAt: '2026-06-01', unlocked: false },
+      { kpId: 'kp_neuro', scannedAt: '2026-06-10', unlocked: false },
+      { kpId: 'kp_resp', scannedAt: '2026-06-14', unlocked: false },
     ],
     membership: { userId: 'user_demo', orgId, state: 'none', autoRenew: false },
     permanentGrants: [],
@@ -205,7 +210,7 @@ export const useDemoStore = create<DemoStore>()(
     {
       name: 'aba-demo',
       // 0613：User 结构新增 gender/region/bookGrants 与登录演示开关，bump 版本以重置过期持久态
-      version: 2,
+      version: 3,
     },
   ),
 );
@@ -235,15 +240,15 @@ export const useOrgKps = () => {
 export const useAssetVisibility = () => {
   const role = useDemoStore((s) => s.role);
   const grants = useDemoStore((s) => s.user.permanentGrants);
+  // 权益改造(模型A:会员/永享两套独立池,互不覆盖):
+  //  会员内容→只看会员身份(买永享不解锁会员内容);永享内容→只看是否已买断该内容(会员不解锁永享,买断也不需先开会员)
   return (assetTag: 'free' | 'member' | 'forever', kpId?: string) => {
     if (assetTag === 'free') return 'unlocked' as const;
-    // permanent 已购解锁
-    if (kpId && grants.some((g) => g.kpId === kpId)) return 'unlocked' as const;
     if (assetTag === 'member') {
-      return role === 'member' || role === 'member_permanent' ? 'unlocked' : 'locked';
+      return role === 'member' || role === 'member_permanent' ? ('unlocked' as const) : ('locked' as const);
     }
     if (assetTag === 'forever') {
-      return 'locked' as const;
+      return kpId && grants.some((g) => g.kpId === kpId) ? ('unlocked' as const) : ('locked' as const);
     }
     return 'locked' as const;
   };

@@ -71,6 +71,6 @@ export function currentSubCard(subs: Subscription[]): SubCardVM | null {
     startDate: base.startDate,
     endDate: base.endDate,
     owner: base.owner,
-    rows: [row('KP 数', 'kp', 'kpUsed', '个'), row('存储', 'storage', 'storageUsed', 'GB'), row('本月 Token', 'token', 'tokenUsed', '亿')],
+    rows: [row('KP 数', 'kp', 'kpUsed', '个'), row('存储', 'storage', 'storageUsed', 'GB'), row('Token', 'token', 'tokenUsed', '亿')],
   };
 }

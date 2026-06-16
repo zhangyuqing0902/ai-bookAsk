@@ -13,6 +13,7 @@ export function MyBooks() {
   const grants = useDemoStore((s) => s.user.bookGrants ?? []);
   const resetChat = useChatStore((s) => s.setMessages);
   const [q, setQ] = useState('');
+  const [bookFilter, setBookFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
   const scanRef = useRef<HTMLInputElement>(null);
 
   // 进入指定纸书 / KP 的全新会话：先清空会话回到欢迎态，再进入 AI 会话。
@@ -28,11 +29,12 @@ export function MyBooks() {
     return grants
       .map((g) => {
         const kp = KPS.find((k) => k.id === g.kpId);
-        return kp ? { kp, scannedAt: g.scannedAt } : null;
+        return kp ? { kp, scannedAt: g.scannedAt, unlocked: g.unlocked } : null;
       })
       .filter((b): b is NonNullable<typeof b> => !!b)
-      .filter((b) => b.kp.name.toLowerCase().includes(kw));
-  }, [grants, q]);
+      .filter((b) => b.kp.name.toLowerCase().includes(kw))
+      .filter((b) => bookFilter === 'all' || (bookFilter === 'unlocked') === b.unlocked);
+  }, [grants, q, bookFilter]);
 
   return (
     <>
@@ -70,17 +72,31 @@ export function MyBooks() {
               </span>
             )}
           </div>
-          <div className="bk-tip">微信扫码解锁纸书全部数字内容，永享内容需另购</div>
+          <div className="fchips">
+            {([['all', '全部'], ['unlocked', '已解锁'], ['locked', '未解锁']] as const).map(([k, label]) => (
+              <span key={k} className={'fchip' + (bookFilter === k ? ' on' : '')} onClick={() => setBookFilter(k)}>
+                {label}
+              </span>
+            ))}
+          </div>
+          <div className="bk-tip">展示全部扫过纸书，首扫解锁相应权益</div>
           {books.length ? (
             <div className="yx-grid">
               {books.map((b) => (
                 <div className="yx-card tap" key={b.kp.id} onClick={() => enterFresh(b.kp.name)}>
                   <div className="bk-cover">
                     <span className="bk-init">{b.kp.name.slice(0, 1)}</span>
+                    {/* 3.3:首扫绑定显「已解锁」标(皇冠示意会员级权益);后扫未解锁不显状态(界面保持干净) */}
+                    {b.unlocked && (
+                      <span className="bk-unlocked">
+                        <Icon id="i-crown" w={11} h={11} />
+                        已解锁
+                      </span>
+                    )}
                   </div>
                   <div className="bk-meta">
                     <div className="bk-name">{b.kp.name}</div>
-                    <div className="bk-date">扫码解锁 · {b.scannedAt}</div>
+                    <div className="bk-date">扫码 · {b.scannedAt}</div>
                   </div>
                 </div>
               ))}

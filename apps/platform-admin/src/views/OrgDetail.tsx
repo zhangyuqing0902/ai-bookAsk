@@ -6,18 +6,20 @@ import { MY_ORG_SUBS, currentSubCard, subStatus, type Subscription } from '@aba/
 
 // 0613-2：套餐 / 配额独立成 Tab；用量看板重排（配额进度重点 + 2×2）；微信配置分区卡片
 // 0615：「套餐 / 配额」Tab 改造为订阅闭环（当前生效订阅只读 + 订阅记录 + 新建续签 / 升级）
-const TABS = ['基本资料', '订阅 / 配额', '机构配置', '用量看板', '品牌外观'];
+const TABS = ['基本资料', '订阅配额', '机构配置', '用量看板', '品牌外观'];
 const SUBTABS = ['LLM 配置', '联网配置', '微信配置'];
 
 // 机构套餐预设（KP 数 / 存储 GB / 月度 Token 亿）；0614c：Token 值只填数字、单位「亿」放后缀 / 单位标（与 KP「个」、存储「GB」一致）；定制版手填
-const PLAN_NAMES = ['基础版', '专业版', '旗舰版', '定制版'];
+const PLAN_NAMES = ['体验版', '基础版', '专业版', '旗舰版', '定制版', '不限版'];
 const PLANS: Record<string, { kp: string; storage: string; token: string }> = {
+  体验版: { kp: '3', storage: '5', token: '0.1' }, // 付费前试用,额度整体最小
   基础版: { kp: '10', storage: '20', token: '0.5' },
   专业版: { kp: '50', storage: '100', token: '2' },
   旗舰版: { kp: '200', storage: '500', token: '10' },
-  定制版: { kp: '', storage: '', token: '' },
+  不限版: { kp: '不限', storage: '不限', token: '不限' }, // 深度合作机构,三额度均不限
+  定制版: { kp: '', storage: '', token: '' }, // 每额度可填数字或单独设「不限」
 };
-const PLAN_CLS_D: Record<string, string> = { 基础版: 'tag-line', 专业版: 'tag-indigo', 旗舰版: 'tag-amber', 定制版: 'tag-jade' };
+const PLAN_CLS_D: Record<string, string> = { 体验版: 'tag-line', 基础版: 'tag-line', 专业版: 'tag-indigo', 旗舰版: 'tag-amber', 不限版: 'tag-jade', 定制版: 'tag-jade' };
 const SUB_ST_CLS: Record<string, string> = { 生效: 'ok', 未生效: 'none', 已过期: 'expired' };
 
 // 用量看板卡片（顶部色条 + 标题 + 指标行分隔 + 数值强调）
@@ -51,7 +53,6 @@ export function OrgDetail() {
   const [net, setNet] = useState(true);
   const [plan, setPlan] = useState('专业版');
   const [quota, setQuota] = useState(PLANS['专业版']);
-  const [custom, setCustom] = useState(false); // 0614：手动改动配额后偏离套餐预设 → 标记「自定义套餐」
   const [primary, setPrimary] = useState('#4B57E8');
   const [secondary, setSecondary] = useState('#8B6CF6');
 
@@ -59,14 +60,13 @@ export function OrgDetail() {
     name !== '定制版' && q.kp === PLANS[name].kp && q.storage === PLANS[name].storage && q.token === PLANS[name].token;
   const selectPlan = (name: string) => {
     setPlan(name);
-    setCustom(false);
     setQuota(PLANS[name]);
   };
-  // 0614：手动微调任一配额值 → 若偏离所选套餐预设，套餐标签自动变「自定义套餐」（消除"选了基础版却改了配额"的歧义）
+  // 2：改额度后自动匹配套餐——命中某预设则选中它，否则自动变「定制版」（不再用额度旁 badge）
   const editQuota = (patch: Partial<typeof quota>) => {
     const nq = { ...quota, ...patch };
     setQuota(nq);
-    setCustom(plan !== '定制版' && !matchesPlan(nq, plan));
+    setPlan(PLAN_NAMES.find((n) => matchesPlan(nq, n)) ?? '定制版');
   };
 
   // 0615-3 / 0615-6：订阅 / 配额 Tab —— 当前生效订阅卡（共享 CurrentSubCard，数据用 currentSubCard 计算）+ 订阅记录 + 加油包右抽屉
@@ -124,7 +124,6 @@ export function OrgDetail() {
 
   const openNew = () => {
     setPlan('专业版');
-    setCustom(false);
     setQuota(PLANS['专业版']);
     setOwner('');
     setNote('');
@@ -136,7 +135,6 @@ export function OrgDetail() {
     // 复制该订阅数据进入新建表单，便于快速填写（有效期仍取衔接默认，避免与被复制订阅重叠）
     if (s.plan) {
       setPlan(s.plan);
-      setCustom(false);
     }
     setQuota({ kp: s.kp, storage: s.storage, token: s.token });
     setOwner(s.owner ?? '');
@@ -327,7 +325,7 @@ export function OrgDetail() {
             title="新建订阅"
             open={subModal}
             onClose={() => setSubModal(false)}
-            width={520}
+            width={850}
             footer={
               <>
                 <button className="btn btn-ghost" onClick={() => setSubModal(false)}>取消</button>
@@ -341,11 +339,11 @@ export function OrgDetail() {
                 <div className="sub-plan-list">
                   {PLAN_NAMES.map((name) => {
                     const p = PLANS[name];
-                    const on = !custom && plan === name;
+                    const on = plan === name;
                     return (
                       <div key={name} className={'sub-plan-row' + (on ? ' on' : '')} onClick={() => selectPlan(name)}>
                         <span className="spr-name">{name}</span>
-                        <span className="spr-spec">{name === '定制版' ? '配额自定义' : `KP ${p.kp} 个 · 存储 ${p.storage} GB · Token ${p.token} 亿`}</span>
+                        <span className="spr-spec">{name === '定制版' ? '配额自定义' : name === '不限版' ? 'KP / 存储 / Token 均不限' : `KP ${p.kp} 个 · 存储 ${p.storage} GB · Token ${p.token} 亿`}</span>
                         {on && <Icon id="i-check" w={15} h={15} />}
                       </div>
                     );
@@ -354,11 +352,22 @@ export function OrgDetail() {
               </div>
             </div>
             <div className="fm-row">
-              <div className="lab">额度 {custom && <span className="plan-badge custom">自定义</span>}</div>
-              <div className="ctl" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TextInput value={quota.kp} onChange={(e) => editQuota({ kp: e.target.value })} style={{ width: 84 }} /><span style={{ fontSize: 13, color: 'var(--ink-3)' }}>个</span></span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TextInput value={quota.storage} onChange={(e) => editQuota({ storage: e.target.value })} style={{ width: 84 }} /><span style={{ fontSize: 13, color: 'var(--ink-3)' }}>GB</span></span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TextInput value={quota.token} onChange={(e) => editQuota({ token: e.target.value })} style={{ width: 84 }} /><span style={{ fontSize: 13, color: 'var(--ink-3)' }}>亿</span></span>
+              <div className="lab">额度</div>
+              <div className="ctl quota-edit">
+                {/* 3：删除独立不限切换;2：选「不限版」时三额度禁止输入、静态显「不限」 */}
+                {([['kp', '个'], ['storage', 'GB'], ['token', '亿']] as const).map(([field, unit]) => {
+                  const unlim = quota[field] === '不限';
+                  return (
+                    <span key={field} className="quota-cell">
+                      {unlim ? (
+                        <span className="quota-unlim-static">不限</span>
+                      ) : (
+                        <TextInput value={quota[field]} onChange={(e) => editQuota({ [field]: e.target.value })} style={{ width: 72 }} />
+                      )}
+                      <span className="quota-unit">{unit}</span>
+                    </span>
+                  );
+                })}
               </div>
             </div>
             <div className="fm-row">
@@ -374,7 +383,7 @@ export function OrgDetail() {
               <div className="ctl"><TextInput value={note} onChange={(e) => setNote(e.target.value)} placeholder="选填" style={{ maxWidth: 320 }} /></div>
             </div>
             {/* 0615-6：去掉状态手动开关——状态由有效期自动判定；说明块用无序列表、不换行依次展示（左对齐控件列） */}
-            <div className="sub-tip" style={{ marginLeft: 106 }}>
+            <div className="sub-tip" style={{ marginLeft: 86 }}>
               <ul style={{ whiteSpace: 'nowrap' }}>
                 <li>同一时间段只能有一个生效订阅</li>
                 <li>有生效订阅时最多再预建 1 期未生效订阅</li>
@@ -509,6 +518,35 @@ export function OrgDetail() {
                   </div>
                 </div>
 
+                {/* 5.2:微信开放平台——非微信浏览器扫码登录 / PC 扫码支付依赖,补充配置 */}
+                <div className="fm-card" style={{ margin: 0 }}>
+                  <div className="fh">
+                    微信开放平台<span className="req">*</span>
+                    <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 12, marginLeft: 8 }}>用于非微信浏览器的扫码登录与 PC 扫码支付，必填（外部浏览器打开时依赖）</span>
+                    <span className="tag-s tag-indigo" style={{ marginLeft: 8 }}>已配置</span>
+                  </div>
+                  <div className="fm-row">
+                    <div className="lab">网站应用 AppID</div>
+                    <div className="ctl"><TextInput defaultValue="wxopen0123456789ab" style={{ maxWidth: 320 }} /></div>
+                  </div>
+                  <div className="fm-row">
+                    <div className="lab">AppSecret</div>
+                    <div className="ctl"><TextInput defaultValue="••••••••••••9d4f" style={{ maxWidth: 320 }} /></div>
+                  </div>
+                  <div className="fm-row">
+                    <div className="lab">授权回调域名</div>
+                    <div className="ctl"><TextInput defaultValue="ai-book-ask-mobile-h5.zhangyuqing.top" style={{ maxWidth: 380 }} /></div>
+                  </div>
+                  <ul className="wx-lim">
+                    <li>用于「非微信浏览器」打开时唤起微信扫码登录（开放平台网站应用 / 二维码授权）。</li>
+                    <li>须在微信开放平台创建「网站应用」并通过审核，与公众号为不同 AppID。</li>
+                    <li>授权回调域名须与开放平台「网站应用 → 授权回调域」完全一致。</li>
+                  </ul>
+                  <div style={{ marginTop: 4 }}>
+                    <button className="btn btn-primary btn-sm" onClick={() => toast('已保存微信开放平台配置')}>保存</button>
+                  </div>
+                </div>
+
                 <div className="fm-card" style={{ margin: 0 }}>
                   {/* 0614：用途说明改行内灰色小号字；支付为必填 */}
                   <div className="fh">
@@ -557,7 +595,7 @@ export function OrgDetail() {
           <div className="quota-alert">
             <Icon id="i-warn" w={15} h={15} />
             <span>
-              本月 Token 已用 <b>88%</b>，已于 06-12、06-13 向机构联系人（张三 · 138****8888）发送 <b>70% / 80%</b> 预警短信；达 <b>90% / 95%</b> 将再次提醒。配额可在「套餐 / 配额」调整。
+              Token 已用 <b>88%</b>，已于 06-12、06-13 向机构联系人（张三 · 138****8888）发送 <b>70% / 80%</b> 预警短信；达 <b>90% / 95%</b> 将再次提醒。配额可在「订阅配额」调整。
             </span>
           </div>
           <div className="grid2" style={{ marginTop: 16 }}>

@@ -196,12 +196,14 @@ export interface PermanentGrant {
   grantedAt: string;
 }
 
-/** 扫线下纸书二维码解锁的知识 KP 权益（前台「我的纸书」）。
- *  grant=member：免费用户即可畅享该 KP 内非永享内容；grant=forever：含永享内容。 */
+/** 扫线下纸书二维码的知识 KP 记录（前台「我的纸书」展示所有扫码过的，含未解锁）。
+ *  unlocked=true（首扫绑定）：已解锁该 KP 会员级权益，可看免费+会员内容（永享仍单独购买）；
+ *  unlocked=false（后扫引导）：未解锁，进会话可体验，付费内容需按 KP 定价单独付费。 */
 export interface BookGrant {
   kpId: string;
-  scannedAt: string; // YYYY-MM-DD 扫码绑定时间
-  grant: 'member' | 'forever';
+  scannedAt: string; // YYYY-MM-DD 扫码时间
+  unlocked: boolean; // 是否首扫绑定获得权益
+  grant?: 'member' | 'forever'; // 已解锁时的权益级别（首扫送会员级）
 }
 
 export type OrderType = 'membership' | 'permanent' | 'redeem';

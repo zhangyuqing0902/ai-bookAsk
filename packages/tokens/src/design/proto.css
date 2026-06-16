@@ -404,6 +404,12 @@
 /* 0615：去掉纸书卡片 hover 放大 / 高亮交互（仅保留可点击，点击进入该 KP 全新会话） */
 .bk-badge{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:700;color:#fff;
   background:var(--amber);border-radius:6px;padding:2px 7px;}
+/* 3.3:我的纸书——筛选 chip + 首扫「已解锁」标(绿) */
+.bk-filter{padding:6px 16px 0;display:flex;gap:8px;}
+.bk-chip{font-size:12px;padding:5px 12px;border-radius:14px;border:1px solid var(--line);color:var(--ink-2);background:var(--surface);cursor:pointer;transition:.15s;}
+.bk-chip.on{background:var(--indigo-soft);border-color:var(--indigo);color:var(--indigo-ink);font-weight:600;}
+.bk-unlocked{position:absolute;top:6px;right:6px;display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:#fff;background:var(--jade);padding:2px 7px;border-radius:7px;z-index:2;letter-spacing:.02em;box-shadow:0 1px 4px rgba(21,176,128,.35);}
+.bk-unlocked svg{width:11px;height:11px;}
 
 /* 个人资料头像 */
 .prof-av{width:40px;height:40px;border-radius:50%;flex:none;border:1px solid var(--line);box-shadow:var(--sh-sm);

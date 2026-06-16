@@ -55,8 +55,8 @@
 .tbl .strong{font-weight:600;}
 .tbl .op{color:var(--indigo-ink);font-weight:600;cursor:pointer;text-decoration:none;}
 .tbl .op:hover{opacity:.65;text-decoration:none;}
-/* 操作列：多个按钮一行、垂直居中、间距统一（替代逐页手写 margin） */
-.op-cell{display:inline-flex;align-items:center;gap:16px;}
+/* 操作列：多个按钮一行、垂直居中、间距统一（替代逐页手写 margin）；一-1：gap 收窄,列宽随按钮数自适应 */
+.op-cell{display:inline-flex;align-items:center;gap:13px;white-space:nowrap;}
 .op-danger{color:var(--terra)!important;}
 .tbl .muted{color:var(--ink-3);}
 /* 0613：操作列固定在表格右侧（横向滚动时不被滑走），中间字段可横向滚动 */

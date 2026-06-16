@@ -17,3 +17,6 @@ apps/*/src/**/*.js
 # 临时备份 / 办公软件锁文件（勿提交）
 *.bak-*
 .~*
+
+# Python 虚拟环境（生成 feature-list.xlsx 的 openpyxl 环境，勿提交）
+.venv/

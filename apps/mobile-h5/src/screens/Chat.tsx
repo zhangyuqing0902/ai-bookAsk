@@ -9,15 +9,20 @@ interface Media {
   kind: 'image' | 'audio' | 'video';
   name: string;
   locked: boolean;
+  // 权益改造:受限资源门槛——'member'=会员内容(开会员看)、'forever'=永享内容(单独买断,不需会员)
+  tier?: 'member' | 'forever';
+  price?: number; // 永享价(tier=forever 时;付费墙金额取此值)
 }
 type Msg = ChatMsg;
 
 const KIND_LABEL: Record<Media['kind'], string> = { image: '图片', audio: '音频', video: '视频' };
+// 权益标签文案(会员/永享),配色:会员=amber 价值色、永享=珊瑚红 terra
+const TIER_LABEL: Record<'member' | 'forever', string> = { member: '会员', forever: '永享' };
 const DEMO_MEDIA: Media[] = [
   { kind: 'image', name: '膳食配比图', locked: false },
   { kind: 'image', name: '血压监测记录表', locked: false },
-  { kind: 'audio', name: '专家讲解 · 低钠饮食', locked: true },
-  { kind: 'video', name: '示范 · 家庭血压测量', locked: true },
+  { kind: 'audio', name: '专家讲解 · 低钠饮食', locked: true, tier: 'member' },
+  { kind: 'video', name: '示范 · 家庭血压测量', locked: true, tier: 'forever', price: 9.9 },
 ];
 const DEMO_FOLLOWUPS = ['那运动方面要注意什么?', '可以喝咖啡吗?', '需要长期服药吗?'];
 const ANSWER =
@@ -169,6 +174,8 @@ export function Chat() {
               <div className="hero-sub">
                 答案有出处<span className="d" />知识更可信
               </div>
+              {/* 3.4:透明说明——告知用户答案来自全机构知识库(欢迎态首次展示一次,发消息后消失) */}
+              <div className="kb-scope">综合「中国医学临床百家」全部知识为你解答</div>
               <div className="ex-list">
                 {['高血压怎么控制饮食?', '射血分数保留型心衰用药怎么选?', '本书第 4 章的重点是什么?'].map((q) => (
                   <div className="ex-q tap" key={q} onClick={() => send(q)}>
@@ -348,7 +355,7 @@ export function Chat() {
           <PaywallCard
             media={pay}
             onMember={() => { setPay(null); nav('/member'); }}
-            onBuy={guard(() => { const n = pay?.name ?? '媒体资源'; setPay(null); nav(`/pay/wechat?amount=9.9&subject=${encodeURIComponent('永享 · ' + n)}`); })}
+            onBuy={guard(() => { const n = pay?.name ?? '媒体资源'; const amt = pay?.price ?? 9.9; setPay(null); nav(`/pay/wechat?amount=${amt}&subject=${encodeURIComponent('永享 · ' + n)}`); })}
           />
         </div>
       </div>
@@ -360,7 +367,7 @@ export function Chat() {
           setIdx={(i) => setLbx({ ...lbx, idx: i })}
           onClose={() => setLbx(null)}
           onMember={() => { setLbx(null); nav('/member'); }}
-          onBuy={guard(() => { const n = lbx.items[lbx.idx]?.name ?? '媒体资源'; setLbx(null); nav(`/pay/wechat?amount=9.9&subject=${encodeURIComponent('永享 · ' + n)}`); })}
+          onBuy={guard(() => { const it = lbx.items[lbx.idx]; const n = it?.name ?? '媒体资源'; const amt = it?.price ?? 9.9; setLbx(null); nav(`/pay/wechat?amount=${amt}&subject=${encodeURIComponent('永享 · ' + n)}`); })}
         />
       )}
 
@@ -448,6 +455,12 @@ function AiMsg({
                 m.locked ? (
                   // 会话内直接点付费资源 → 直接弹付费墙(不进预览)
                   <div className="media-thumb locked tap" key={i} onClick={() => onPay(m)}>
+                    {/* 权益改造:封面右上角权益标签——会员(amber)/永享(珊瑚) */}
+                    {m.tier && (
+                      <span className="media-tier" style={{ background: m.tier === 'forever' ? 'var(--terra)' : 'var(--amber)' }}>
+                        {TIER_LABEL[m.tier]}
+                      </span>
+                    )}
                     <div className="lk">
                       <Icon id="i-lock" />
                       <span className="pr">{KIND_LABEL[m.kind]}</span>
@@ -502,20 +515,25 @@ function AiMsg({
 }
 
 // 付费墙内容卡片：会话内直接弹 / lightbox 内下方弹 复用同一套
+// 权益改造:按资源门槛动态——永享内容只显「买断」按钮(不需会员)、会员内容只显「开会员」按钮
 function PaywallCard({ media, onMember, onBuy }: { media: Media | null; onMember: () => void; onBuy: () => void }) {
+  const isForever = media?.tier === 'forever';
   return (
     <div className="pw-inner">
       <div className="pw-h">
-        <div className="t">{media?.name} · 受限内容</div>
-        <div className="s">开通会员畅享全部，或单独永久解锁此内容</div>
+        <div className="t">{media?.name}</div>
+        <div className="s">{isForever ? '永享内容单独购买、永久持有，无需开通会员' : '开通会员畅享全部会员内容'}</div>
       </div>
       <div className="pw-btns">
-        <button className="btn btn-amber" onClick={onMember}>
-          开通会员 · 畅享全部
-        </button>
-        <button className="btn btn-ghost" onClick={onBuy}>
-          ¥9.9 永久解锁此内容
-        </button>
+        {isForever ? (
+          <button className="btn btn-amber" onClick={onBuy}>
+            ¥{media?.price ?? 9.9} 永久解锁此内容
+          </button>
+        ) : (
+          <button className="btn btn-amber" onClick={onMember}>
+            开通会员 · 畅享全部会员内容
+          </button>
+        )}
       </div>
     </div>
   );

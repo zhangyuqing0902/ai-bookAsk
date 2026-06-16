@@ -72,4 +72,28 @@ export const KPS: KnowledgeProduct[] = [
     status: 'published',
     createdAt: '2026-03-15',
   },
+  // 0617：用于「我的纸书」未解锁(后扫引导)演示——机构的其他医学 KP，用户扫过但未首扫绑定
+  {
+    id: 'kp_neuro',
+    orgId: 'org_med',
+    name: '神经内科诊疗精要 · 脑卒中分册',
+    granularity: 'book',
+    description: '脑卒中急性期处理、二级预防、康复全流程，含 60+ 影像判读案例。',
+    baseTag: 'member',
+    hasForever: true,
+    foreverPrice: 6.9,
+    status: 'published',
+    createdAt: '2026-05-28',
+  },
+  {
+    id: 'kp_resp',
+    orgId: 'org_med',
+    name: '呼吸与危重症医学手册',
+    granularity: 'book',
+    description: '慢阻肺 / 哮喘 / 肺部感染 / 机械通气，一线呼吸科决策参考。',
+    baseTag: 'free',
+    hasForever: false,
+    status: 'published',
+    createdAt: '2026-06-05',
+  },
 ];
