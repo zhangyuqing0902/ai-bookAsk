@@ -2,31 +2,46 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, DataGrid, RangePicker, Modal, ConfirmDialog, TextInput, type Col } from '@aba/ui-admin';
-import { AORDERS, byPayDesc, type AOrder } from '../data/orders';
-import { useRefundStore } from '../refundStore';
+import { AORDERS, byPayDesc, MY_ORG, type AOrder } from '../data/orders';
+import { useRefundStore, operatorLabel } from '../refundStore';
 
 const TYPES = ['全部', '会员', '永享', '兑换码'];
-// 退款状态复用 .fstat 配色：退款中=处理中(靛)、部分退款=提醒(橙)、已退款=已退出资金(珊瑚)
-const RF_CLS: Record<string, string> = { 退款中: 'ing', 部分退款: 'wait', 已退款: 'fail' };
+// 订单状态配色：已支付=ok(青)、已核销=none(灰)
+const ORDER_CLS: Record<string, string> = { 已支付: 'ok', 已核销: 'none' };
+// 退款状态独立成列，复用 .fstat 配色：未退款=灰、退款中=处理中(靛)、部分退款=提醒(橙)、全额退款=已退出资金(珊瑚)
+const RF_CLS: Record<string, string> = { 未退款: 'none', 退款中: 'ing', 部分退款: 'wait', 全额退款: 'fail' };
 
-// 机构后台 · 订单管理（共性字段列表 + 点击进详情；按付款时间降序）。0613：操作列加退款。
+// 0614 退款对象 = C 端客户「昵称（手机号）」：手机号登录用户昵称取「用户+后四位」；wx 昵称用户无手机号则不显括号
+function refundTarget(user: string): { nick: string; phone: string } {
+  const m = user.match(/\d{3}\*{4}(\d{4})/);
+  if (m) return { nick: '用户' + m[1], phone: user };
+  return { nick: user, phone: '' };
+}
+
+// 机构后台 · 订单管理（共性字段列表 + 点击进详情；按付款时间降序）。0613-2：退款状态独立成列、与订单状态解耦。
 export function Orders() {
   const nav = useNavigate();
   const [q, setQ] = useState('');
   const [type, setType] = useState('全部');
   const [status, setStatus] = useState('全部');
+  const [rfStatus, setRfStatus] = useState('全部');
   const refunds = useRefundStore((s) => s.refunds);
   const startRefund = useRefundStore((s) => s.startRefund);
   const [refundOrder, setRefundOrder] = useState<AOrder | null>(null);
   const [refundAmt, setRefundAmt] = useState('');
   const [confirmRefund, setConfirmRefund] = useState(false);
 
-  const statusOf = (r: AOrder) => refunds[r.id]?.status ?? r.status;
-  const refundable = (r: AOrder) => r.amount > 0 && !['退款中', '已退款'].includes(refunds[r.id]?.status ?? '');
+  const refundStatusOf = (r: AOrder) => refunds[r.id]?.status ?? '未退款';
+  const refundable = (r: AOrder) => r.amount > 0 && !['退款中', '全额退款'].includes(refunds[r.id]?.status ?? '');
   const remaining = refundOrder ? refundOrder.amount - (refunds[refundOrder.id]?.refundedAmount ?? 0) : 0;
 
   const rows = AORDERS.filter(
-    (r) => (!q || r.id.includes(q) || r.user.includes(q)) && (type === '全部' || r.type === type) && (status === '全部' || statusOf(r) === status),
+    (r) =>
+      r.org === MY_ORG &&
+      (!q || r.id.includes(q) || r.user.includes(q)) &&
+      (type === '全部' || r.type === type) &&
+      (status === '全部' || r.status === status) &&
+      (rfStatus === '全部' || refundStatusOf(r) === rfStatus),
   ).slice().sort(byPayDesc);
 
   const openRefund = (r: AOrder) => {
@@ -50,18 +65,29 @@ export function Orders() {
 
   const columns: Col<AOrder>[] = [
     { header: '订单号', className: 'mono', cell: (r) => r.id },
-    { header: '类型', cell: (r) => <span className={'tag-s ' + r.tag}>{r.type}</span> },
+    { header: '类型', cell: (r) => <span className={'tag-s ' + r.tag}>{r.type}</span>, sortValue: (r) => r.type },
     { header: '关联知识产品', cell: (r) => (r.kp ? r.kp : <span className="muted">—</span>) },
     { header: '金额', className: 'mono', cell: (r) => '¥' + r.amount, sortValue: (r) => r.amount },
-    { header: '支付方式', cell: (r) => r.payMethod },
+    { header: '支付方式', cell: (r) => r.payMethod, sortValue: (r) => r.payMethod },
     {
-      header: '状态',
+      header: '订单状态',
+      sortValue: (r) => r.status,
+      cell: (r) => (
+        <span className={'fstat ' + (ORDER_CLS[r.status] ?? 'ok')}>
+          <span className="dt" />
+          {r.status}
+        </span>
+      ),
+    },
+    {
+      header: '退款状态',
+      sortValue: (r) => refundStatusOf(r),
       cell: (r) => {
-        const rf = refunds[r.id];
+        const s = refundStatusOf(r);
         return (
-          <span className={'fstat ' + (rf ? RF_CLS[rf.status] : 'ok')}>
+          <span className={'fstat ' + RF_CLS[s]}>
             <span className="dt" />
-            {rf ? rf.status : r.status}
+            {s}
           </span>
         );
       },
@@ -95,7 +121,8 @@ export function Orders() {
       <div className="orders-filter">
         <Search placeholder="搜索订单号 / 用户" minWidth={220} value={q} onChange={setQ} />
         <Dropdown label="类型" options={TYPES} onSelect={setType} />
-        <Dropdown label="状态" options={['全部', '已支付', '已核销', '退款中', '部分退款', '已退款']} onSelect={setStatus} />
+        <Dropdown label="订单状态" options={['全部', '已支付', '已核销']} onSelect={setStatus} />
+        <Dropdown label="退款状态" options={['全部', '未退款', '退款中', '部分退款', '全额退款']} onSelect={setRfStatus} />
         <div className="grow" />
         <button className="btn btn-ghost btn-sm" onClick={() => toast('导出订单')}>
           <Icon id="i-dl" w={14} h={14} />
@@ -107,7 +134,7 @@ export function Orders() {
         <div className="range-col"><RangePicker label="支付时间" /></div>
         <div className="range-col"><RangePicker label="兑换时间" /></div>
       </div>
-      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的订单' }} minWidth={1320} pageUnit="单" />
+      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的订单' }} minWidth={1440} pageUnit="单" />
 
       {/* 退款金额弹窗 */}
       <Modal
@@ -147,7 +174,10 @@ export function Orders() {
                 <TextInput value={refundAmt} onChange={(e) => setRefundAmt(e.target.value)} placeholder="请输入退款金额" style={{ maxWidth: 180 }} />
               </div>
             </div>
-            <div className="hint" style={{ margin: '4px 0 0 4px' }}>支持部分退款；确认后资金原路退回原支付账户。</div>
+            <ul className="rf-warn">
+              <li>支持部分退款</li>
+              <li>确认后资金原路退回原支付账户，操作不可撤销</li>
+            </ul>
           </>
         )}
       </Modal>
@@ -158,7 +188,43 @@ export function Orders() {
         title="确认退款？"
         danger
         confirmText="确认退款"
-        desc={refundOrder ? <>将向订单「{refundOrder.id}」退款 <b style={{ color: 'var(--terra)' }}>¥{Number(refundAmt || 0).toFixed(2)}</b>，资金原路退回原支付账户，操作不可撤销。</> : undefined}
+        desc={
+          refundOrder ? (
+            <div className="rf-confirm">
+              <div className="rf-cf-row">
+                <span className="k">发起人</span>
+                <span className="v">{operatorLabel}</span>
+              </div>
+              <div className="rf-cf-row">
+                <span className="k">退款对象</span>
+                <span className="v">
+                  {(() => {
+                    const t = refundTarget(refundOrder.user);
+                    return t.phone ? `${t.nick}（${t.phone}）` : t.nick;
+                  })()}
+                </span>
+              </div>
+              <div className="rf-cf-row">
+                <span className="k">订单号</span>
+                <span className="v mono">{refundOrder.id}</span>
+              </div>
+              <div className="rf-cf-row">
+                <span className="k">退款金额</span>
+                <span className="v" style={{ color: 'var(--terra)', fontWeight: 700 }}>
+                  ¥{Number(refundAmt || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="rf-cf-row">
+                <span className="k">资金路径</span>
+                <span className="v">原路退回客户原支付账户</span>
+              </div>
+              <div className="rf-cf-row">
+                <span className="k">备注</span>
+                <span className="v">操作一经确认无法撤销</span>
+              </div>
+            </div>
+          ) : undefined
+        }
         onConfirm={doRefund}
         onClose={() => setConfirmRefund(false)}
       />

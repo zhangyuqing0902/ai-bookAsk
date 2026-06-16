@@ -34,7 +34,7 @@ export function Member() {
               <div className="member-h">
                 解锁全部受限内容 · <span className="grad">畅享问答</span>
               </div>
-              <div className="member-sub">图 / 音 / 视全解锁 · 实时电话语音 · 优先响应</div>
+              <div className="member-sub">图音视频深度精讲 · 实时电话即时问答 · VIP 极速优先</div>
             </div>
             <div className={'plan' + (plan === 0 ? ' sel' : '')} onClick={() => setPlan(0)}>
               <div className="radio" />

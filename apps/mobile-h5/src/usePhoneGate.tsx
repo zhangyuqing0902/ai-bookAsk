@@ -21,11 +21,7 @@ export function usePhoneGate() {
       <div className="pw">
         <div className="pw-h" style={{ textAlign: 'center' }}>
           <div className="t">请先绑定手机号</div>
-          <div className="s">
-            根据相关规定，
-            <br />
-            支付下单、兑换码与开通会员需先完成手机号绑定。
-          </div>
+          <div className="s">支付、开会员等操作需绑定手机号，来保障账户安全</div>
         </div>
         <div className="pw-btns">
           <button

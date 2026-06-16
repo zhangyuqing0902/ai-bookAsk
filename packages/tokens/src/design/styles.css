@@ -296,6 +296,9 @@ body{
 .kpi .lab{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:7px;}
 .kpi .val{font-family:var(--mono);font-weight:500;font-size:32px;letter-spacing:-.02em;margin-top:12px;color:var(--ink);}
 .kpi .val .u{font-size:16px;color:var(--ink-3);margin-left:2px;}
+/* 0614b：指标单位后缀（个/条/次/人…，小号灰字，紧跟数值）+ 单位规范说明行 */
+.kpi .val .uu{font-size:14px;color:var(--ink-3);font-weight:400;margin-left:3px;}
+.unit-note{font-size:11.5px;color:var(--ink-3);line-height:1.6;margin:12px 2px 0;}
 .kpi .delta{font-size:11.5px;margin-top:8px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
 .kpi .delta.up{color:var(--jade);}
 .kpi .delta.dn{color:var(--terra);}
@@ -592,7 +595,12 @@ body{
 .field .inp{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.6);
   border:1px solid rgba(23,26,33,.1);border-radius:12px;padding:12px 14px;color:var(--ink-3);font-size:13.5px;}
 .field .inp svg{width:16px;height:16px;color:var(--ink-3);}
-.field .inp .vcode{margin-left:auto;font-size:12px;color:var(--indigo-ink);font-weight:700;white-space:nowrap;}
+.field .inp .vcode{font-size:14px;font-family:var(--mono);letter-spacing:.16em;color:var(--indigo-ink);font-weight:800;white-space:nowrap;}
+/* 0615：验证码可点「换一张」刷新——整块可点，hover 刷新图标旋转高亮 */
+.field .inp .vcode-box{margin-left:auto;display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none;}
+.field .inp .vcode-box svg{width:14px;height:14px;color:var(--ink-3);transition:transform .35s ease,color .2s;}
+.field .inp .vcode-box:hover svg{color:var(--indigo-ink);transform:rotate(-180deg);}
+.field .inp .vcode-box:hover .vcode{opacity:.85;}
 .login-btn{width:100%;justify-content:center;padding:14px;margin-top:8px;font-size:15px;}
 .login-foot{display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--ink-2);position:relative;}
 .login-foot a{color:var(--indigo-ink);text-decoration:none;}

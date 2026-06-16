@@ -29,6 +29,7 @@ export function TextInput({
   placeholder,
   style,
   textarea,
+  type,
 }: {
   defaultValue?: string;
   value?: string;
@@ -36,6 +37,7 @@ export function TextInput({
   placeholder?: string;
   style?: CSSProperties;
   textarea?: boolean;
+  type?: string; // 0615-3：支持 password 等
 }) {
   const controlled = value !== undefined ? { value, onChange: (e: { target: { value: string } }) => onChange?.(e) } : { defaultValue };
   return (
@@ -43,7 +45,7 @@ export function TextInput({
       {textarea ? (
         <textarea placeholder={placeholder} {...(controlled as object)} />
       ) : (
-        <input placeholder={placeholder} {...(controlled as object)} />
+        <input type={type} placeholder={placeholder} {...(controlled as object)} />
       )}
     </div>
   );

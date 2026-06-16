@@ -1,23 +1,23 @@
 import { type ReactNode } from 'react';
 import { Icon } from '@aba/ui';
 
-// 空态：插画 + 文案 + 主操作
+// 空态：插画 + 文案 + 主操作。illust 提供时用自定义插画替代「圆圈 + icon」（0615-6）
 export function EmptyState({
   icon = 'i-cube',
+  illust,
   title,
   sub,
   action,
 }: {
   icon?: string;
+  illust?: ReactNode;
   title: string;
   sub?: string;
   action?: ReactNode;
 }) {
   return (
     <div className="estate">
-      <div className="eill">
-        <Icon id={icon} />
-      </div>
+      {illust ? <div className="eart">{illust}</div> : <div className="eill"><Icon id={icon} /></div>}
       <div className="et">{title}</div>
       {sub && <div className="es">{sub}</div>}
       {action && <div className="ea">{action}</div>}

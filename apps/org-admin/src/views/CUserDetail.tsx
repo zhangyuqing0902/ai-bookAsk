@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 import { DataGrid, MediaView, type Col, type MediaItem } from '@aba/ui-admin';
 import { AORDERS, byPayDesc, type AOrder } from '../data/orders';
+import { useRefundStore } from '../refundStore';
 
 const YX: MediaItem[] = [
   { kind: 'image', name: '心电图示例' },
@@ -10,18 +11,46 @@ const YX: MediaItem[] = [
   { kind: 'video', name: '手术演示' },
 ];
 
+// 0614：订单状态 / 退款状态配色与字段与「订单管理」列表保持一致，避免歧义
+const ORDER_CLS: Record<string, string> = { 已支付: 'ok', 已核销: 'none' };
+const RF_CLS: Record<string, string> = { 未退款: 'none', 退款中: 'ing', 部分退款: 'wait', 全额退款: 'fail' };
+
 // 机构后台 · C 端用户详情
 export function CUserDetail() {
   const nav = useNavigate();
   const [preview, setPreview] = useState<MediaItem | null>(null);
+  const refunds = useRefundStore((s) => s.refunds);
+  const refundStatusOf = (r: AOrder) => refunds[r.id]?.status ?? '未退款';
   const rows = AORDERS.slice().sort(byPayDesc);
 
   const columns: Col<AOrder>[] = [
     { header: '订单号', className: 'mono', cell: (r) => r.id },
-    { header: '类型', cell: (r) => <span className={'tag-s ' + r.tag}>{r.type}</span> },
+    { header: '类型', cell: (r) => <span className={'tag-s ' + r.tag}>{r.type}</span>, sortValue: (r) => r.type },
     { header: '金额', className: 'mono', cell: (r) => '¥' + r.amount, sortValue: (r) => r.amount },
-    { header: '支付方式', cell: (r) => r.payMethod },
-    { header: '状态', cell: (r) => <span className="fstat ok"><span className="dt" />{r.status}</span> },
+    { header: '支付方式', cell: (r) => r.payMethod, sortValue: (r) => r.payMethod },
+    {
+      header: '订单状态',
+      sortValue: (r) => r.status,
+      cell: (r) => (
+        <span className={'fstat ' + (ORDER_CLS[r.status] ?? 'ok')}>
+          <span className="dt" />
+          {r.status}
+        </span>
+      ),
+    },
+    {
+      header: '退款状态',
+      sortValue: (r) => refundStatusOf(r),
+      cell: (r) => {
+        const s = refundStatusOf(r);
+        return (
+          <span className={'fstat ' + RF_CLS[s]}>
+            <span className="dt" />
+            {s}
+          </span>
+        );
+      },
+    },
     { header: '付款时间', className: 'mono', cell: (r) => r.payTime, sortValue: (r) => r.payTime },
     { header: '操作', cell: (r) => <span className="op" onClick={() => nav('/orders/' + r.id)}>详情</span> },
   ];

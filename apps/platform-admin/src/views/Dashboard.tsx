@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { LineChart, RangePicker, Dropdown, InfoDot } from '@aba/ui-admin';
+import { LineChart, RangePicker, Dropdown, InfoDot, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
 import { platformDaily, platformSnapshot, rangeMetrics } from '@aba/mock';
 
 // 平台后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
+// 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
 export function Dashboard() {
   const [days, setDays] = useState(7);
   const [rangeLabel, setRangeLabel] = useState('近 7 天');
@@ -11,7 +12,7 @@ export function Dashboard() {
   const scope = org === '全部机构' ? '全平台' : org;
   const cur = rangeMetrics(platformDaily, days);
   const prev = rangeMetrics(platformDaily, days, days);
-  const n = (x: number) => x.toLocaleString('en-US');
+  const n = fmtCn;
   const chartSlice = days <= 1 ? platformDaily.slice(-7) : cur.slice;
 
   const Delta = ({ c, p }: { c: number; p: number }) => {
@@ -48,13 +49,14 @@ export function Dashboard() {
         <span className="dash-realtime-tag">实时</span>
         <span className="dash-section-sub">· {scope}截至今日的累计 / 存量数据，不随下方时间筛选变化</span>
       </div>
-      <div className="kpi-row">
+      {/* 0614：单行 5 列（含净 GMV），避免末卡换行后向左展开的 tooltip 被裁切露出侧栏 */}
+      <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(5,1fr)' }}>
         <div className="kpi">
           <div className="lab">
             入驻机构数
             <InfoDot text="平台已创建且未删除的机构总数。统计口径：实时快照。" />
           </div>
-          <div className="val">{n(platformSnapshot.orgs)}</div>
+          <div className="val">{n(platformSnapshot.orgs)}<span className="uu">家</span></div>
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
             <Icon id="i-building" w={16} h={16} />
           </div>
@@ -64,7 +66,7 @@ export function Dashboard() {
             累计用户
             <InfoDot text="全平台各机构 C 端去重注册用户数合计。统计区间：开通至今（实时快照）。" />
           </div>
-          <div className="val">{n(platformSnapshot.totalUsers)}</div>
+          <div className="val">{n(platformSnapshot.totalUsers)}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
             <Icon id="i-user" w={16} h={16} />
           </div>
@@ -84,10 +86,23 @@ export function Dashboard() {
         </div>
         <div className="kpi">
           <div className="lab">
+            净 GMV（扣退款）
+            <InfoDot text="全平台累计 GMV − 累计退款金额（约 ¥18,100 · 退款率 2.1%），即全平台各机构净收入合计（资金 100% 进入各机构账户，平台不参与分账）。统计区间：开通至今（实时快照）。" />
+          </div>
+          <div className="val">
+            <span className="u">¥</span>
+            {n(platformSnapshot.totalGmv - 18100)}
+          </div>
+          <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
+            <Icon id="i-chart" w={16} h={16} />
+          </div>
+        </div>
+        <div className="kpi">
+          <div className="lab">
             提问总量
             <InfoDot text="全平台 C 端历史累计提问条数合计。统计区间：开通至今（实时快照）。" />
           </div>
-          <div className="val">{n(platformSnapshot.totalQuestions)}</div>
+          <div className="val">{n(platformSnapshot.totalQuestions)}<span className="uu">条</span></div>
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
             <Icon id="i-msg" w={16} h={16} />
           </div>
@@ -116,7 +131,7 @@ export function Dashboard() {
             活跃用户
             <InfoDot text="所选区间内全平台有登录或提问行为的去重用户数（今日＝当日 DAU；区间为去重后近似）。随时间筛选变化。" />
           </div>
-          <div className="val">{n(cur.activeUsers)}</div>
+          <div className="val">{n(cur.activeUsers)}<span className="uu">人</span></div>
           <Delta c={cur.activeUsers} p={prev.activeUsers} />
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
             <Icon id="i-grid" w={16} h={16} />
@@ -127,7 +142,7 @@ export function Dashboard() {
             新增会员
             <InfoDot text="所选区间内全平台新开通会员的去重用户数。随时间筛选变化。" />
           </div>
-          <div className="val">{n(cur.newMembers)}</div>
+          <div className="val">{n(cur.newMembers)}<span className="uu">人</span></div>
           <Delta c={cur.newMembers} p={prev.newMembers} />
           <div className="ic" style={{ background: 'var(--amber-soft)', color: 'var(--amber-ink)' }}>
             <Icon id="i-user" w={16} h={16} />
@@ -152,7 +167,7 @@ export function Dashboard() {
             区间提问数
             <InfoDot text="所选区间内全平台 C 端新增提问条数(含追问)。随时间筛选变化。" />
           </div>
-          <div className="val">{n(cur.questions)}</div>
+          <div className="val">{n(cur.questions)}<span className="uu">条</span></div>
           <Delta c={cur.questions} p={prev.questions} />
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
             <Icon id="i-msg" w={16} h={16} />
@@ -177,6 +192,7 @@ export function Dashboard() {
           }}
         />
       </div>
+      <div className="unit-note">{UNIT_NOTE}</div>
     </>
   );
 }

@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
+import { usePhoneGate } from '../usePhoneGate';
 
 const GRAD_BG = 'linear-gradient(176deg,#F0F3FE 0%,#F4F1FC 46%,#FDF4F1 100%)';
 
 // 0613：免费 vs 会员 权益对比，强化付费价值感
 const CMP_ROWS: { label: string; free: boolean | string; member: boolean | string }[] = [
-  { label: '基础知识问答', free: true, member: true },
-  { label: '受限 图 / 音 / 视内容', free: false, member: true },
-  { label: '实时电话语音问答', free: false, member: true },
-  { label: '更快响应 · 优先排队', free: false, member: true },
-  { label: '永享内容', free: '单独购买', member: '单独购买' },
+  { label: '基础文字知识问答', free: true, member: true },
+  { label: '图音视频深度知识精讲', free: false, member: true },
+  { label: 'VIP 极速优先通道', free: false, member: true },
+  { label: '实时电话即时问答', free: false, member: true },
+  { label: '永享名家典藏知识', free: '单独购买', member: '单独购买' },
 ];
 
 function Cell({ v }: { v: boolean | string }) {
@@ -21,6 +22,7 @@ function Cell({ v }: { v: boolean | string }) {
 // 12 会员中心（会员态）
 export function MemberCenter() {
   const nav = useNavigate();
+  const { guard, gate } = usePhoneGate();
   const [autoRenew, setAutoRenew] = useState(true);
   const [confirm, setConfirm] = useState(false);
 
@@ -96,7 +98,7 @@ export function MemberCenter() {
               <button
                 className="btn btn-primary"
                 style={{ width: '100%', justifyContent: 'center' }}
-                onClick={reopen}
+                onClick={guard(reopen)}
               >
                 自动续费
               </button>
@@ -125,6 +127,8 @@ export function MemberCenter() {
           </div>
         </div>
       </div>
+      {/* 0614：续费(自动续费)前置手机号绑定校验——未绑先引导绑定，再续费 */}
+      {gate}
     </>
   );
 }

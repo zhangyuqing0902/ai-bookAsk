@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
+import { useDemoStore } from '@aba/mock';
 import { useChatStore, nextMsgId, type ChatMsg } from '../chatStore';
 import { usePhoneGate } from '../usePhoneGate';
 
@@ -33,6 +34,8 @@ const HISTORY = [
 export function Chat() {
   const nav = useNavigate();
   const { guard, gate } = usePhoneGate();
+  // 0614：机构本月 Token 超额度 → 给 C 端的友好提示（演示开关在落地页）
+  const orgTokenExceeded = useDemoStore((s) => s.orgTokenExceeded);
   const [jump, setJump] = useState<{ url: string; n: number } | null>(null);
   const msgs = useChatStore((s) => s.messages);
   const setMsgs = useChatStore((s) => s.setMessages);
@@ -61,7 +64,24 @@ export function Chat() {
     return () => clearTimeout(t);
   }, [jump]);
 
+  // 0614：机构本月 Token 已达上限 → 任何提问/语音/实时会话入口都拦截，不让问题发出去
+  // 0614c：不再弹 3 秒 toast（界面顶部已有珊瑚红常驻提示条），改为让该提示条放大抖动 + 跳亮一下，提醒用户看已有提示
+  const orgTipRef = useRef<HTMLDivElement>(null);
+  const tokenBlocked = () => {
+    if (orgTokenExceeded) {
+      const el = orgTipRef.current;
+      if (el) {
+        el.classList.remove('pulse');
+        void el.offsetWidth; // 强制重排以重启动画
+        el.classList.add('pulse');
+      }
+      return true;
+    }
+    return false;
+  };
+
   const send = (q: string) => {
+    if (tokenBlocked()) return;
     const text = q.trim();
     if (!text) return;
     setMsgs((m) => [...m, { id: nextMsgId(), role: 'user', text }, { id: nextMsgId(), role: 'ai', text: ANSWER }]);
@@ -93,6 +113,7 @@ export function Chat() {
 
   // 0610：单击 / 长按麦克风 → 进入全屏语音输入动画；点击浮层任意位置 → 关闭并发送本次语音问题
   const openVoice = () => {
+    if (tokenBlocked()) return;
     setVoice(true);
     // 演示：后台静默申请麦克风权限以贴近真实，不阻塞动画浮层（避免权限回调与点击竞态）
     navigator.mediaDevices?.getUserMedia({ audio: true }).then((s) => s.getTracks().forEach((t) => t.stop())).catch(() => {});
@@ -116,7 +137,7 @@ export function Chat() {
             <div className="sub">内容由 AI 生成</div>
           </div>
           <div className="grp">
-            <div className="ic tap" onClick={() => nav('/call')}>
+            <div className="ic tap" onClick={() => { if (tokenBlocked()) return; nav('/call'); }}>
               <Icon id="i-phone" w={20} h={20} />
             </div>
             <div className="ic tap" onClick={newChat}>
@@ -124,6 +145,14 @@ export function Chat() {
             </div>
           </div>
         </div>
+
+        {/* 0614：机构本月 Token 超额度 → 给 C 端的友好提示 */}
+        {orgTokenExceeded && (
+          <div className="org-tip" ref={orgTipRef}>
+            <Icon id="i-warn" w={14} h={14} />
+            当前机构 Token 已达上限，请联系客服
+          </div>
+        )}
 
         <div className="h5-scroll" ref={scrollRef} style={{ overflowY: 'auto' }}>
           {msgs.length === 0 ? (
@@ -284,7 +313,7 @@ export function Chat() {
             <div className="t">参考来源</div>
           </div>
           {/* 上块:知识 KP(同一 KP 内多个命中文件归并展示,最多 2 个,余下用省略号) */}
-          <div className="src-item tap" onClick={() => { setOv(null); setJump({ url: '纸书购买链接', n: 3 }); }}>
+          <div className="src-item tap" onClick={() => setJump({ url: '纸书购买链接', n: 3 })}>
             <div className="src-cover">
               <span className="sp" />
             </div>
@@ -299,10 +328,7 @@ export function Chat() {
           <div className="src-divider" />
           <div
             className="src-item tap"
-            onClick={() => {
-              setOv(null);
-              setJump({ url: 'hypertension-2024.org', n: 3 });
-            }}
+            onClick={() => setJump({ url: 'hypertension-2024.org', n: 3 })}
           >
             <div className="src-web-ic">
               <Icon id="i-link" />
@@ -350,21 +376,14 @@ export function Chat() {
       {/* 三能力手机号绑定门槛弹窗 */}
       {gate}
 
-      {/* 0613：第三方来源跳转 3 秒倒计时过渡 */}
+      {/* 0614：跳出外部 = 黑底白字倒计时条（仿通用 toast）：时间 + 即将跳转到外部 + 取消跳转 */}
       {jump && (
-        <div className="ov open">
-          <div className="scrim" onClick={() => setJump(null)} />
-          <div className="cd-card">
-            <div className="cd-ic">
-              <Icon id="i-globe" w={26} h={26} />
-            </div>
-            <div className="cd-t">即将跳转至外部页面</div>
-            <div className="cd-num">{jump.n}</div>
-            <div className="cd-s">{jump.n} 秒后自动打开 · 内容由第三方提供</div>
-            <button className="btn btn-text-weak" style={{ width: '100%', justifyContent: 'center', marginTop: 6 }} onClick={() => setJump(null)}>
-              取消跳转
-            </button>
-          </div>
+        <div className="jump-bar">
+          <span className="jb-num">{jump.n}</span>
+          <span className="jb-txt">即将跳转到外部</span>
+          <button className="jb-cancel" onClick={() => setJump(null)}>
+            取消跳转
+          </button>
         </div>
       )}
     </>

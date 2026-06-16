@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { LineChart, RangePicker, InfoDot } from '@aba/ui-admin';
-import { orgDaily, orgSnapshot, rangeMetrics } from '@aba/mock';
+import { LineChart, RangePicker, InfoDot, CurrentSubCard, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
+import { orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, currentSubCard } from '@aba/mock';
 
 // 机构后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
+// 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
 export function Dashboard() {
   const [days, setDays] = useState(7);
   const [rangeLabel, setRangeLabel] = useState('近 7 天');
   const cur = rangeMetrics(orgDaily, days);
   const prev = rangeMetrics(orgDaily, days, days);
-  const n = (x: number) => x.toLocaleString('en-US');
+  const n = fmtCn;
   const chartSlice = days <= 1 ? orgDaily.slice(-7) : cur.slice;
 
   const Delta = ({ c, p }: { c: number; p: number }) => {
@@ -39,13 +40,19 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* 0615 / 0615-6：机构配额前置——进后台先看「当前订阅 + 额度是否吃紧」，再看经营数据；
+          复用平台机构详情同款「当前生效订阅卡」（机构侧只读：不显商务负责人 / 不显新建订阅按钮） */}
+      <CurrentSubCard data={currentSubCard(MY_ORG_SUBS)} showOwner={false} />
+
       {/* 实时总览（累计 / 存量，不随时间筛选变化） */}
       <div className="dash-section-title">
         实时总览
         <span className="dash-realtime-tag">实时</span>
         <span className="dash-section-sub">· 截至今日的累计 / 存量数据，不随下方时间筛选变化</span>
       </div>
-      <div className="kpi-row">
+      {/* 0614：实时总览聚焦「钱 + 规模」——钱(累计GMV / 累计退款 / 净GMV) 连在一起，再规模(会员 / 注册)；去掉累计提问(归数据看板·提问分析)。
+          单行 5 列：避免 5 卡换行后末卡落到第二行左列、其向左展开的 tooltip 被 admin-body 横向裁切而露出侧栏（修复累计退款 tooltip 遮挡） */}
+      <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(5,1fr)' }}>
         <div className="kpi">
           <div className="lab">
             累计 GMV（成交总额）
@@ -61,38 +68,8 @@ export function Dashboard() {
         </div>
         <div className="kpi">
           <div className="lab">
-            当前会员数
-            <InfoDot text="当前拥有有效会员权益的去重用户数。统计口径：实时快照。" />
-          </div>
-          <div className="val">{n(orgSnapshot.currentMembers)}</div>
-          <div className="ic" style={{ background: 'var(--amber-soft)', color: 'var(--amber-ink)' }}>
-            <Icon id="i-user" w={16} h={16} />
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="lab">
-            累计提问数
-            <InfoDot text="C 端用户历史累计提问条数(含追问)。统计区间：开通至今（实时快照）。" />
-          </div>
-          <div className="val">{n(orgSnapshot.totalQuestions)}</div>
-          <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
-            <Icon id="i-msg" w={16} h={16} />
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="lab">
-            累计注册用户
-            <InfoDot text="本机构 C 端去重注册用户数。统计区间：开通至今（实时快照）。" />
-          </div>
-          <div className="val">{n(orgSnapshot.totalRegistered)}</div>
-          <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
-            <Icon id="i-user" w={16} h={16} />
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="lab">
             累计退款 / 退款率
-            <InfoDot text="历史累计已成功退款金额；退款率 = 退款金额 ÷ GMV。GMV 已扣减退款。统计区间：开通至今。" />
+            <InfoDot text="历史累计已成功退款金额；退款率 = 退款金额 ÷ GMV。统计区间：开通至今。" />
           </div>
           <div className="val">
             <span className="u">¥</span>
@@ -101,6 +78,39 @@ export function Dashboard() {
           </div>
           <div className="ic" style={{ background: 'rgba(229,83,59,.12)', color: 'var(--terra)' }}>
             <Icon id="i-dl" w={16} h={16} />
+          </div>
+        </div>
+        <div className="kpi">
+          <div className="lab">
+            净 GMV（扣退款）
+            <InfoDot text="累计 GMV − 累计退款金额，反映实际到账净收入。统计区间：开通至今（实时快照）。" />
+          </div>
+          <div className="val">
+            <span className="u">¥</span>
+            {n(orgSnapshot.totalGmv - 1860)}
+          </div>
+          <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
+            <Icon id="i-chart" w={16} h={16} />
+          </div>
+        </div>
+        <div className="kpi">
+          <div className="lab">
+            当前会员数
+            <InfoDot text="当前拥有有效会员权益的去重用户数。统计口径：实时快照。" />
+          </div>
+          <div className="val">{n(orgSnapshot.currentMembers)}<span className="uu">人</span></div>
+          <div className="ic" style={{ background: 'var(--amber-soft)', color: 'var(--amber-ink)' }}>
+            <Icon id="i-user" w={16} h={16} />
+          </div>
+        </div>
+        <div className="kpi">
+          <div className="lab">
+            累计注册用户
+            <InfoDot text="本机构 C 端去重注册用户数。统计区间：开通至今（实时快照）。" />
+          </div>
+          <div className="val">{n(orgSnapshot.totalRegistered)}<span className="uu">人</span></div>
+          <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
+            <Icon id="i-user" w={16} h={16} />
           </div>
         </div>
       </div>
@@ -127,7 +137,7 @@ export function Dashboard() {
             活跃用户
             <InfoDot text="所选区间内有登录或提问行为的去重用户数（今日＝当日 DAU；区间为去重后近似）。随时间筛选变化。" />
           </div>
-          <div className="val">{n(cur.activeUsers)}</div>
+          <div className="val">{n(cur.activeUsers)}<span className="uu">人</span></div>
           <Delta c={cur.activeUsers} p={prev.activeUsers} />
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
             <Icon id="i-grid" w={16} h={16} />
@@ -138,7 +148,7 @@ export function Dashboard() {
             新增会员
             <InfoDot text="所选区间内新开通会员的去重用户数。随时间筛选变化。" />
           </div>
-          <div className="val">{n(cur.newMembers)}</div>
+          <div className="val">{n(cur.newMembers)}<span className="uu">人</span></div>
           <Delta c={cur.newMembers} p={prev.newMembers} />
           <div className="ic" style={{ background: 'var(--amber-soft)', color: 'var(--amber-ink)' }}>
             <Icon id="i-user" w={16} h={16} />
@@ -163,7 +173,7 @@ export function Dashboard() {
             区间提问数
             <InfoDot text="所选区间内 C 端新增提问条数(含追问)。随时间筛选变化。" />
           </div>
-          <div className="val">{n(cur.questions)}</div>
+          <div className="val">{n(cur.questions)}<span className="uu">条</span></div>
           <Delta c={cur.questions} p={prev.questions} />
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
             <Icon id="i-msg" w={16} h={16} />
@@ -195,6 +205,7 @@ export function Dashboard() {
           }}
         />
       </div>
+      <div className="unit-note">{UNIT_NOTE}</div>
     </>
   );
 }

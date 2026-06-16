@@ -456,6 +456,68 @@ body,
   color: var(--ink-3);
   margin-top: 16px;
 }
+/* 0615：支付环境标签 + 微信外 H5 支付引导 / 唤起过场 */
+.wxpay-env {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: center;
+  margin-bottom: 18px;
+  padding: 4px 11px;
+  border-radius: 14px;
+  background: var(--surface-warm);
+  color: var(--ink-2);
+  font-size: 11.5px;
+}
+.wxpay-h5tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 22px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  background: #fff6ec;
+  color: #9a5b16;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.wxpay-h5tip svg {
+  flex: none;
+}
+.wxpay {
+  position: relative;
+}
+.wxpay-hop {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: rgba(20, 18, 28, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.wxpay-hop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 26px 30px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--sh-md);
+}
+.wxpay-hop-t {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.wxpay-hop-s {
+  font-size: 12px;
+  color: var(--ink-3);
+}
 
 /* ============ 一-8:支付成功落地页(品牌质感,非后台味绿勾) ============ */
 .pay-ok {

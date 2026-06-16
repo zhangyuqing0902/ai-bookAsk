@@ -1,0 +1,70 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'PingFang SC','Noto Sans SC',system-ui,-apple-system,'Microsoft YaHei',sans-serif;background:#fff;color:#14182a;-webkit-font-smoothing:antialiased}
+.wrap{display:inline-block;padding:30px 32px;background:#fff;min-width:200px}
+.fig-title{font-size:20px;font-weight:800;margin:0 0 4px;letter-spacing:.3px}
+.fig-sub{font-size:13px;color:#9aa0b4;margin:0 0 22px}
+.layer{display:flex;align-items:stretch;gap:14px;margin-bottom:13px}
+.layer-label{flex:0 0 104px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:13px;font-weight:700;color:#3730a3;background:#eef0fb;border-radius:10px;padding:8px 6px;line-height:1.4}
+.layer-body{flex:1;display:flex;gap:12px}
+.lb-box{flex:1;border:1.5px solid #e3e5ee;border-radius:12px;padding:13px 15px;background:#fff}
+.lb-box.full{flex:1}
+.lb-box .t{font-weight:700;font-size:14.5px}
+.lb-box .s{font-size:12px;color:#5b6178;margin-top:5px;line-height:1.6}
+.lb-box .port{font-size:11px;color:#4f46e5;font-weight:700;font-family:'DM Mono',ui-monospace,monospace;margin-left:6px}
+.accent-i{border-left:5px solid #4f46e5!important}
+.accent-a{border-left:5px solid #ff7a5c!important}
+.accent-j{border-left:5px solid #15b080!important}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;max-width:1110px}
+.step{position:relative;border:1.5px solid #e3e5ee;border-radius:12px;padding:11px 13px;background:#fff;width:158px;margin:7px 0;display:flex;flex-direction:column;justify-content:center}
+.step .st-t{font-weight:700;font-size:13.5px;line-height:1.35}
+.step .st-s{font-size:11.5px;color:#5b6178;margin-top:4px;line-height:1.5}
+.conn{display:flex;align-items:center;color:#c2c7ee;font-size:20px;font-weight:800;padding:0 7px}
+.legend{margin-top:20px;font-size:12px;color:#5b6178;display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:7px;vertical-align:middle}
+.note{margin-top:16px;font-size:12px;color:#5b6178;background:#f6f7fb;border-radius:8px;padding:11px 13px;max-width:1040px;line-height:1.65}
+.note b{color:#14182a}
+.rel{margin-top:18px;font-size:12.5px;color:#5b6178;line-height:1.95;max-width:1240px;columns:2;column-gap:40px}
+.rel b{color:#3730a3}
+
+  </style></head><body><div class="wrap">
+  <div class="fig-title">图 10 · 机构订阅与加油包关系</div><div class="fig-sub">机构 1—N 订阅，加油包挂在生效订阅下；当前可用额度 = 生效订阅 + 生效加油包累加</div>
+  <div style="width:1116px">
+    <div style="border:1.5px solid #e3e5ee;border-left:5px solid #4f46e5;border-radius:12px;padding:11px 15px;background:#eef0fb"><div style="font-weight:700;font-size:14px;color:#14182a">机构（租户）</div><div style="font-size:11.5px;color:#5b6178;margin-top:5px;line-height:1.55">一个机构对应 1 — N 笔订阅订单；其“当前可用额度”由生效订阅 + 生效加油包决定，只读、不可手改。</div></div>
+    <div style="text-align:center;color:#c2c7ee;font-size:18px;font-weight:800;margin:4px 0">↓<span style="font-size:11px;color:#9aa0b4;font-weight:600;margin-left:7px">1 — N</span></div>
+    <div style="font-size:12.5px;font-weight:700;color:#3730a3;margin:6px 0 8px">订阅订单（常规 · 定套餐 + 有效期）</div>
+    <div style="display:flex;align-items:stretch;gap:10px">
+      <div style="flex:1"><div style="border:1.5px solid #e3e5ee;border-left:5px solid #9aa0b4;border-radius:12px;padding:11px 15px;background:#fff"><div style="font-weight:700;font-size:14px;color:#14182a">订阅① 专业版<span style="font-size:11px;font-weight:700;padding:1px 9px;border-radius:20px;background:#eceef3;color:#9aa0b4;margin-left:7px">未生效</span></div><div style="font-size:11.5px;color:#5b6178;margin-top:5px;line-height:1.55">2025-06 ~ 2026-05 · 首年签约</div></div></div>
+      <div style="display:flex;align-items:center;color:#c2c7ee;font-size:18px;font-weight:800">→</div>
+      <div style="flex:1.05"><div style="border:1.5px solid #4f46e5;border-left:5px solid #4f46e5;border-radius:12px;padding:11px 15px;background:#eef0fb"><div style="font-weight:700;font-size:14px;color:#14182a">订阅② 专业版<span style="font-size:11px;font-weight:700;padding:1px 9px;border-radius:20px;background:#dfe3fb;color:#3730a3;margin-left:7px">生效</span></div><div style="font-size:11.5px;color:#5b6178;margin-top:5px;line-height:1.55">2026-06 ~ 2027-05 · 续约（当前生效）</div></div></div>
+      <div style="display:flex;align-items:center;color:#c2c7ee;font-size:18px;font-weight:800">→</div>
+      <div style="flex:1"><div style="border:1.5px solid #e3e5ee;border-left:5px solid #9aa0b4;border-radius:12px;padding:11px 15px;background:#fff"><div style="font-weight:700;font-size:14px;color:#14182a">订阅③ …<span style="font-size:11px;font-weight:700;padding:1px 9px;border-radius:20px;background:#eceef3;color:#9aa0b4;margin-left:7px">未生效</span></div><div style="font-size:11.5px;color:#5b6178;margin-top:5px;line-height:1.55">可提前预建下一期</div></div></div>
+    </div>
+    <div style="font-size:11.5px;color:#5b6178;margin:9px 0 0;background:#f6f7fb;border-radius:8px;padding:9px 13px;line-height:1.6">同一机构同时只有一个【生效】订阅；续约 / 到期 = 新建并切换下一笔，历史订阅完整留痕（签约时间 / 套餐 / 商务负责人 / 有效期）。</div>
+    <div style="text-align:center;color:#c2c7ee;font-size:18px;font-weight:800;margin:4px 0">↓<span style="font-size:11px;color:#9aa0b4;font-weight:600;margin-left:7px">生效订阅之下挂加油包</span></div>
+    <div style="font-size:12.5px;font-weight:700;color:#c2410c;margin:6px 0 8px">加油包（期中加量 · 即时生效 · 额度累加 · 不改套餐）</div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><div style="border:1.5px solid #e3e5ee;border-left:5px solid #ff7a5c;border-radius:12px;padding:11px 15px;background:#fff1ec"><div style="font-weight:700;font-size:14px;color:#14182a">加油包 A<span style="font-size:11px;font-weight:700;padding:1px 9px;border-radius:20px;background:#ffe3d8;color:#c2410c;margin-left:7px">生效</span></div><div style="font-size:11.5px;color:#5b6178;margin-top:5px;line-height:1.55">+0.5 亿 Token · 跟随订阅② 到期 2027-05</div></div></div>
+      <div style="flex:1"><div style="border:1.5px solid #e3e5ee;border-left:5px solid #ff7a5c;border-radius:12px;padding:11px 15px;background:#fff1ec"><div style="font-weight:700;font-size:14px;color:#14182a">加油包 B<span style="font-size:11px;font-weight:700;padding:1px 9px;border-radius:20px;background:#ffe3d8;color:#c2410c;margin-left:7px">生效</span></div><div style="font-size:11.5px;color:#5b6178;margin-top:5px;line-height:1.55">+0.5 亿 Token · 跟随订阅② 到期 2027-05</div></div></div>
+    </div>
+    <div style="text-align:center;color:#c2c7ee;font-size:18px;font-weight:800;margin:4px 0">↓</div>
+    <div style="border:1.5px solid #15b080;border-radius:12px;background:#e7f7f1;padding:13px 16px">
+      <div style="font-weight:800;font-size:14px;color:#0f7a59">机构当前可用额度（总额度，含加油包）</div>
+      <div style="font-size:12.5px;color:#14182a;margin-top:6px;line-height:1.75">= 当前【生效】订阅基础额度 ＋ 该订阅下全部【生效】加油包累加<br>示例：KP 50＋0 = <b>50 个</b> · 存储 100＋0 = <b>100 GB</b> · Token 2＋0.5＋0.5 = <b>3 亿</b>（已用量同口径累加）</div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:18px">
+      <div style="flex:1;border:1.5px solid #e3e5ee;border-radius:12px;padding:12px 15px;background:#fff">
+        <div style="font-weight:700;font-size:13px;color:#3730a3">B 端订阅订单（机构 → 平台）</div>
+        <div style="font-size:11.5px;color:#5b6178;margin-top:5px;line-height:1.6">商务 / 超管创建，决定机构配额额度；平台不经手资金（无合同金额字段）。本图即此体系。</div>
+      </div>
+      <div style="flex:1;border:1.5px solid #e3e5ee;border-radius:12px;padding:12px 15px;background:#fff">
+        <div style="font-weight:700;font-size:13px;color:#14182a">C 端订单（终端用户 → 机构）</div>
+        <div style="font-size:11.5px;color:#5b6178;margin-top:5px;line-height:1.6">会员订阅 / 永享买断 / 兑换码核销，资金进机构商户号。与 B 端订阅订单两套体系，互不混淆。</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:#5b6178;display:flex;gap:22px">
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#4f46e5;margin-right:6px;vertical-align:middle"></span>生效订阅</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#9aa0b4;margin-right:6px;vertical-align:middle"></span>未生效订阅</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#ff7a5c;margin-right:6px;vertical-align:middle"></span>加油包</span>
+    </div>
+  </div></div></body></html>

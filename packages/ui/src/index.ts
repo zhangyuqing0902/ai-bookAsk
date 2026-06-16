@@ -2,6 +2,8 @@
 export { cn } from './cn';
 export { Icon } from './Icon';
 export { IconSprite } from './IconSprite';
+export { FileTypeIcon } from './FileTypeIcon';
+export type { FileKind } from './FileTypeIcon';
 export { ToastHost, toast } from './Toast';
 // 原型清单（站点地图）
 export { PrototypeList } from './manifest/PrototypeList';

@@ -30,7 +30,7 @@ export function Conflict() {
           <div className="lg-s" style={{ marginBottom: 22 }}>
             手机号 <b style={{ color: 'var(--ink)', fontFamily: 'var(--mono)' }}>138****8888</b> 已被占用。
             <br />
-            请更换其他手机号绑定，如有疑问请联系平台客服。
+            请更换其他手机号绑定，如有疑问请联系客服。
           </div>
           <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 14 }} onClick={() => nav(-1)}>
             更换手机号
@@ -40,7 +40,7 @@ export function Conflict() {
             style={{ width: '100%', justifyContent: 'center', padding: 14, marginTop: 12 }}
             onClick={() => setService(true)}
           >
-            联系平台客服
+            联系客服
           </button>
         </div>
       </div>

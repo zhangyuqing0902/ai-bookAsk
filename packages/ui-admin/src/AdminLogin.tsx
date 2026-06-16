@@ -2,12 +2,19 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 
+// 图形验证码：随机 4 位，排除易混字符（0/O/1/I/L）。
+const VC_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const genCode = () => Array.from({ length: 4 }, () => VC_ALPHABET[Math.floor(Math.random() * VC_ALPHABET.length)]).join('');
+
 // 后台登录 · 动态毛玻璃（机构后台 / 平台超管共用,仅标题不同）。结构取自「主视觉.html」,样式见 styles.css .login。
 export function AdminLogin({ title, redirect = '/' }: { title: string; redirect?: string }) {
   const nav = useNavigate();
   const [account, setAccount] = useState('');
   const [pwd, setPwd] = useState('');
   const [vcode, setVcode] = useState('');
+  // 0615：图形验证码随机生成 + 点击「换一张」刷新（原为硬编码固定值）
+  const [vc, setVc] = useState(genCode);
+  const refreshVc = () => setVc(genCode());
 
   return (
     <div className="login">
@@ -74,7 +81,10 @@ export function AdminLogin({ title, redirect = '/' }: { title: string; redirect?
               onChange={(e) => setVcode(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && nav(redirect)}
             />
-            <span className="vcode">A7K9</span>
+            <span className="vcode-box" onClick={refreshVc} title="看不清？点击换一张" role="button" aria-label="刷新验证码">
+              <b className="vcode">{vc}</b>
+              <Icon id="i-refresh" />
+            </span>
           </div>
         </div>
         <button className="btn btn-primary login-btn" onClick={() => nav(redirect)}>

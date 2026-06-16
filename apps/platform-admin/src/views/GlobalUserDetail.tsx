@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 import { DataGrid, MediaView, type Col, type MediaItem } from '@aba/ui-admin';
+import { AORDERS, byPayDesc, useRefundStore, type AOrder } from '@aba/mock';
 
 interface GUser {
   nick: string;
@@ -13,36 +14,46 @@ interface GUser {
   gmv: number;
   lastLogin: string;
 }
-interface DOrder { id: string; type: string; tag: string; amount: number; status: string; payMethod: string; payTime: string }
 
-const FALLBACK: GUser = { nick: '微信昵称A', wx: 'wx_abc', phone: '138****8888', org: 'XX 出版集团', member: true, yx: 3, gmv: 129.6, lastLogin: '2026-06-06 21:30:11' };
+const FALLBACK: GUser = { nick: '微信昵称A', wx: 'wx_abc', phone: '138****8888', org: 'XX 出版社', member: true, yx: 3, gmv: 129.6, lastLogin: '2026-06-06 21:30:11' };
 const YX: MediaItem[] = [
   { kind: 'image', name: '心电图示例' },
   { kind: 'audio', name: '专题讲座音频' },
   { kind: 'video', name: '手术演示' },
 ];
-const ORDERS: DOrder[] = [
-  { id: 'OD20260530140208', type: '会员', tag: 'tag-amber', amount: 19.9, status: '已支付', payMethod: '微信支付', payTime: '2026-05-30 14:02:08' },
-  { id: 'OD20260530152133', type: '永享', tag: 'tag-indigo', amount: 9.9, status: '已支付', payMethod: '微信支付', payTime: '2026-05-30 15:21:33' },
-];
+const RF_CLS: Record<string, string> = { 未退款: 'none', 退款中: 'ing', 部分退款: 'wait', 全额退款: 'fail' };
+const ORDER_CLS: Record<string, string> = { 已支付: 'ok', 已核销: 'none' };
 
-// 平台后台 · 全域用户详情（结构对齐机构后台用户详情,多展示一个「机构」字段）
+// 平台后台 · 全域用户详情（结构对齐机构后台用户详情，多展示「机构」字段；
+// 0614b：全部订单复用全域订单同一份数据 @aba/mock，按当前用户过滤，不再单写一套）
 export function GlobalUserDetail() {
   const nav = useNavigate();
   const loc = useLocation();
   const u = (loc.state as GUser) ?? FALLBACK;
   const [preview, setPreview] = useState<MediaItem | null>(null);
+  const refunds = useRefundStore((s) => s.refunds);
+  const refundStatusOf = (r: AOrder) => refunds[r.id]?.status ?? '未退款';
 
-  const columns: Col<DOrder>[] = [
+  // 复用全域订单数据，按当前用户（微信号 / 手机号）过滤
+  const myOrders = AORDERS.filter((r) => r.user === u.wx || r.user === u.phone).slice().sort(byPayDesc);
+
+  const columns: Col<AOrder>[] = [
     { header: '订单号', className: 'mono', cell: (r) => r.id },
     { header: '类型', cell: (r) => <span className={'tag-s ' + r.tag}>{r.type}</span> },
     { header: '金额', className: 'mono', cell: (r) => '¥' + r.amount, sortValue: (r) => r.amount },
     { header: '支付方式', cell: (r) => r.payMethod },
-    { header: '状态', cell: (r) => <span className="fstat ok"><span className="dt" />{r.status}</span> },
+    { header: '订单状态', cell: (r) => <span className={'fstat ' + (ORDER_CLS[r.status] ?? 'ok')}><span className="dt" />{r.status}</span> },
+    {
+      header: '退款状态',
+      cell: (r) => {
+        const s = refundStatusOf(r);
+        return <span className={'fstat ' + RF_CLS[s]}><span className="dt" />{s}</span>;
+      },
+    },
     { header: '付款时间', className: 'mono', cell: (r) => r.payTime, sortValue: (r) => r.payTime },
     { header: '操作', cell: (r) => (
       <div className="op-cell">
-        <span className="op" onClick={() => nav('/orders/' + r.id, { state: { no: r.id, org: u.org, type: r.type, typeCls: r.tag, amount: r.amount, status: r.status, user: u.nick, time: r.payTime } })}>详情</span>
+        <span className="op" onClick={() => nav('/orders/' + r.id)}>详情</span>
       </div>
     ) },
   ];
@@ -63,7 +74,6 @@ export function GlobalUserDetail() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 700 }}>
             {u.nick} <span className={'tag-s ' + (u.member ? 'tag-amber' : 'tag-line')}>{u.member ? '会员' : '非会员'}</span>
           </div>
-          {/* 多一个「机构」字段(平台视角) */}
           <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 6, fontFamily: 'var(--mono)' }}>
             机构 {u.org} · 手机号 {u.phone} · 微信号 {u.wx === '—' ? '—' : u.wx}
           </div>
@@ -90,7 +100,7 @@ export function GlobalUserDetail() {
 
       <div style={{ marginTop: 16 }}>
         <div className="block-t" style={{ marginBottom: 10 }}>全部订单</div>
-        <DataGrid columns={columns} rows={ORDERS} empty={{ title: '暂无订单' }} minWidth={760} />
+        <DataGrid columns={columns} rows={myOrders} empty={{ title: '暂无订单' }} minWidth={920} />
       </div>
       <MediaView item={preview} onClose={() => setPreview(null)} />
     </>

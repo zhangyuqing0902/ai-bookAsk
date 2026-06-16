@@ -13,3 +13,7 @@ dist/
 packages/*/src/**/*.js
 apps/*/src/**/*.js
 *.tsbuildinfo
+
+# 临时备份 / 办公软件锁文件（勿提交）
+*.bak-*
+.~*

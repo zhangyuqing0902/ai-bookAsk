@@ -1,66 +1,71 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, DataGrid, type Col } from '@aba/ui-admin';
+import { Search, Dropdown, DataGrid, RangePicker, type Col } from '@aba/ui-admin';
+import { AORDERS, byPayDesc, useRefundStore, type AOrder } from '@aba/mock';
 
-interface O {
-  no: string;
-  org: string;
-  type: string;
-  typeCls: string;
-  amount: number;
-  status: string;
-  user: string;
-  time: string;
-}
-const ROWS: O[] = [
-  { no: 'OD20260530140208', org: 'XX 出版集团', type: '会员', typeCls: 'tag-amber', amount: 19.9, status: '已支付', user: '138****8888', time: '2026-05-30 14:02:08' },
-  { no: 'OD20260530152133', org: 'ZZ 少儿', type: '永享', typeCls: 'tag-indigo', amount: 9.9, status: '已支付', user: 'wx_abc', time: '2026-05-30 15:21:33' },
-  { no: 'OD20260529091307', org: 'YY 教育', type: '兑换码', typeCls: 'tag-jade', amount: 0, status: '已核销', user: '139****0000', time: '2026-05-29 09:13:07' },
-  { no: 'OD20260528103412', org: 'XX 出版集团', type: '永享', typeCls: 'tag-indigo', amount: 29.9, status: '已支付', user: 'wx_c01', time: '2026-05-28 10:34:12' },
-  { no: 'OD20260528164509', org: 'YY 教育', type: '会员', typeCls: 'tag-amber', amount: 19.9, status: '已支付', user: '137****5678', time: '2026-05-28 16:45:09' },
-  { no: 'OD20260527093320', org: 'ZZ 少儿', type: '会员', typeCls: 'tag-amber', amount: 198, status: '已支付', user: 'wx_d22', time: '2026-05-27 09:33:20' },
-  { no: 'OD20260527141855', org: 'XX 出版集团', type: '兑换码', typeCls: 'tag-jade', amount: 0, status: '已核销', user: '135****1357', time: '2026-05-27 14:18:55' },
-  { no: 'OD20260526112047', org: 'YY 教育', type: '永享', typeCls: 'tag-indigo', amount: 9.9, status: '已支付', user: 'wx_f44', time: '2026-05-26 11:20:47' },
-  { no: 'OD20260526085533', org: 'ZZ 少儿', type: '会员', typeCls: 'tag-amber', amount: 19.9, status: '已支付', user: '133****2024', time: '2026-05-26 08:55:33' },
-  { no: 'OD20260525170612', org: 'XX 出版集团', type: '永享', typeCls: 'tag-indigo', amount: 19.9, status: '已支付', user: 'wx_i77', time: '2026-05-25 17:06:12' },
-  { no: 'OD20260525134428', org: 'YY 教育', type: '会员', typeCls: 'tag-amber', amount: 19.9, status: '已支付', user: '130****8080', time: '2026-05-25 13:44:28' },
-  { no: 'OD20260524101739', org: 'ZZ 少儿', type: '兑换码', typeCls: 'tag-jade', amount: 0, status: '已核销', user: '136****2468', time: '2026-05-24 10:17:39' },
-  { no: 'OD20260524092214', org: 'XX 出版集团', type: '永享', typeCls: 'tag-indigo', amount: 29.9, status: '已支付', user: 'wx_abc', time: '2026-05-24 09:22:14' },
-  { no: 'OD20260523155902', org: 'YY 教育', type: '会员', typeCls: 'tag-amber', amount: 198, status: '已支付', user: '137****5678', time: '2026-05-23 15:59:02' },
-];
+// 平台超管 · 全域订单（0614b：复用机构后台订单的列表 / 详情字段，仅多一列「归属机构」+ 机构筛选；
+// 补齐机构后台已有的「退款状态」列；数据与机构后台同一份 @aba/mock，不再各写一套）。
+const TYPES = ['全部', '会员', '永享', '兑换码'];
+const ORDER_CLS: Record<string, string> = { 已支付: 'ok', 已核销: 'none' };
+const RF_CLS: Record<string, string> = { 未退款: 'none', 退款中: 'ing', 部分退款: 'wait', 全额退款: 'fail' };
 
-// 平台超管 · 全域订单（搜索 + 机构/状态筛选 + 金额/时间排序 + 详情 + 分页）
 export function GlobalOrders() {
   const nav = useNavigate();
   const [q, setQ] = useState('');
   const [org, setOrg] = useState('全部');
+  const [type, setType] = useState('全部');
   const [status, setStatus] = useState('全部');
+  const [rfStatus, setRfStatus] = useState('全部');
+  const refunds = useRefundStore((s) => s.refunds);
+  const refundStatusOf = (r: AOrder) => refunds[r.id]?.status ?? '未退款';
 
-  const rows = ROWS.filter(
+  const orgNames = [...new Set(AORDERS.map((r) => r.org))];
+
+  const rows = AORDERS.filter(
     (r) =>
-      (!q || r.user.includes(q) || r.no.includes(q)) &&
+      (!q || r.id.includes(q) || r.user.includes(q)) &&
       (org === '全部' || r.org === org) &&
-      (status === '全部' || r.status === status),
-  );
+      (type === '全部' || r.type === type) &&
+      (status === '全部' || r.status === status) &&
+      (rfStatus === '全部' || refundStatusOf(r) === rfStatus),
+  ).slice().sort(byPayDesc);
 
-  const columns: Col<O>[] = [
-    { header: '订单号', className: 'mono', cell: (r) => r.no },
-    { header: '机构', cell: (r) => r.org },
-    { header: '类型', cell: (r) => <span className={'tag-s ' + r.typeCls}>{r.type}</span> },
+  const columns: Col<AOrder>[] = [
+    { header: '订单号', className: 'mono', cell: (r) => r.id },
+    { header: '归属机构', cell: (r) => r.org, sortValue: (r) => r.org },
+    { header: '类型', cell: (r) => <span className={'tag-s ' + r.tag}>{r.type}</span>, sortValue: (r) => r.type },
+    { header: '关联知识产品', cell: (r) => (r.kp ? r.kp : <span className="muted">—</span>) },
     { header: '金额', className: 'mono', cell: (r) => '¥' + r.amount, sortValue: (r) => r.amount },
+    { header: '支付方式', cell: (r) => r.payMethod, sortValue: (r) => r.payMethod },
     {
-      header: '状态',
+      header: '订单状态',
+      sortValue: (r) => r.status,
       cell: (r) => (
-        <span className="fstat ok">
+        <span className={'fstat ' + (ORDER_CLS[r.status] ?? 'ok')}>
           <span className="dt" />
           {r.status}
         </span>
       ),
     },
+    {
+      header: '退款状态',
+      sortValue: (r) => refundStatusOf(r),
+      cell: (r) => {
+        const s = refundStatusOf(r);
+        return (
+          <span className={'fstat ' + RF_CLS[s]}>
+            <span className="dt" />
+            {s}
+          </span>
+        );
+      },
+    },
     { header: '用户', className: 'mono', cell: (r) => r.user },
-    { header: '创建时间', className: 'mono', cell: (r) => r.time, sortValue: (r) => r.time },
-    { header: '操作', cell: (r) => <div className="op-cell"><span className="op" onClick={() => nav('/orders/' + r.no, { state: r })}>详情</span></div> },
+    { header: '下单时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.orderTime), sortValue: (r) => r.orderTime },
+    { header: '付款时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.payTime), sortValue: (r) => r.payTime },
+    { header: '兑换时间', className: 'mono', cell: (r) => (r.redeemTime ? r.redeemTime : <span className="muted">—</span>), sortValue: (r) => r.redeemTime ?? '' },
+    { header: '操作', cell: (r) => <div className="op-cell"><span className="op" onClick={() => nav('/orders/' + r.id)}>详情</span></div> },
   ];
 
   return (
@@ -76,12 +81,16 @@ export function GlobalOrders() {
           </button>
         </div>
       </div>
-      <div className="filter">
+      <div className="orders-filter">
         <Search placeholder="微信号 / 手机号 / 订单号" minWidth={240} value={q} onChange={setQ} />
-        <Dropdown label="机构" options={['全部', 'XX 出版社', 'YY 教育', 'ZZ 少儿']} onSelect={setOrg} />
+        <Dropdown label="归属机构" options={['全部', ...orgNames]} onSelect={setOrg} style={{ width: 160 }} />
+        <Dropdown label="类型" options={TYPES} onSelect={setType} />
         <Dropdown label="订单状态" options={['全部', '已支付', '已核销']} onSelect={setStatus} />
+        <Dropdown label="退款状态" options={['全部', '未退款', '退款中', '部分退款', '全额退款']} onSelect={setRfStatus} />
+        <div className="grow" />
+        <RangePicker label="付款时间" />
       </div>
-      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的订单' }} minWidth={1000} pageUnit="单" />
+      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的订单' }} minWidth={1480} pageUnit="单" />
     </>
   );
 }

@@ -137,6 +137,35 @@ export interface OrgAccount {
   lastLoginAt?: string;
 }
 
+// 0615-2：机构订阅订单（B 端，机构→平台）。与 C 端订单（终端用户→机构）两套体系。
+// 类型只分两种：「订阅」= 常规订阅，定套餐 + 有效期（新签/续签只是触发时机先后，不手选）；
+// 「加油包」= 期中加量，即时生效、额度累加到机构当前额度（不改套餐）。
+// 每笔有「生效/未生效」状态开关，默认新建即生效。平台不经手资金，无合同金额。
+export type SubType = '订阅' | '加油包';
+// 0615-7：「订阅」状态三态、由有效期自动判定（未生效=未到生效日 / 生效=服务期内 / 已过期=已过到期日）；「加油包」沿用存储状态
+export type SubStatus = '生效' | '未生效' | '已过期';
+export interface Subscription {
+  id: string; // 订阅订单 ID（自动生成）
+  orgId: string;
+  orgName: string; // 冗余机构名，便于全域列表展示
+  type: SubType;
+  parentId?: string; // 「加油包」所属的「订阅」订阅号（加油包跟随该订阅有效期）
+  plan?: string; // 仅「订阅」有套餐：基础版 / 专业版 / 旗舰版 / 定制版
+  kp: string; // 额度 / 加量增量（KP 个）
+  storage: string; // 存储（GB）
+  token: string; // 月度 Token（亿）
+  kpUsed?: string; // 已用（演示）
+  storageUsed?: string;
+  tokenUsed?: string;
+  startDate: string; // 有效期起
+  endDate: string; // 有效期止
+  owner?: string; // 商务负责人（选填）
+  note?: string; // 备注（选填，新建订阅时填，详情页展示）
+  status: SubStatus; // 生效 / 未生效（默认新建即生效）
+  createdAt: string; // 创建时间（年月日时分秒）
+  createdBy: string; // 创建人账户
+}
+
 // 跨机构 C 端用户（平台后台聚合视图）
 export interface CrossOrgUser {
   userId: string;

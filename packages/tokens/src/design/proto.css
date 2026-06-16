@@ -244,8 +244,11 @@
 /* toast */
 /* 3 秒提示:置于屏幕中上方,用户视线直达(原贴底太靠下) */
 .toast{position:absolute;left:50%;top:92px;transform:translateX(-50%) translateY(-8px);z-index:40;
-  background:rgba(28,26,33,.9);color:#fff;font-size:12.5px;padding:9px 16px;border-radius:20px;
-  opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;}
+  background:rgba(28,26,33,.9);color:#fff;font-size:12.5px;padding:9px 16px;border-radius:16px;
+  opacity:0;transition:.25s;pointer-events:none;
+  /* 0615：限宽 + 过长自动换行（手机框 375 内留边）。0615-2：width:max-content 让其按内容宽（不受 left:50% 的
+     shrink-to-fit 只占半宽限制），10 字内 KP 名可一行、超 330 才换行 */
+  width:max-content;max-width:330px;text-align:center;line-height:1.45;word-break:break-word;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* 页面容器(列表型页面) */
@@ -361,6 +364,33 @@
 .cd-url{font-size:12px;color:var(--ink-2);font-family:var(--mono);margin-top:5px;}
 .cd-num{font-family:var(--mono);font-weight:700;font-size:38px;color:var(--indigo-ink);margin:6px 0 2px;line-height:1;}
 .cd-s{font-size:11.5px;color:var(--ink-3);margin-bottom:8px;}
+/* 0614：跳出外部 = 黑底白字倒计时条（仿通用 toast，时间 + 文案 + 取消跳转） */
+.jump-bar{position:absolute;left:50%;top:92px;transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:9px;max-width:90%;
+  background:rgba(28,26,33,.93);color:#fff;font-size:13px;padding:9px 11px 9px 14px;border-radius:22px;
+  box-shadow:0 14px 32px -12px rgba(0,0,0,.5);animation:jbIn .22s ease both;white-space:nowrap;}
+@keyframes jbIn{from{opacity:0;transform:translateX(-50%) translateY(-8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+.jump-bar .jb-num{font-family:var(--mono);font-weight:700;font-size:13px;min-width:17px;height:17px;
+  display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.16);}
+.jump-bar .jb-txt{opacity:.94;}
+.jump-bar .jb-cancel{margin-left:2px;background:rgba(255,255,255,.16);color:#fff;border:none;
+  font-size:12.5px;padding:5px 12px;border-radius:15px;cursor:pointer;white-space:nowrap;}
+.jump-bar .jb-cancel:active{background:rgba(255,255,255,.3);}
+/* 0614：机构本月 Token 超额度 → 给 C 端的友好提示条 */
+.org-tip{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 12px 0;padding:9px 12px;
+  background:#FCEEE9;color:var(--terra);font-size:12.5px;font-weight:500;border-radius:10px;}
+.org-tip svg{flex:none;color:var(--terra);}
+/* 0614c：Token 超额时用户再点提问/语音/实时 → 该常驻提示条放大抖动 + 跳亮一下（替代 3 秒 toast，引导看已有提示） */
+.org-tip.pulse{animation:orgTipPulse .55s cubic-bezier(.36,.07,.19,.97);}
+@keyframes orgTipPulse{
+  0%{transform:scale(1);background:#FCEEE9;box-shadow:0 0 0 0 rgba(229,83,59,0);}
+  18%{transform:scale(1.05);background:#FBDFD5;box-shadow:0 0 0 4px rgba(229,83,59,.16);}
+  34%{transform:scale(1.03) translateX(-5px);}
+  50%{transform:scale(1.03) translateX(5px);background:#FBDFD5;}
+  66%{transform:scale(1.02) translateX(-3px);}
+  82%{transform:scale(1.01) translateX(2px);}
+  100%{transform:scale(1) translateX(0);background:#FCEEE9;box-shadow:0 0 0 0 rgba(229,83,59,0);}
+}
 
 /* 我的纸书 */
 .bk-tip{font-size:12px;color:var(--ink-3);line-height:1.6;padding:8px 16px 2px;}
@@ -371,10 +401,63 @@
 .bk-meta{padding:10px 11px 11px;display:flex;flex-direction:column;}
 .bk-name{font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.35;height:34px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .bk-date{font-size:11px;color:var(--ink-3);margin-top:7px;}
+/* 0615：去掉纸书卡片 hover 放大 / 高亮交互（仅保留可点击，点击进入该 KP 全新会话） */
 .bk-badge{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:700;color:#fff;
   background:var(--amber);border-radius:6px;padding:2px 7px;}
 
 /* 个人资料头像 */
-.prof-av{width:34px;height:34px;border-radius:50%;flex:none;
+.prof-av{width:40px;height:40px;border-radius:50%;flex:none;border:1px solid var(--line);box-shadow:var(--sh-sm);
   background:radial-gradient(120% 120% at 30% 25%,#fff,rgba(255,255,255,0) 40%),linear-gradient(150deg,#7c8bf5,#4b57e8);}
+
+/* 0613-2：居中弹窗（昵称 / 性别 / 地区，替代底部 sheet） */
+.cm-wrap{position:absolute;left:0;right:0;bottom:0;top:46px;z-index:9;display:flex;align-items:center;justify-content:center;visibility:hidden;}
+.cm-wrap.open{visibility:visible;}
+.cm-wrap .scrim{position:absolute;inset:0;background:rgba(20,18,30,.42);cursor:pointer;animation:fadeScrim .26s ease both;}
+.cm{position:relative;z-index:1;width:84%;max-width:330px;background:var(--surface);border-radius:20px;padding:22px 20px 18px;
+  box-shadow:0 28px 70px -24px rgba(40,46,90,.5);}
+.cm-wrap.open .cm{animation:popIn .26s cubic-bezier(.2,.8,.2,1) both;}
+.cm-h{font-family:var(--serif-cjk);font-weight:700;font-size:15.5px;color:var(--ink);text-align:center;margin-bottom:16px;}
+.cm-btns{display:flex;gap:11px;margin-top:18px;}
+.cm-btns .btn{flex:1;justify-content:center;padding:13px;font-size:14.5px;}
+@keyframes popIn{from{opacity:0;transform:scale(.9);}to{opacity:1;transform:scale(1);}}
+/* 性别选项 */
+.cm-opts{display:flex;flex-direction:column;gap:10px;}
+.cm-opt{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;font-size:15px;font-weight:600;
+  color:var(--ink);background:var(--surface-warm);border:1px solid var(--line);border-radius:13px;cursor:pointer;transition:.15s;}
+.cm-opt:hover{border-color:rgba(75,87,232,.3);}
+.cm-opt.on{background:var(--indigo-soft);border-color:rgba(75,87,232,.4);color:var(--indigo-ink);}
+.cm-opt svg{width:18px;height:18px;}
+/* 地区级联 */
+.cm-tall{height:64%;max-height:480px;display:flex;flex-direction:column;}
+.rgn-tabs{display:flex;gap:18px;border-bottom:1px solid var(--line-2);padding:0 2px 11px;margin-bottom:4px;flex-wrap:wrap;}
+.rgn-tab{font-size:13.5px;font-weight:600;color:var(--ink-3);cursor:pointer;position:relative;padding-bottom:3px;white-space:nowrap;}
+.rgn-tab.on{color:var(--indigo-ink);}
+.rgn-tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-12px;height:2px;border-radius:2px;background:var(--indigo);}
+.rgn-list{flex:1;min-height:0;overflow-y:auto;margin:0 -4px;}
+.rgn-item{display:flex;align-items:center;justify-content:space-between;padding:13px 8px;font-size:14.5px;color:var(--ink);
+  border-bottom:1px solid var(--line-2);cursor:pointer;transition:.13s;}
+.rgn-item:hover{background:var(--surface-warm);}
+.rgn-item.on{color:var(--indigo-ink);font-weight:600;}
+.rgn-item svg{width:17px;height:17px;color:var(--indigo);}
+
+/* 0613-2：头像圆形裁剪 overlay */
+.crop-ov{position:absolute;left:0;right:0;bottom:0;top:46px;z-index:32;background:#16141e;display:flex;flex-direction:column;
+  animation:fadeScrim .26s ease both;}
+/* 0614：裁剪头部套用前台 AI 主视觉（清晰标题 + 靛蓝渐变「确定」按钮）；去掉底部缩放拖拽条 */
+.crop-top{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;
+  background:rgba(255,255,255,.06);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.08);}
+.crop-top .t{font-size:14px;font-weight:600;color:#fff;font-family:var(--serif-cjk);line-height:1.6;padding:2px 0;}
+.crop-cancel{background:none;border:none;color:rgba(255,255,255,.85);font-size:14px;cursor:pointer;padding:6px 4px;}
+.crop-done{border:none;cursor:pointer;color:#fff;font-size:14px;font-weight:600;padding:7px 18px;border-radius:18px;
+  background:linear-gradient(135deg,var(--indigo),#6b5cf0);box-shadow:0 6px 16px -6px rgba(75,87,232,.7);}
+.crop-done:active{transform:translateY(1px);}
+.crop-stage{flex:1;position:relative;overflow:hidden;touch-action:none;display:flex;align-items:center;justify-content:center;}
+.crop-stage img{max-width:none;width:300px;height:auto;user-select:none;-webkit-user-drag:none;will-change:transform;cursor:grab;}
+.crop-mask{position:absolute;inset:0;pointer-events:none;
+  background:rgba(0,0,0,.55);
+  -webkit-mask:radial-gradient(circle 130px at 50% 50%,transparent 129px,#000 130px);
+  mask:radial-gradient(circle 130px at 50% 50%,transparent 129px,#000 130px);}
+.crop-mask::after{content:"";position:absolute;left:50%;top:50%;width:260px;height:260px;transform:translate(-50%,-50%);
+  border-radius:50%;border:2px solid rgba(255,255,255,.85);}
+.crop-hint{text-align:center;color:rgba(255,255,255,.6);font-size:12.5px;padding:16px 0 26px;}
 .statusbar .r span{font-size:12px;}

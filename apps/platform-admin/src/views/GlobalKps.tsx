@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { Search, Dropdown, DataGrid, type Col } from '@aba/ui-admin';
+import { useNavigate } from 'react-router-dom';
+import { Icon } from '@aba/ui';
+import { Search, Dropdown, EmptyState } from '@aba/ui-admin';
 import { KPS, ORGS } from '@aba/mock';
 
-// 平台超管 · 全域 KP（0613 新增）：跨机构知识产品聚合只读视图，供平台监管 / 统计。
-const GRAN: Record<string, string> = { book: '书籍', series: '系列', expert: '专家库', domain: '领域', custom: '自定义' };
+// 平台超管 · 全域知识 KP（0614b：表格 → 卡片，复用机构后台 KP 列表视觉；每卡显示归属机构；只读监管）。
 const STAT: Record<string, { t: string; cls: string }> = {
   published: { t: '已发布', cls: 'tag-jade' },
   draft: { t: '草稿', cls: 'tag-line' },
   archived: { t: '已下架', cls: 'tag-amber' },
 };
+const COVERS = ['', 'c2', 'c3', 'c4'];
 
 type Kp = (typeof KPS)[number];
 
 export function GlobalKps() {
+  const nav = useNavigate();
   const [q, setQ] = useState('');
   const [org, setOrg] = useState('全部');
   const [status, setStatus] = useState('全部');
@@ -27,21 +30,11 @@ export function GlobalKps() {
       (status === '全部' || STAT[k.status]?.t === status),
   );
 
-  const columns: Col<Kp>[] = [
-    { header: '机构', cell: (k) => orgName(k.orgId) },
-    { header: 'KP 名称', className: 'strong', cell: (k) => k.name },
-    { header: '颗粒度', cell: (k) => GRAN[k.granularity] ?? k.granularity },
-    { header: '基础标', cell: (k) => (k.baseTag ? <span className={'tag-s ' + (k.baseTag === 'member' ? 'tag-amber' : 'tag-jade')}>{k.baseTag === 'member' ? '会员' : '免费'}</span> : <span className="muted">—</span>) },
-    { header: '永享', cell: (k) => (k.hasForever ? <span className="tag-s tag-indigo">有</span> : <span className="muted">—</span>) },
-    { header: '状态', cell: (k) => { const s = STAT[k.status]; return <span className={'tag-s ' + (s?.cls ?? 'tag-line')}>{s?.t ?? k.status}</span>; }, sortValue: (k) => k.status },
-    { header: '创建时间', className: 'mono', cell: (k) => k.createdAt, sortValue: (k) => k.createdAt },
-  ];
-
   return (
     <>
       <div className="page-head">
         <div>
-          <div className="pt">全域 KP</div>
+          <div className="pt">全域知识产品 KP</div>
         </div>
       </div>
       <div className="filter">
@@ -49,10 +42,39 @@ export function GlobalKps() {
         <Dropdown label="机构" options={['全部', ...orgNames]} onSelect={setOrg} style={{ width: 180 }} />
         <Dropdown label="状态" options={['全部', '已发布', '草稿', '已下架']} onSelect={setStatus} />
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--ink-3)', margin: '0 0 12px 2px' }}>
-        平台视角跨机构知识产品聚合（只读，供监管 / 统计）。Agent / 用户反馈 / 兑换码不在此平铺，可从「机构详情」下钻查看。
-      </div>
-      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的 KP' }} minWidth={960} pageUnit="个" />
+      {rows.length === 0 ? (
+        <div className="card card-pad">
+          <EmptyState icon="i-cube" title="没有匹配的 KP" sub="换个名称、机构或状态试试" />
+        </div>
+      ) : (
+        <div className="kp-grid">
+          {rows.map((k, i) => {
+            const s = STAT[k.status] ?? { t: k.status, cls: 'tag-line' };
+            return (
+              <div className="kp-card" key={k.orgId + k.name} style={{ cursor: 'pointer' }} onClick={() => nav('/global-kps/' + (i + 1))} title={`查看「${k.name}」详情`}>
+                <div className={'kp-cover ' + COVERS[i % COVERS.length]}>
+                  <div className="ct">{k.name}</div>
+                </div>
+                <div className="kp-info">
+                  <div className="kp-info-top">
+                    <span className="kp-name">{k.name}</span>
+                  </div>
+                  {/* 归属机构（平台视角必显） */}
+                  <div className="kp-agent">
+                    <span className="av" />
+                    机构 · {orgName(k.orgId)}
+                  </div>
+                  {/* 0614b：删去 书籍/系列/专家库 粒度标、免费/会员、创建时间——平台只读监管只看名称/机构/状态 */}
+                  <div className="kp-tags">
+                    <span className={'kp-tag-st ' + s.cls}>{s.t}</span>
+                    {k.hasForever && <span className="kp-tag-src">永享</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }

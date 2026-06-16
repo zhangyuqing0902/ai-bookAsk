@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Outlet, useNavigate } from 'react-router-dom';
 import { IconSprite, ToastHost, PrototypeList } from '@aba/ui';
-import { AdminShell, AdminLogin, UserMenu, type NavGroup } from '@aba/ui-admin';
+import { AdminShell, AdminLogin, UserMenu, AccountCenter, type NavGroup, type AccountInfo } from '@aba/ui-admin';
+import { useAdminAvatar } from '@aba/mock';
 import { Dashboard } from './views/Dashboard';
 import { KpList } from './views/KpList';
 import { KpDetail } from './views/KpDetail';
@@ -12,6 +13,7 @@ import { Orders } from './views/Orders';
 import { OrderDetail } from './views/OrderDetail';
 import { Codes } from './views/Codes';
 import { DataBoard } from './views/DataBoard';
+import { Feedback } from './views/Feedback';
 import { CsConfig } from './views/CsConfig';
 import { SysConfig } from './views/SysConfig';
 import { Placeholder } from './views/Placeholder';
@@ -33,7 +35,13 @@ const NAV: NavGroup[] = [
       { to: '/codes', label: '兑换码', icon: 'i-ticket' },
     ],
   },
-  { group: '数据中心', items: [{ to: '/board', label: '数据看板', icon: 'i-chart' }] },
+  {
+    group: '数据中心',
+    items: [
+      { to: '/board', label: '数据看板', icon: 'i-chart' },
+      { to: '/feedback', label: '答案反馈', icon: 'i-msg' },
+    ],
+  },
   {
     group: '系统设置',
     items: [
@@ -56,8 +64,10 @@ const TITLES: Record<string, string> = {
   '/orders/': '订单详情',
   '/codes': '兑换码',
   '/board': '数据看板',
+  '/feedback': '答案反馈',
   '/cs': '客服配置',
   '/sys': '系统配置',
+  '/profile': '个人中心',
   '/prototypes': '原型清单',
 };
 
@@ -66,13 +76,33 @@ function Prototypes() {
   return <PrototypeList current="org" onSameApp={(p) => nav(p)} />;
 }
 
+// 0615：当前登录机构账户（演示数据；含上级机构以演示「集团 → 分社」场景）
+const ORG_ACCOUNT: AccountInfo = {
+  account: 'zhangsan@xx-press',
+  name: '张三',
+  orgName: 'XX 出版社 · 临床医学分社',
+  parentOrgName: 'XX 出版社集团',
+  roleName: '机构管理员',
+  phone: '138****1234',
+  email: 'zhangsan@xx-press.cn',
+  status: 'active',
+  initial: '张',
+};
+
+function ProfilePage() {
+  const avatar = useAdminAvatar((s) => s.avatar);
+  const setAvatar = useAdminAvatar((s) => s.setAvatar);
+  return <AccountCenter account={ORG_ACCOUNT} avatarImg={avatar} onAvatarChange={setAvatar} />;
+}
+
 function Shell() {
+  const avatar = useAdminAvatar((s) => s.avatar);
   return (
     <AdminShell
       brandSub="机构后台"
       nav={NAV}
       titleMap={TITLES}
-      topRight={<UserMenu org="XX 出版社" name="张三 · 管理员" avatar="张" />}
+      topRight={<UserMenu org="XX 出版社" avatar="张" avatarImg={avatar} />}
     >
       <Outlet />
     </AdminShell>
@@ -97,8 +127,10 @@ export function App() {
           <Route path="/orders/:id" element={<OrderDetail />} />
           <Route path="/codes" element={<Codes />} />
           <Route path="/board" element={<DataBoard />} />
+          <Route path="/feedback" element={<Feedback />} />
           <Route path="/cs" element={<CsConfig />} />
           <Route path="/sys" element={<SysConfig />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/prototypes" element={<Prototypes />} />
           <Route path="*" element={<Placeholder />} />
         </Route>

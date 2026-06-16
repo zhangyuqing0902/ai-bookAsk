@@ -60,10 +60,25 @@
 .op-danger{color:var(--terra)!important;}
 .tbl .muted{color:var(--ink-3);}
 /* 0613：操作列固定在表格右侧（横向滚动时不被滑走），中间字段可横向滚动 */
-.tbl th.dg-op,.tbl td.dg-op{position:sticky;right:0;background:var(--surface);box-shadow:-9px 0 11px -9px rgba(40,46,90,.16);}
+/* 0614b：按截图改——底色与表格一致（白底 / hover 暖底，不再用色块），仅靠左侧一道细线 + 柔和左阴影区分；
+   底仍为不透明色以在横滚时遮住下方内容 */
+/* 0614b：操作列左侧灰线加深（原 var(--line) 0.086 太淡几乎看不见）——常驻清晰分隔，
+   不滑动时也能一眼区分「固定操作列 vs 可横滚字段」 */
+/* 0615-5d：固定操作列——去掉硬边框线（姐姐确认），只留一道很轻的柔和左阴影（看出层次即可）。
+   ① 阴影用伪元素 ::before 渐变实现（不用 box-shadow：.tbl 为 border-collapse:collapse，collapse 模型下
+      单元格 box-shadow 在 Chrome 不渲染）；轻柔、不依赖横滚常驻可见。
+   ② BUG 修复：.tbl-wrap 滚动容器有 padding-right:10px，固定列 sticky right:0 贴内容区右缘，右边留了
+      ~11px 缝，横滚时下方数据从这条缝透出；用 ::after 一块同底色盖板盖住该缝，横滚时彻底看不见底下数据。 */
+.tbl th.dg-op,.tbl td.dg-op{position:sticky;right:0;background:var(--surface);}
+.tbl th.dg-op::before,.tbl td.dg-op::before{content:'';position:absolute;top:0;right:100%;height:100%;width:10px;
+  pointer-events:none;background:linear-gradient(to right,rgba(40,46,90,0),rgba(40,46,90,.09));}
+/* 盖板宽度 = .tbl-wrap 右内边距(10px)，正好盖到 clientWidth 边缘、不越界（越界会给"本可放下"的表凭空加横向滚动） */
+.tbl th.dg-op::after,.tbl td.dg-op::after{content:'';position:absolute;top:0;left:100%;height:100%;width:10px;
+  pointer-events:none;background:var(--surface);}
 .tbl th.dg-op{z-index:3;}
 .tbl td.dg-op{z-index:1;}
 .tbl tbody tr:hover td.dg-op{background:var(--surface-warm);}
+.tbl tbody tr:hover td.dg-op::after{background:var(--surface-warm);}
 /* 0613：角色权限三态选择器（无 / 只读 / 可操作） */
 .lvl-seg{display:inline-flex;background:var(--surface-warm);border:1px solid var(--line);border-radius:9px;padding:2px;flex:none;}
 .lvl-seg b{font-size:11.5px;font-weight:500;color:var(--ink-3);padding:4px 10px;border-radius:7px;cursor:pointer;transition:.12s;white-space:nowrap;}
@@ -71,6 +86,22 @@
 .lvl-seg b.on.none{background:var(--ink-3);}
 .lvl-seg b.on.read{background:var(--amber);}
 .lvl-seg b.on.write{background:var(--indigo);}
+/* 0613-2：三态图例 */
+.lvl-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin:4px 0 2px;font-size:12px;color:var(--ink-3);}
+.lvl-legend-label{font-weight:600;color:var(--ink-2);}
+.lvl-legend-note{color:var(--ink-3);}
+.lvl-lg{display:inline-flex;align-items:center;gap:7px;}
+.lvl-lg b{font-size:11px;font-weight:600;color:#fff;border-radius:6px;padding:2px 8px;}
+.lvl-lg b.none{background:var(--ink-3);}
+.lvl-lg b.read{background:var(--amber);}
+.lvl-lg b.write{background:var(--indigo);}
+/* 0614：三态图例移入「权限」右侧问号 hover 浮层——垂直 + 无序圆点（在深色 info-pop 内） */
+.lvl-pop{display:flex;flex-direction:column;gap:7px;}
+.lvl-pop-row{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;line-height:1.5;}
+.lvl-pop-row i{flex:none;width:7px;height:7px;border-radius:50%;margin-top:5px;}
+.lvl-pop-row i.none{background:#9aa0ad;}
+.lvl-pop-row i.read{background:var(--amber);}
+.lvl-pop-row i.write{background:#7c8bf5;}
 /* 0613：订单退款时间线 */
 .rf-timeline{display:flex;flex-direction:column;gap:14px;padding:4px 0;}
 .rf-ev{display:flex;gap:10px;position:relative;}
@@ -78,6 +109,76 @@
 .rf-ev:not(:last-child)::before{content:"";position:absolute;left:4px;top:13px;bottom:-15px;width:1px;background:var(--line);}
 .rf-ev .rf-label{font-size:13px;color:var(--ink);line-height:1.4;}
 .rf-ev .rf-time{font-size:11.5px;color:var(--ink-3);margin-top:3px;}
+/* 0613-2：退款提示——珊瑚红文案 + 黄色警告图标 */
+/* 0614 退款提示：浅灰底圆角"引用块" + 珊瑚亮色字 + 无序圆点垂直展开（去掉生硬警告 icon） */
+.rf-warn{list-style:none;margin:14px 0 2px;padding:11px 14px;background:var(--surface-warm);border-radius:10px;
+  font-size:12.5px;line-height:1.7;color:var(--terra);}
+.rf-warn li{position:relative;padding-left:15px;}
+.rf-warn li::before{content:"";position:absolute;left:2px;top:.72em;width:4px;height:4px;border-radius:50%;background:var(--terra);}
+/* 0614 退款二次确认：字段垂直并列（标签定宽 + 取值） */
+.rf-confirm{display:flex;flex-direction:column;gap:9px;margin-top:2px;}
+.rf-cf-row{display:flex;align-items:baseline;gap:10px;font-size:13px;line-height:1.5;}
+.rf-cf-row .k{flex:none;width:64px;color:var(--ink-3);}
+.rf-cf-row .v{color:var(--ink);word-break:break-all;}
+/* 0614：列表页机构配额用量小徽标（超限阻断） */
+.quota-chip{display:inline-flex;align-items:center;font-size:12px;color:var(--ink-2);font-family:var(--mono);
+  background:var(--surface-warm);border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;white-space:nowrap;cursor:help;}
+.quota-chip.warn{color:var(--amber-ink);background:var(--amber-soft);border-color:transparent;}
+.quota-chip.bad{color:var(--terra);background:rgba(229,83,59,.1);border-color:transparent;}
+
+/* 0613-2：答案反馈工作台 */
+.fb-q{color:var(--ink);font-weight:500;}
+.fb-detail{display:flex;flex-direction:column;gap:18px;padding-bottom:8px;}
+.fb-line{display:flex;align-items:center;gap:10px;}
+.fb-line .fb-meta{font-size:12.5px;color:var(--ink-2);display:inline-flex;align-items:center;}
+.fb-block .fb-k{font-size:12px;color:var(--ink-3);font-weight:600;margin-bottom:7px;}
+.fb-q-big{font-size:15px;font-weight:600;color:var(--ink);line-height:1.5;}
+.fb-a{font-size:13.5px;color:var(--ink);line-height:1.7;}
+/* 0614：反馈详情仿前台 AI 对话——用户问题(右) / AI 答案(左) 气泡 */
+.fb-chat{display:flex;flex-direction:column;gap:14px;}
+.fb-bubble{max-width:82%;display:flex;flex-direction:column;gap:5px;}
+.fb-bubble.user{align-self:flex-end;align-items:flex-end;}
+.fb-bubble.ai{align-self:flex-start;align-items:flex-start;}
+.fb-bub-role{font-size:11px;color:var(--ink-3);font-weight:600;padding:0 2px;}
+.fb-bub-body{font-size:13.5px;line-height:1.7;padding:11px 14px;border-radius:14px;white-space:pre-wrap;}
+/* 0614b：与前台一致——用户气泡=主题色渐变，AI 气泡=白底+边框 */
+.fb-bubble.user .fb-bub-body{background:var(--grad-bubble);color:#fff;border-bottom-right-radius:4px;
+  box-shadow:0 8px 18px -10px rgba(75,87,232,.55);}
+.fb-bubble.ai .fb-bub-body{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-bottom-left-radius:4px;}
+/* 0614b：反馈元信息 ↔ 问答气泡之间的浅灰分隔线（避免误以为是 C 端会话界面本身） */
+.fb-divider{height:1px;background:var(--line);}
+/* 0614b：相关媒体资源——横向缩略图条（左右滑动、点击放大），贴合前台多模态展示 */
+.fb-media{margin-top:10px;}
+.fb-media-k{font-size:11.5px;color:var(--ink-3);font-weight:600;margin:0 0 8px;}
+/* 0614c：overflow-x:auto 会令 overflow-y 计算为 auto（裁掉 hover 放大的顶/底）；
+   给上下留白，hover 用 scale + 适度阴影 + 抬层级，整体落在留白内，不再被裁顶角 */
+.fb-media-strip{display:flex;gap:8px;overflow-x:auto;padding:6px 2px;}
+.fb-thumb{width:92px;height:78px;flex:none;border-radius:9px;overflow:hidden;cursor:pointer;
+  background:repeating-linear-gradient(135deg,#E6E2D8 0 7px,#EEEAE1 7px 14px);
+  border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  transition:border-color .14s,transform .14s,box-shadow .14s;}
+.fb-thumb:hover{border-color:rgba(75,87,232,.5);transform:scale(1.05);position:relative;z-index:2;
+  box-shadow:0 2px 6px -2px rgba(40,46,90,.25);}
+.fb-thumb-ic{color:var(--ink-2);display:flex;}
+.fb-thumb-nm{font-size:9px;font-family:var(--mono);color:var(--ink-3);max-width:84px;padding:0 5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* 0613-2：提问关键词云（字号/色深随频次 s:1~5）；0614 升级视觉 + hover 显示当前区间提问数量 */
+.kw-cloud{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:10px 18px;padding:30px 18px;line-height:1.2;
+  background:radial-gradient(120% 120% at 50% 0%,rgba(75,87,232,.05),transparent 60%);border-radius:12px;overflow:visible;}
+.kw{position:relative;font-weight:600;cursor:default;transition:color .16s,transform .16s,text-shadow .16s;white-space:nowrap;letter-spacing:.3px;}
+.kw:hover{transform:translateY(-3px) scale(1.08);text-shadow:0 6px 18px rgba(75,87,232,.28);}
+/* hover 气泡：显示该词在当前所选区间的提问数量 */
+.kw[data-c]:hover::after{content:attr(data-c);position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);
+  background:rgba(28,26,33,.94);color:#fff;font-size:11.5px;font-weight:500;letter-spacing:0;padding:4px 9px;border-radius:7px;
+  white-space:nowrap;z-index:600;pointer-events:none;box-shadow:0 8px 20px -6px rgba(0,0,0,.45);}
+.kw[data-c]:hover::before{content:"";position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:rgba(28,26,33,.94);z-index:600;pointer-events:none;}
+.kw-1{font-size:13px;color:var(--ink-3);}
+.kw-2{font-size:16px;color:var(--ink-2);}
+.kw-3{font-size:21px;color:var(--jade);}
+.kw-4{font-size:26px;color:var(--indigo);}
+.kw-5{font-size:33px;color:var(--indigo-ink);font-weight:800;}
 
 /* 过滤条 */
 .filter{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
@@ -144,6 +245,9 @@
 .fstat.ing{color:var(--indigo-ink);} .fstat.ing .dt{background:var(--indigo);}
 .fstat.wait{color:var(--amber-ink);} .fstat.wait .dt{background:var(--amber);}
 .fstat.fail{color:var(--terra);} .fstat.fail .dt{background:var(--terra);}
+.fstat.none{color:var(--ink-3);} .fstat.none .dt{background:var(--ink-3);opacity:.5;}
+/* 0615-7：订阅「已过期」——比未生效更弱的灰，点用空心圈，表"历史已结束" */
+.fstat.expired{color:var(--ink-3);opacity:.7;} .fstat.expired .dt{background:transparent;border:1.5px solid var(--ink-3);}
 .fbar{width:74px;height:5px;border-radius:3px;background:#ECEEF4;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:8px;}
 .fbar i{display:block;height:100%;background:var(--indigo);border-radius:3px;}
 
@@ -163,6 +267,10 @@
 .ae-form9{width:64px;height:92px;border-radius:10px;flex:none;background:linear-gradient(155deg,#5b73f2,#4b57e8);}
 .ae-prompt{background:var(--surface-warm);border:1px solid var(--line);border-radius:12px;padding:14px;
   font-size:13px;color:var(--ink-2);line-height:1.7;min-height:120px;}
+/* 0614b：超管可编辑回答 Prompt 的输入态（平台后台） */
+.ae-prompt-edit{display:block;width:100%;box-sizing:border-box;resize:vertical;background:var(--surface);color:var(--ink);
+  font-family:inherit;outline:none;}
+.ae-prompt-edit:focus{border-color:var(--indigo);}
 .ae-kp{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border:1px solid var(--line);
   border-radius:12px;margin-bottom:10px;background:var(--surface);cursor:pointer;
   transition:border-color .14s,box-shadow .14s,transform .14s,background .14s;}
@@ -322,6 +430,22 @@
 .cal-d.sel.start.end{border-radius:8px;}
 .cal-f{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:11px;border-top:1px solid var(--line-2);}
 .cal-range{font-family:var(--mono);font-size:11px;color:var(--ink-2);}
+/* 0614c：日历标题可点（日→月→年下钻）+ 月 / 年九宫格 */
+.cal-title{cursor:pointer;padding:3px 10px;border-radius:7px;transition:background .14s;}
+.cal-title:hover{background:var(--surface-warm);}
+.cal-title.cal-title-static,.cal-title.cal-title-static:hover{cursor:default;background:none;}
+.cal-grid.cal-ym{grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 0 2px;}
+.cal-cell{height:40px;display:flex;align-items:center;justify-content:center;font-size:12.5px;border-radius:8px;cursor:pointer;color:var(--ink);font-family:var(--mono);}
+.cal-cell:hover{background:var(--indigo-soft);}
+.cal-cell.on{background:var(--indigo);color:#fff;font-weight:700;}
+/* 0614c：服务有效期「开始 ~ 截止」字段（日历同主控台 + 时分秒） */
+.dtr{position:relative;display:inline-block;}
+/* 0614c：输入框宽度与下拉日历面板（.dr-pop.calpop 266px）一致，对齐成一列 */
+.dtr-field{display:inline-flex;align-items:center;width:266px;}
+.dr-pop.calpop.dtr-pop{left:0;right:auto;}
+.dtr-times{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line-2);}
+.dtr-times label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--ink-2);}
+.dtr-time{min-width:auto;flex:none;padding:5px 8px;}
 
 /* ============================================================
    v3 增补:浅渐变背景 / 水平 KP·Agent 卡 / 时间下拉 /

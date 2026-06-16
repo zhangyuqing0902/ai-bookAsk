@@ -4,7 +4,7 @@ const NAMES: Record<string, string> = {
   '/accounts': '机构账户',
   '/users': '全域用户',
   '/orders': '全域订单',
-  '/model': '模型用量',
+  '/model': '全域模型用量',
   '/llm': '默认 LLM 模型配置',
   '/roles': '角色权限',
 };

@@ -22,7 +22,7 @@ export function DataGrid<T,>({
 }: {
   columns: Col<T>[];
   rows: T[];
-  empty?: { title: string; sub?: string; icon?: string };
+  empty?: { title: string; sub?: string; icon?: string; illust?: ReactNode };
   minWidth?: number;
   /** 每页最多展示条数，默认 10；超出才分页，未超出不显示分页器 */
   pageSize?: number;
@@ -68,7 +68,7 @@ export function DataGrid<T,>({
   if (rows.length === 0)
     return (
       <div className="tbl-wrap">
-        <EmptyState icon={empty?.icon || 'i-search'} title={empty?.title || '没有匹配的结果'} sub={empty?.sub || '换个关键词或筛选条件试试'} />
+        <EmptyState icon={empty?.icon || 'i-search'} illust={empty?.illust} title={empty?.title || '没有匹配的结果'} sub={empty?.sub || '换个关键词或筛选条件试试'} />
       </div>
     );
 

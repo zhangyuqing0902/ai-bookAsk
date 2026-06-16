@@ -57,12 +57,15 @@ interface DemoStore {
   // 0613 登录演示：浏览器环境（微信内 / 非微信）+ 手机号绑定态
   wechatEnv: boolean;
   phoneBound: boolean;
+  // 0614 演示：机构本月 Token 是否超额度（开启则前台会话给 C 端友好提示）
+  orgTokenExceeded: boolean;
   // 操作
   setRole: (r: Role) => void;
   setOrg: (orgId: string) => void;
   setPaymentSetting: (s: Partial<PaymentSetting>) => void;
   toggleDemoConsole: () => void;
   setWechatEnv: (v: boolean) => void;
+  setOrgTokenExceeded: (v: boolean) => void;
   wechatLogin: () => void;
   phoneLogin: () => void;
   bindPhone: () => void;
@@ -89,6 +92,7 @@ const initialState = (role: Role = 'free', orgId: string = DEFAULT_ORG_ID) => ({
   showDemoConsole: true,
   wechatEnv: true,
   phoneBound: true,
+  orgTokenExceeded: false,
 });
 
 export const useDemoStore = create<DemoStore>()(
@@ -119,6 +123,7 @@ export const useDemoStore = create<DemoStore>()(
         set({ paymentSetting: { ...get().paymentSetting, ...s } }),
       toggleDemoConsole: () => set({ showDemoConsole: !get().showDemoConsole }),
       setWechatEnv: (v) => set({ wechatEnv: v }),
+      setOrgTokenExceeded: (v) => set({ orgTokenExceeded: v }),
       // 微信授权成功：带回头像 / 昵称 / 性别 / 地区；手机号未绑（H5 无法获取手机号）
       wechatLogin: () =>
         set((s) => ({

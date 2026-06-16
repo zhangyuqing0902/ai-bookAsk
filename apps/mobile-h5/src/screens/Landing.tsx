@@ -10,6 +10,8 @@ export function Landing() {
   const [agreed, setAgreed] = useState(false);
   const wechatEnv = useDemoStore((s) => s.wechatEnv);
   const setWechatEnv = useDemoStore((s) => s.setWechatEnv);
+  const orgTokenExceeded = useDemoStore((s) => s.orgTokenExceeded);
+  const setOrgTokenExceeded = useDemoStore((s) => s.setOrgTokenExceeded);
 
   const guard = (fn: () => void) => () => {
     if (!agreed) {
@@ -71,6 +73,11 @@ export function Landing() {
           <div className="env-seg">
             <b className={wechatEnv ? 'on' : ''} onClick={() => setWechatEnv(true)}>微信内打开</b>
             <b className={!wechatEnv ? 'on' : ''} onClick={() => setWechatEnv(false)}>浏览器打开</b>
+          </div>
+          {/* 0614：演示「机构本月 Token 超额度」→ 会话顶部出现给 C 端的友好提示 */}
+          <div className="env-seg">
+            <b className={!orgTokenExceeded ? 'on' : ''} onClick={() => setOrgTokenExceeded(false)}>Token 正常</b>
+            <b className={orgTokenExceeded ? 'on' : ''} onClick={() => setOrgTokenExceeded(true)}>机构 Token 超限</b>
           </div>
         </div>
       </div>

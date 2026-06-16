@@ -1,0 +1,49 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'PingFang SC','Noto Sans SC',system-ui,-apple-system,'Microsoft YaHei',sans-serif;background:#fff;color:#14182a;-webkit-font-smoothing:antialiased}
+.wrap{display:inline-block;padding:30px 32px;background:#fff;min-width:200px}
+.fig-title{font-size:20px;font-weight:800;margin:0 0 4px;letter-spacing:.3px}
+.fig-sub{font-size:13px;color:#9aa0b4;margin:0 0 22px}
+.layer{display:flex;align-items:stretch;gap:14px;margin-bottom:13px}
+.layer-label{flex:0 0 104px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:13px;font-weight:700;color:#3730a3;background:#eef0fb;border-radius:10px;padding:8px 6px;line-height:1.4}
+.layer-body{flex:1;display:flex;gap:12px}
+.lb-box{flex:1;border:1.5px solid #e3e5ee;border-radius:12px;padding:13px 15px;background:#fff}
+.lb-box.full{flex:1}
+.lb-box .t{font-weight:700;font-size:14.5px}
+.lb-box .s{font-size:12px;color:#5b6178;margin-top:5px;line-height:1.6}
+.lb-box .port{font-size:11px;color:#4f46e5;font-weight:700;font-family:'DM Mono',ui-monospace,monospace;margin-left:6px}
+.accent-i{border-left:5px solid #4f46e5!important}
+.accent-a{border-left:5px solid #ff7a5c!important}
+.accent-j{border-left:5px solid #15b080!important}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;max-width:1110px}
+.step{position:relative;border:1.5px solid #e3e5ee;border-radius:12px;padding:11px 13px;background:#fff;width:158px;margin:7px 0;display:flex;flex-direction:column;justify-content:center}
+.step .st-t{font-weight:700;font-size:13.5px;line-height:1.35}
+.step .st-s{font-size:11.5px;color:#5b6178;margin-top:4px;line-height:1.5}
+.conn{display:flex;align-items:center;color:#c2c7ee;font-size:20px;font-weight:800;padding:0 7px}
+.legend{margin-top:20px;font-size:12px;color:#5b6178;display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:7px;vertical-align:middle}
+.note{margin-top:16px;font-size:12px;color:#5b6178;background:#f6f7fb;border-radius:8px;padding:11px 13px;max-width:1040px;line-height:1.65}
+.note b{color:#14182a}
+.rel{margin-top:18px;font-size:12.5px;color:#5b6178;line-height:1.95;max-width:1240px;columns:2;column-gap:40px}
+.rel b{color:#3730a3}
+
+  </style></head><body><div class="wrap">
+  <div class="fig-title">图 11 · 订阅生命周期状态机</div><div class="fig-sub">未生效 → 生效 → 已过期 由有效期自动判定；含 A+C 创建规则与误建删除规则</div>
+  <div style="width:1080px">
+    <div style="display:flex;align-items:stretch;gap:0;margin-bottom:6px">
+      <div style="flex:1;text-align:center;border:1.5px solid #e3e5ee;border-radius:12px;padding:13px 10px;background:#fff"><div style="font-weight:800;font-size:15px;color:#5b6178">未生效</div><div style="font-size:11px;color:#5b6178;margin-top:4px;line-height:1.45">今天 &lt; 生效日<br>预建的下一期、暂不计入额度</div></div>
+      <div style="flex:0 0 116px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#5b6178"><div style="font-size:11px;font-weight:700;color:#3730a3">到生效日</div><div style="font-size:18px;color:#c2c7ee;font-weight:800;line-height:1">→</div><div style="font-size:10.5px;color:#9aa0b4">系统自动</div></div>
+      <div style="flex:1;text-align:center;border:1.5px solid #4f46e5;border-radius:12px;padding:13px 10px;background:#eef0fb"><div style="font-weight:800;font-size:15px;color:#3730a3">生效</div><div style="font-size:11px;color:#5b6178;margin-top:4px;line-height:1.45">生效日 ≤ 今天 ≤ 到期日<br>决定机构当前可用额度</div></div>
+      <div style="flex:0 0 116px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#5b6178"><div style="font-size:11px;font-weight:700;color:#3730a3">过到期日</div><div style="font-size:18px;color:#c2c7ee;font-weight:800;line-height:1">→</div><div style="font-size:10.5px;color:#9aa0b4">系统自动</div></div>
+      <div style="flex:1;text-align:center;border:1.5px solid #e3e5ee;border-radius:12px;padding:13px 10px;background:#f6f7fb"><div style="font-weight:800;font-size:15px;color:#9aa0b4">已过期</div><div style="font-size:11px;color:#5b6178;margin-top:4px;line-height:1.45">今天 &gt; 到期日<br>历史已结束的服务周期</div></div>
+    </div>
+    <div style="font-size:11.5px;color:#5b6178;background:#f6f7fb;border-radius:8px;padding:9px 13px;line-height:1.6">状态<b>完全由有效期自动判定</b>，无手动开关；同一机构同一时间段最多只有一个「生效」订阅。</div>
+    <div style="display:flex;gap:12px;margin-top:18px">
+      <div style="flex:1;border:1.5px solid #e3e5ee;border-left:5px solid #4f46e5;border-radius:12px;padding:13px 16px;background:#fff"><div style="font-weight:700;font-size:13.5px;color:#14182a">创建规则（方案 A+C）</div><ul style="margin:8px 0 0;padding-left:18px;font-size:12px;color:#5b6178;line-height:1.85"><li>同一时间段只能有一个生效订阅</li><li>有生效订阅时最多再预建 1 期「未生效」（续约）</li><li>新建有效期不可与已有订阅重叠，否则拦截</li><li>新建有效期默认从最晚订阅到期次日衔接一年</li></ul></div>
+      <div style="flex:1;border:1.5px solid #e3e5ee;border-left:5px solid #ff7a5c;border-radius:12px;padding:13px 16px;background:#fff"><div style="font-weight:700;font-size:13.5px;color:#14182a">删除规则（误建处理）</div><ul style="margin:8px 0 0;padding-left:18px;font-size:12px;color:#5b6178;line-height:1.85"><li>可删 = 零用量 + 无加油包 + 非已过期（危险操作 + 二次确认、不可恢复）</li><li>生效中且有用量消耗 → 不可删（保留服务 / 计费历史）</li><li>已过期 → 不可删</li><li>覆盖"机构第一笔生效订阅建错了"：刚建、还没消耗即可删</li></ul></div>
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:#5b6178;display:flex;gap:22px">
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#4f46e5;margin-right:6px;vertical-align:middle"></span>生效</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;border:1.5px solid #9aa0b4;margin-right:6px;vertical-align:middle"></span>未生效 / 已过期</span>
+    </div>
+  </div></div></body></html>

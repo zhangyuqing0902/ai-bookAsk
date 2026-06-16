@@ -12,7 +12,7 @@ export function CsConfig() {
       </div>
       <div className="fm-card">
         <div className="fm-row">
-          <div className="lab">客服二维码</div>
+          <div className="lab">客服二维码<span className="req">*</span></div>
           <div className="ctl">
             <div className="upbox" style={{ maxWidth: 160 }} onClick={() => toast('上传客服二维码')}>
               <Icon id="i-qr" />

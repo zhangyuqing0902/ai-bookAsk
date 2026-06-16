@@ -21,6 +21,10 @@ const KPS: Kp[] = [
 ];
 
 // 机构后台 · 知识产品 KP 列表（搜索 + 状态/来源筛选 + 空态 + 新建/导入弹窗）
+// 0614：机构 KP / 存储配额（demo，与平台用量看板一致）；超限时阻断并提示联系平台扩容
+const KP_USED = 30, KP_LIMIT = 50;
+const STORE_USED = 62, STORE_LIMIT = 100;
+
 export function KpList() {
   const nav = useNavigate();
   const [create, setCreate] = useState(false);
@@ -29,6 +33,12 @@ export function KpList() {
   const [status, setStatus] = useState('全部');
   const [source, setSource] = useState('全部');
   const [page, setPage] = useState(1);
+  // 0614：KP 数达上限 → 阻断新建并提示
+  const overKp = KP_USED >= KP_LIMIT;
+  const newKp = () => {
+    if (overKp) return toast(`已达 KP 数量上限（${KP_LIMIT} 个），请联系平台扩容`);
+    setCreate(true);
+  };
 
   const list = KPS.filter(
     (kp) => (!q || kp.name.includes(q)) && (status === '全部' || kp.status === status) && (source === '全部' || kp.source === source),
@@ -46,11 +56,18 @@ export function KpList() {
           <div className="pt">知识产品 KP</div>
         </div>
         <div className="pa">
+          {/* 0614：机构配额用量提示（超限将阻断新建 / 上传，提示联系平台扩容） */}
+          <span
+            className={'quota-chip' + (KP_USED / KP_LIMIT >= 0.9 || STORE_USED / STORE_LIMIT >= 0.9 ? ' bad' : KP_USED / KP_LIMIT >= 0.7 || STORE_USED / STORE_LIMIT >= 0.7 ? ' warn' : '')}
+            title="机构配额：KP 数 / 存储空间。达上限将无法新建 KP 或上传文件，请联系平台扩容。"
+          >
+            KP {KP_USED}/{KP_LIMIT} · 存储 {STORE_USED}/{STORE_LIMIT}GB
+          </span>
           <button className="btn btn-ghost btn-sm" onClick={() => setImp(true)}>
             <Icon id="i-dl" w={14} h={14} />
             导入分享 KP
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setCreate(true)}>
+          <button className="btn btn-primary btn-sm" onClick={newKp}>
             <Icon id="i-plus" w={14} h={14} />
             新建 KP
           </button>

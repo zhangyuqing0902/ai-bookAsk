@@ -29,7 +29,14 @@ export function My() {
       <div className="pg">
         <div className="scrollY">
           <div className="my-head tap" onClick={() => nav('/me/profile')}>
-            <div className="av" />
+            <div
+              className="av"
+              style={
+                user.avatar
+                  ? { backgroundImage: `url(${user.avatar})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                  : undefined
+              }
+            />
             <div style={{ flex: 1 }}>
               <div className="nm">
                 {user.nickname || '未设置昵称'}
@@ -100,15 +107,6 @@ export function My() {
 
           <div className="my-sec">账户与帮助</div>
           <div className="mlist">
-            <div className="mrow tap" onClick={() => nav('/me/profile')}>
-              <span className="mi">
-                <Icon id="i-user" />
-              </span>
-              <span className="ml">个人资料</span>
-              <span className="mc">
-                <Icon id="i-chevR" />
-              </span>
-            </div>
             {phoneBound ? (
               <div className="mrow tap" onClick={() => nav('/account')}>
                 <span className="mi">
