@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { Modal, TextInput, Dropdown, InfoDot } from '@aba/ui-admin';
+import { Modal, TextInput, InfoDot } from '@aba/ui-admin';
 
 // 平台超管 · 角色权限（0615-3 重构）：移入「系统设置」，按「角色类型 = 机构 / 平台」分别管理。
 // 机构角色与平台角色的权限点不同；新建角色时选类型，机构账户选机构角色、平台账户选平台角色。
@@ -173,7 +173,20 @@ export function Roles() {
       >
         <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
           <div className="lab">角色类型<span className="req">*</span></div>
-          <div className="ctl"><Dropdown label={newKind === 'org' ? '机构角色' : '平台角色'} options={['机构角色', '平台角色']} onSelect={(v) => setNewKind(v === '平台角色' ? 'plat' : 'org')} style={{ width: 160 }} /></div>
+          <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* 类型由创建入口页签决定、锁定不可切换：整段控件呈锁定态（非仅文字置灰） */}
+            <div className="seg seg-locked" role="radiogroup" aria-disabled="true">
+              <b className={newKind === 'org' ? 'on' : ''}>
+                {newKind === 'org' && <Icon id="i-lock" w={12} h={12} className="lock-ic" />}
+                机构角色
+              </b>
+              <b className={newKind === 'plat' ? 'on' : ''}>
+                {newKind === 'plat' && <Icon id="i-lock" w={12} h={12} className="lock-ic" />}
+                平台角色
+              </b>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>由创建入口页签决定，不可切换</span>
+          </div>
         </div>
         <div className="fm-row">
           <div className="lab">角色名称<span className="req">*</span></div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, Modal, TextInput, DataGrid, type Col } from '@aba/ui-admin';
+import { Search, Dropdown, Modal, TextInput, DateTimeRangeField, DataGrid, exportWorkbook, type Col } from '@aba/ui-admin';
 import { BATCHES, batchCodes, type Batch, type Code } from '../data/codes';
 
 // 机构后台 · 兑换码（按批次管理；点击「详情」在当前页右侧抽屉展示该批次全部兑换码）
@@ -19,6 +19,7 @@ export function Codes() {
     { header: '批次名称', className: 'strong', cell: (b) => b.name },
     { header: '已兑换 / 生成', className: 'mono', cell: (b) => `${b.redeemed} / ${b.total}`, sortValue: (b) => b.redeemed },
     { header: '权益有效期', cell: (b) => '会员 · ' + b.duration },
+    { header: '可兑换时间', className: 'mono', cell: (b) => `${b.validFrom ?? '创建后立即'} ~ ${b.validTo ?? '长期有效'}` },
     { header: '批次创建时间', className: 'mono', cell: (b) => b.createdAt, sortValue: (b) => b.createdAt },
     { header: '操作', cell: (b) => <div className="op-cell"><span className="op" onClick={() => openDetail(b)}>详情</span></div> },
   ];
@@ -90,6 +91,13 @@ export function Codes() {
           <div className="lab">生成数量</div>
           <div className="ctl"><TextInput defaultValue="500" style={{ maxWidth: 120 }} /></div>
         </div>
+        <div className="fm-row">
+          <div className="lab">可兑换时间<span className="req">*</span></div>
+          <div className="ctl">
+            <DateTimeRangeField defaultStart="2026-07-20 00:00:00" defaultEnd="2026-12-31 23:59:59" withTime />
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 6 }}>开始前提示“该兑换码尚未到生效时间，请于生效时间后再试”；结束后提示“该兑换码已过期”。</div>
+          </div>
+        </div>
       </Modal>
 
       {/* 0610:兑换码批次详情抽屉(右侧滑入,交互/布局对齐二维码码包) */}
@@ -100,7 +108,7 @@ export function Codes() {
             <div className="drawer-h">
               <div>
                 <div className="dh-t">{view.name}</div>
-                <div className="dh-s">已兑换 {view.redeemed} / {view.total} · 权益 会员 · {view.duration} · 批次创建 {view.createdAt}</div>
+                <div className="dh-s">已兑换 {view.redeemed} / {view.total} · 权益 会员 · {view.duration} · 可兑换 {view.validFrom ?? '创建后立即'} ~ {view.validTo ?? '长期有效'} · 批次创建 {view.createdAt}</div>
               </div>
               <span className="drawer-x" onClick={() => setView(null)}>✕</span>
             </div>
@@ -111,7 +119,7 @@ export function Codes() {
                 <Search placeholder="搜索手机号" minWidth={180} value={cPhone} onChange={setCPhone} />
                 <Dropdown label="状态" options={['全部', '已兑换', '未兑换']} onSelect={setCStatus} />
                 <div className="grow" />
-                <button className="btn btn-ghost btn-sm" onClick={() => toast('导出本批次 Excel')}>
+                <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(`${view.name}-兑换码`, [{ name: '批次信息', title: view.name, subtitle: `可兑换 ${view.validFrom ?? '创建后立即'} ~ ${view.validTo ?? '长期有效'}`, headers: ['批次 ID', '生成数量', '已兑换', '会员时长', '创建时间'], rows: [[view.id, view.total, view.redeemed, view.duration, view.createdAt]], widths: [22, 14, 14, 16, 22] }, { name: '兑换码明细', title: `${view.name} · 兑换码明细`, subtitle: `状态=${cStatus} · 兑换用户=${cUser || '全部'} · 手机号=${cPhone || '全部'}`, headers: ['兑换码', '权益', '状态', '兑换时间', '兑换用户', '手机号', '权益到期'], rows: codeRows.map((c) => [c.code, `会员 · ${view.duration}`, c.status, c.redeemAt, c.user, c.phone, c.expire]), widths: [16, 18, 14, 22, 26, 16, 18] }]); toast('正在生成 XLSX'); }}>
                   <Icon id="i-dl" w={14} h={14} />
                   导出
                 </button>

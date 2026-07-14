@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, DataGrid, RangePicker, type Col } from '@aba/ui-admin';
-import { AORDERS, byPayDesc, useRefundStore, type AOrder } from '@aba/mock';
+import { Search, Dropdown, DataGrid, RangePicker, exportWorkbook, type Col } from '@aba/ui-admin';
+import { AORDERS, byPayDesc, orgOptionLabel, orgOptionValue, revealPhone, useRefundStore, type AOrder } from '@aba/mock';
 
 // 平台超管 · 全域订单（0614b：复用机构后台订单的列表 / 详情字段，仅多一列「归属机构」+ 机构筛选；
 // 补齐机构后台已有的「退款状态」列；数据与机构后台同一份 @aba/mock，不再各写一套）。
@@ -61,7 +61,7 @@ export function GlobalOrders() {
         );
       },
     },
-    { header: '用户', className: 'mono', cell: (r) => r.user },
+    { header: '用户', className: 'mono', cell: (r) => revealPhone(r.user) },
     { header: '下单时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.orderTime), sortValue: (r) => r.orderTime },
     { header: '付款时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.payTime), sortValue: (r) => r.payTime },
     { header: '兑换时间', className: 'mono', cell: (r) => (r.redeemTime ? r.redeemTime : <span className="muted">—</span>), sortValue: (r) => r.redeemTime ?? '' },
@@ -75,7 +75,7 @@ export function GlobalOrders() {
           <div className="pt">全域订单</div>
         </div>
         <div className="pa">
-          <button className="btn btn-ghost btn-sm" onClick={() => toast('导出订单')}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook('平台全域订单', [{ name: '订单明细', title: '平台全域订单', subtitle: `机构=${org} · 类型=${type} · 订单状态=${status} · 退款状态=${rfStatus} · 搜索=${q || '无'}`, headers: ['订单号', '机构', '类型', '知识产品', '金额', '支付方式', '订单状态', '退款状态', '用户', '下单时间', '支付时间', '兑换时间'], rows: rows.map((r) => [r.id, r.org, r.type, r.kp ?? '—', r.amount, r.payMethod, r.status, refundStatusOf(r), revealPhone(r.user), r.orderTime, r.payTime, r.redeemTime ?? '—']), widths: [24, 22, 12, 22, 12, 16, 14, 14, 18, 22, 22, 22] }]); toast('正在生成 XLSX'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
@@ -83,7 +83,7 @@ export function GlobalOrders() {
       </div>
       <div className="orders-filter">
         <Search placeholder="微信号 / 手机号 / 订单号" minWidth={240} value={q} onChange={setQ} />
-        <Dropdown label="归属机构" options={['全部', ...orgNames]} onSelect={setOrg} style={{ width: 160 }} />
+        <Dropdown label="归属机构" options={['全部', ...orgNames.map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ width: 190 }} />
         <Dropdown label="类型" options={TYPES} onSelect={setType} />
         <Dropdown label="订单状态" options={['全部', '已支付', '已核销']} onSelect={setStatus} />
         <Dropdown label="退款状态" options={['全部', '未退款', '退款中', '部分退款', '全额退款']} onSelect={setRfStatus} />

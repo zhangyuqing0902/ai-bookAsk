@@ -16,5 +16,6 @@ export default defineConfig({
       '@aba/ui-mobile': path.resolve(__dirname, '../../packages/ui-mobile/src/index.ts'),
     },
   },
-  server: { port: 5173, host: true },
+  // 5173 让给别的项目(QuickCut)常驻占用,移动端固定 5170;strictPort 不开,被占时自动换空闲端口
+  server: { port: 5170, host: true },
 });

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon, toast, FileTypeIcon, appBase, type FileKind } from '@aba/ui';
+import { Icon, toast, FileTypeIcon, type FileKind } from '@aba/ui';
 import { Search, TextInput } from './Fields';
 import { Dropdown } from './Dropdown';
 import { DataGrid, type Col } from './DataGrid';
@@ -69,7 +69,6 @@ interface Qr {
   rescans: number | null; // 后扫数量
 }
 const KP_CODE = 'KP012'; // 当前 KP 全平台唯一编号(心血管分册)
-const FRONT_ORG = 'xx-press'; // 演示机构标识(该 KP 所属机构 slug),用于拼前台访问地址
 const QR: Qr[] = [
   { name: '心血管首发批次', pkg: 'B01', mode: '首扫绑定,后扫引导', qty: 100, totalScans: 8642, firstScans: 6210, rescans: 2432 },
   { name: '内部测试码', pkg: 'B02', mode: '无权益', qty: 1, totalScans: 38, firstScans: null, rescans: 38 },
@@ -98,7 +97,7 @@ const buildQrCodes = (pkg: string, qty: number): QrCode[] =>
       firstStatus: bound ? '已首扫' : '未首扫',
       firstTime: bound ? `2026-04-${String((i % 27) + 1).padStart(2, '0')} 1${i % 9}:0${i % 6}` : '—',
       account: bound ? nm : '—',
-      phone: bound ? `13${(i % 9) + 1}****${String(1000 + i).slice(-4)}` : '—',
+      phone: bound ? `13${(i % 9) + 1}0013${String(1000 + i).slice(-4)}` : '—',
       rescans: bound ? (i * 13) % 40 : 0,
     };
   });
@@ -112,10 +111,17 @@ type Confirm = { title: string; desc: ReactNode; danger?: boolean; confirmText?:
 
 // KP 详情（6 Tab）——机构后台 + 平台后台全域 KP 共用，0614b 抽公共组件。
 // listBase 适配两端「删除后返回列表」的路由（机构 /kps、平台 /global-kps）。
-export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
+// orgPrefix / domainSuffix 由各端 wrapper 注入（不在共享组件里硬编码机构 slug）：
+//   前台访问地址采用真实二级机构域名形态 https://{前缀}{后缀}/kp/{KP编号}，与域名功能其它位置一致；
+//   domainSuffix 由 wrapper 用 @aba/mock 的 tenantDomainSuffix(hostname) 按当前环境算好传入（本地 -aba.localhost）。
+export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domainSuffix = '-aba.一级域名.cn', importMode = 'own' }: { listBase?: string; orgPrefix?: string; domainSuffix?: string; importMode?: 'own' | 'realtime' | 'snapshot' }) {
   const nav = useNavigate();
-  // 复制该 KP 的 C 端前台访问地址：随当前环境自动生成(本地按端口、线上按部署域名),并携带机构 + KP 标识
-  const frontUrl = `${appBase('mobile')}/chat?org=${FRONT_ORG}&kp=${KP_CODE}`;
+  // 复制该 KP 的 C 端前台访问地址：随当前环境自动生成、随机构域名前缀变化
+  const frontUrl = `https://${orgPrefix}${domainSuffix}/kp/${KP_CODE}`;
+  // 分享权限（对齐 @aba/mock sharePolicy）：实时同步导入的 KP 内容随源机构更新、只读，
+  // 二维码 / 分享两 Tab 不可见，下架 / 归档等源机构侧操作也隐藏；独立快照与自建 KP 全功能。
+  const isRealtime = importMode === 'realtime';
+  const visibleTabs = isRealtime ? TABS.filter((t) => t.id !== 'qr' && t.id !== 'share') : TABS;
   const copyFront = () => {
     navigator.clipboard?.writeText(frontUrl);
     toast('已复制前台访问地址');
@@ -351,7 +357,7 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
       <div className="op-cell">
         <span className="op op-danger" onClick={() => setConfirm({
           title: '取消分享',
-          desc: <>取消后该分享链接「{s.link}」立即失效，已导入的下级机构不受影响。</>,
+          desc: <>取消后该分享链接「{s.link}」立即失效：未导入者不可再导入；已实时导入者立即失去授权，已导入的独立快照不受影响。</>,
           danger: true,
           confirmText: '确认取消',
           onOk: () => toast('已取消分享'),
@@ -368,28 +374,40 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
           返回
         </span>
         <span className="kpd-name">心血管分册 · 第4版</span>
-        <span className="tag-s tag-indigo">自建</span>
-        {/* 6.15:状态紧跟自建标签直接显示,不要「当前状态」文案 */}
+        {/* 来源标签：实时同步 / 独立快照导入的 KP 显示「共享导入」，避免与「实时同步 · 只读」矛盾 */}
+        <span className={'tag-s ' + (importMode === 'own' ? 'tag-indigo' : 'tag-line')}>{importMode === 'own' ? '自建' : '共享导入'}</span>
+        {/* 6.15:状态紧跟来源标签直接显示,不要「当前状态」文案 */}
         <span className="tag-s tag-jade">已发布</span>
-        <span className="kpd-status">
-          <button className="btn btn-ghost btn-sm" onClick={() => setConfirm({
-            title: '下架知识 KP',
-            desc: '下架后该 KP 将从 C 端检索中移除，用户无法再提问；可随时重新发布。',
-            confirmText: '确认下架',
-            onOk: () => toast('已下架'),
-          })}>下架</button>
-          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--terra)', borderColor: 'var(--terra-soft)' }} onClick={() => setConfirm({
-            title: '删除知识 KP',
-            desc: '删除后该 KP 及其全部知识库文件、向量数据、二维码与分享将一并清除，不可恢复。',
-            danger: true,
-            confirmText: '确认删除',
-            onOk: () => { toast('已删除'); nav(listBase); },
-          })}>删除</button>
-        </span>
+        {isRealtime ? (
+          <span className="tag-s tag-line">实时同步 · 只读</span>
+        ) : (
+          <span className="kpd-status">
+            <button className="btn btn-ghost btn-sm" onClick={() => setConfirm({
+              title: '下架知识 KP',
+              desc: '下架后停止检索、新购买、新扫码与普通链接访问；已购买或已获纸书权益的用户继续保留访问，可随时重新发布。',
+              confirmText: '确认下架',
+              onOk: () => toast('已下架'),
+            })}>下架</button>
+            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--terra)', borderColor: 'var(--terra-soft)' }} onClick={() => setConfirm({
+              title: '归档知识 KP',
+              desc: '该 KP 已存在订单、赠送、分享或导入关系，不能物理删除。归档后停止新增访问并保留历史权益与审计记录。仅无任何业务关系的 KP 才允许物理删除。',
+              danger: true,
+              confirmText: '确认归档',
+              onOk: () => { toast('已归档'); nav(listBase); },
+            })}>归档</button>
+          </span>
+        )}
       </div>
 
+      {isRealtime && (
+        <div className="kp-readonly-banner">
+          <Icon id="i-lock" w={14} h={14} />
+          <span>本 KP 由其它机构以「实时同步」分享导入：内容随源机构自动更新、仅可查看不可编辑；不占本机构 KP 数与存储、问答消耗本机构 Token；二维码与分享不可用。如需自主编辑，请改用「独立快照」方式导入。</span>
+        </div>
+      )}
+
       <div className="kpd-tabs">
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <div key={t.id} className={'kpd-tab' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}>
             {t.label}
           </div>
@@ -731,6 +749,7 @@ export function KpDetailView({ listBase = '/kps' }: { listBase?: string }) {
           <div className="lab">导入次数上限</div>
           <div className="ctl"><TextInput placeholder="如 10" /></div>
         </div>
+        <div className="sub-tip">实时同步：不占接收方 KP/存储，接收方消耗 Token，内容只读且隐藏二维码/分享；撤销或源 KP 下架后立即失权。独立快照：占接收方 KP/存储，可编辑五个页签并生成自有二维码/分享；源侧撤销不影响已导入快照。发起机构不能导入自己的分享。</div>
       </Modal>
 
       {/* —— 上传知识文件弹窗(4.5) —— */}

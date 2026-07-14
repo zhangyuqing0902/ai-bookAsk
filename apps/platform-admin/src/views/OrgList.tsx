@@ -1,28 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@aba/ui';
-import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DataGrid, type Col } from '@aba/ui-admin';
+import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DomainInput, DataGrid, type Col } from '@aba/ui-admin';
+import { PLATFORM_ORGS, platformOrgRole, secondaryTenantDomain, suspensionImpact, tenantDomainSuffix, validateDomainPrefix, type PlatformOrg } from '@aba/mock';
 
-interface Org {
-  i: number;
-  id: string;
-  name: string;
-  status: string;
-  statusCls: string;
-  /** 上级机构 ID；null = 顶级机构（V1 只允许一层：集团→分社） */
-  parentId: string | null;
-  llm: string;
-  pay: string;
-  payCls: string;
-  /** 0614c：套餐 + 三项配额「已用」（上限由套餐推断；定制版上限单列） */
-  plan: '基础版' | '专业版' | '旗舰版' | '定制版';
-  kpUsed: number;
-  stUsed: number; // 存储 GB
-  tkUsed: number; // 月度 Token，单位亿
-  /** 定制版上限（其余套餐由 PLAN_Q 推断） */
-  custom?: { kp: number; storage: number; token: number };
-}
-// 套餐预设上限（KP 个 / 存储 GB / 月度 Token 亿），与机构详情套餐一致
+// 机构主数据（含父/子机构树）已下沉到 @aba/mock（PLATFORM_ORGS），机构列表与机构详情共用同一份，
+// 不再在页面里本地维护一份 INIT。父/子/普通三态标签统一由 platformOrgRole 从机构树推导。
+// 套餐预设上限（KP 个 / 存储 GB / 当前订阅周期 Token 亿），与机构详情套餐一致
 const PLAN_Q: Record<string, { kp: number; storage: number; token: number }> = {
   基础版: { kp: 10, storage: 20, token: 0.5 },
   专业版: { kp: 50, storage: 100, token: 2 },
@@ -30,22 +14,7 @@ const PLAN_Q: Record<string, { kp: number; storage: number; token: number }> = {
 };
 const PLAN_RANK: Record<string, number> = { 基础版: 1, 专业版: 2, 旗舰版: 3, 定制版: 4 };
 const PLAN_CLS: Record<string, string> = { 基础版: 'tag-line', 专业版: 'tag-indigo', 旗舰版: 'tag-amber', 定制版: 'tag-jade' };
-const limitOf = (r: Org) => r.custom ?? PLAN_Q[r.plan];
-const INIT: Org[] = [
-  { i: 1, id: 'ORG001', name: 'XX 出版集团', status: '正常', statusCls: 'tag-jade', parentId: null, llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '专业版', kpUsed: 30, stUsed: 62, tkUsed: 1.76 },
-  { i: 2, id: 'ORG002', name: 'YY 教育', status: '停用', statusCls: 'tag-terra', parentId: 'ORG001', llm: '自配 · 通义', pay: '未配置', payCls: 'tag-line', plan: '基础版', kpUsed: 8, stUsed: 15, tkUsed: 0.32 },
-  { i: 3, id: 'ORG003', name: 'ZZ 少儿', status: '正常', statusCls: 'tag-jade', parentId: 'ORG001', llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '专业版', kpUsed: 22, stUsed: 40, tkUsed: 1.1 },
-  { i: 4, id: 'ORG004', name: 'AA 文化集团', status: '正常', statusCls: 'tag-jade', parentId: null, llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '旗舰版', kpUsed: 120, stUsed: 300, tkUsed: 6.4 },
-  { i: 5, id: 'ORG005', name: 'AA 少儿分社', status: '正常', statusCls: 'tag-jade', parentId: 'ORG004', llm: '平台默认', pay: '未配置', payCls: 'tag-line', plan: '基础版', kpUsed: 6, stUsed: 12, tkUsed: 0.28 },
-  { i: 6, id: 'ORG006', name: 'AA 教辅分社', status: '停用', statusCls: 'tag-terra', parentId: 'ORG004', llm: '自配 · 通义', pay: '已配置', payCls: 'tag-indigo', plan: '专业版', kpUsed: 35, stUsed: 70, tkUsed: 1.5 },
-  { i: 7, id: 'ORG007', name: 'BB 数字出版', status: '正常', statusCls: 'tag-jade', parentId: null, llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '旗舰版', kpUsed: 90, stUsed: 220, tkUsed: 4.8 },
-  { i: 8, id: 'ORG008', name: 'BB 期刊中心', status: '正常', statusCls: 'tag-jade', parentId: 'ORG007', llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '基础版', kpUsed: 9, stUsed: 18, tkUsed: 0.46 },
-  { i: 9, id: 'ORG009', name: 'CC 科技出版', status: '正常', statusCls: 'tag-jade', parentId: null, llm: '自配 · 通义', pay: '未配置', payCls: 'tag-line', plan: '定制版', kpUsed: 60, stUsed: 250, tkUsed: 3.6, custom: { kp: 80, storage: 300, token: 5 } },
-  { i: 10, id: 'ORG010', name: 'CC 医学分社', status: '正常', statusCls: 'tag-jade', parentId: 'ORG009', llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '专业版', kpUsed: 44, stUsed: 88, tkUsed: 1.9 },
-  { i: 11, id: 'ORG011', name: 'DD 教育研究院', status: '停用', statusCls: 'tag-terra', parentId: null, llm: '平台默认', pay: '未配置', payCls: 'tag-line', plan: '基础版', kpUsed: 5, stUsed: 10, tkUsed: 0.2 },
-  { i: 12, id: 'ORG012', name: 'DD 考试中心', status: '正常', statusCls: 'tag-jade', parentId: 'ORG011', llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '专业版', kpUsed: 28, stUsed: 55, tkUsed: 1.3 },
-  { i: 13, id: 'ORG013', name: 'EE 美术出版', status: '正常', statusCls: 'tag-jade', parentId: null, llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '旗舰版', kpUsed: 75, stUsed: 180, tkUsed: 3.2 },
-];
+const limitOf = (r: PlatformOrg) => r.custom ?? PLAN_Q[r.plan];
 
 // 配额单元格：已用 / 上限。0615-6：去掉按使用率变色（整列太花）——统一普通文字，
 // 已用黑字、「/ 上限」灰字；用量预警仍由机构详情用量看板进度条体现。
@@ -61,13 +30,18 @@ function QuotaCell({ used, limit, unit }: { used: number; limit: number; unit?: 
 // 平台超管 · 机构列表（搜索 + 状态筛选 + 排序 + 空态 + 创建弹窗 + 状态变更二次确认）
 export function OrgList() {
   const nav = useNavigate();
-  const [data, setData] = useState<Org[]>(INIT);
+  const [data, setData] = useState<PlatformOrg[]>(PLATFORM_ORGS);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('全部');
   const [parent, setParent] = useState('全部');
   const [plan, setPlan] = useState('全部');
-  const [confirm, setConfirm] = useState<Org | null>(null);
+  const [confirm, setConfirm] = useState<PlatformOrg | null>(null);
+  const [newName, setNewName] = useState('');
+  const [domainPrefix, setDomainPrefix] = useState('');
+  const [newParent, setNewParent] = useState('无（顶级机构）');
+  const domainCheck = validateDomainPrefix(domainPrefix, data.map((r) => r.domainPrefix));
+  const domainSuffix = tenantDomainSuffix(window.location.hostname);
 
   const nameOf = (id: string | null) => (id ? data.find((r) => r.id === id)?.name ?? '—' : '—');
   // 候选上级 = 顶级机构（自身无上级），保证只有「集团→分社」两层
@@ -89,16 +63,17 @@ export function OrgList() {
     );
   });
 
-  const toggleStatus = (target: Org) => {
+  const toggleStatus = (target: PlatformOrg) => {
     const next = target.status === '正常' ? '停用' : '正常';
     setData((d) =>
       d.map((r) => (r.id === target.id ? { ...r, status: next, statusCls: next === '正常' ? 'tag-jade' : 'tag-terra' } : r)),
     );
   };
 
-  const columns: Col<Org>[] = [
+  const columns: Col<PlatformOrg>[] = [
     { header: '机构 ID', className: 'mono', cell: (r) => r.id },
-    { header: '机构名称', className: 'strong', cell: (r) => r.name },
+    { header: '机构名称', className: 'strong', cell: (r) => <>{r.name}{platformOrgRole(r, data) === 'parent' && <span className="tag-s tag-indigo" style={{ marginLeft: 6 }}>父机构</span>}</> },
+    { header: '二级机构域名', className: 'mono', cell: (r) => secondaryTenantDomain(r.domainPrefix) },
     { header: '状态', cell: (r) => <span className={'tag-s ' + r.statusCls}>{r.status}</span>, sortValue: (r) => r.status },
     { header: '上级机构', cell: (r) => (r.parentId === null ? <span className="muted">—</span> : nameOf(r.parentId)) },
     // 0614c：套餐（可排序——按档位 基础<专业<旗舰<定制）
@@ -143,19 +118,26 @@ export function OrgList() {
         <Dropdown label="套餐" options={['全部', '基础版', '专业版', '旗舰版', '定制版']} onSelect={setPlan} />
         <Dropdown label="上级机构" options={['全部', ...parentNames]} onSelect={setParent} style={{ width: 180 }} />
       </div>
-      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的机构', sub: '换个名称或状态试试' }} minWidth={1320} pageUnit="家" />
+      <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的机构', sub: '换个名称或状态试试' }} minWidth={1480} pageUnit="家" />
 
       <Modal
         title="创建机构"
         open={open}
         onClose={() => setOpen(false)}
-        width={460}
+        width={620}
         footer={
           <>
             <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>
               取消
             </button>
-            <button className="btn btn-primary btn-sm" onClick={() => setOpen(false)}>
+            <button className="btn btn-primary btn-sm" disabled={!newName.trim() || !domainCheck.valid} onClick={() => {
+              if (!newName.trim() || !domainCheck.valid) return;
+              const i = Math.max(...data.map((r) => r.i)) + 1;
+              const parentName = newParent.replace(/（父机构）$/, '');
+              const parentId = newParent === '无（顶级机构）' ? null : data.find((r) => r.name === parentName)?.id ?? null;
+              setData((rows) => [...rows, { i, id: `ORG${String(i).padStart(3, '0')}`, name: newName.trim(), domainPrefix: domainCheck.normalized, status: '正常', statusCls: 'tag-jade', parentId, llm: '平台默认', pay: '未配置', payCls: 'tag-line', plan: '基础版', kpUsed: 0, stUsed: 0, tkUsed: 0 }]);
+              setNewName(''); setDomainPrefix(''); setNewParent('无（顶级机构）'); setOpen(false);
+            }}>
               创建
             </button>
           </>
@@ -163,7 +145,14 @@ export function OrgList() {
       >
         <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
           <div className="lab">机构名称<span className="req">*</span></div>
-          <div className="ctl"><TextInput placeholder="请输入机构名称" /></div>
+          <div className="ctl"><TextInput placeholder="请输入机构名称" value={newName} onChange={(e) => setNewName(e.target.value)} /></div>
+        </div>
+        <div className="fm-row">
+          <div className="lab">机构域名前缀<span className="req">*</span></div>
+          <div className="ctl">
+            <DomainInput value={domainPrefix} onChange={setDomainPrefix} suffix={domainSuffix} invalid={!!domainPrefix && !domainCheck.valid} />
+            {!!domainPrefix && !domainCheck.valid && <div style={{ fontSize: 12, marginTop: 5, color: 'var(--terra)' }}>{domainCheck.error}</div>}
+          </div>
         </div>
         {/* 0614：机构联系人（用于配额阈值预警短信；手机号可重复） */}
         <div className="fm-row">
@@ -176,7 +165,11 @@ export function OrgList() {
         </div>
         <div className="fm-row">
           <div className="lab">上级机构</div>
-          <div className="ctl"><Dropdown label="无（顶级机构）" options={['无（顶级机构）', ...topLevelNames]} style={{ width: 200 }} /></div>
+          <div className="ctl">
+            <Dropdown label="无（顶级机构）" options={['无（顶级机构）', ...topLevelNames.map((name) => data.some((x) => x.parentId === data.find((r) => r.name === name)?.id) ? `${name}（父机构）` : name)]} onSelect={setNewParent} style={{ width: 260 }} />
+            {/* 提示紧贴字段，不再放到弹窗最底部远离控件 */}
+            <div className="hint">仅顶级机构可被选为上级；选定后本机构将成为其子机构（仅支持父 / 子两层）。</div>
+          </div>
         </div>
         <div className="fm-row">
           <div className="lab">备注</div>
@@ -191,9 +184,8 @@ export function OrgList() {
             </div>
           </div>
         </div>
-        {/* 0613-2：创建弹窗不含套餐，套餐 / 配额在机构详情的「套餐 / 配额」Tab 设置 */}
-        {/* 0614：说明文案精简为单句 */}
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>仅顶级机构可被选为上级。</div>
+        {/* 0613-2：创建弹窗不含套餐，套餐 / 配额在机构详情的「套餐 / 配额」Tab 设置；
+            0712：上级机构提示移至字段下方（原在弹窗底部远离控件） */}
       </Modal>
 
       <ConfirmDialog
@@ -203,7 +195,7 @@ export function OrgList() {
         confirmText={confirm?.status === '正常' ? '确认停用' : '确认恢复'}
         desc={
           confirm?.status === '正常' ? (
-            <>停用「{confirm?.name}」后，该机构的后台与前台均会提示「机构服务已暂停」，C 端用户将无法访问。可随时恢复。</>
+            <>停用「{confirm?.name}」后，仅该机构后台与前台暂停。{confirm ? suspensionImpact(data.some((x) => x.parentId === confirm.id)).message : ''}</>
           ) : (
             <>恢复「{confirm?.name}」后，该机构的后台与前台访问将立即解封。</>
           )

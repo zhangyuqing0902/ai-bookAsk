@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 import { Search, Dropdown, EmptyState } from '@aba/ui-admin';
-import { KPS, ORGS } from '@aba/mock';
+import { KPS, ORGS, orgOptionLabel, orgOptionValue } from '@aba/mock';
 
 // 平台超管 · 全域知识 KP（0614b：表格 → 卡片，复用机构后台 KP 列表视觉；每卡显示归属机构；只读监管）。
 const STAT: Record<string, { t: string; cls: string }> = {
@@ -39,7 +39,7 @@ export function GlobalKps() {
       </div>
       <div className="filter">
         <Search placeholder="搜索 KP 名称" minWidth={240} value={q} onChange={setQ} />
-        <Dropdown label="机构" options={['全部', ...orgNames]} onSelect={setOrg} style={{ width: 180 }} />
+        <Dropdown label="机构" options={['全部', ...orgNames.map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ width: 190 }} />
         <Dropdown label="状态" options={['全部', '已发布', '草稿', '已下架']} onSelect={setStatus} />
       </div>
       {rows.length === 0 ? (

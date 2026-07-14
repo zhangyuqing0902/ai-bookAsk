@@ -49,6 +49,18 @@ export function Orders() {
                 <span>{o.status}</span>
                 <span>{o.payTime}</span>
               </div>
+              {!!o.refunds?.length && (
+                <div className="refund-strip">
+                  {/* 展示全部退款记录（同一订单可多笔），不静默截断 */}
+                  {o.refunds.map((refund) => (
+                    <div className="refund-strip-row" key={refund.id}>
+                      <span className={'refund-state ' + (refund.status === '退款成功' ? 'success' : refund.status === '退款失败' ? 'failed' : 'processing')}>{refund.status}</span>
+                      <span>{refund.amount}</span>
+                      <span>{refund.createdAt.slice(0, 10)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

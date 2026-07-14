@@ -30,6 +30,7 @@ export function TextInput({
   style,
   textarea,
   type,
+  disabled,
 }: {
   defaultValue?: string;
   value?: string;
@@ -38,15 +39,37 @@ export function TextInput({
   style?: CSSProperties;
   textarea?: boolean;
   type?: string; // 0615-3：支持 password 等
+  disabled?: boolean;
 }) {
   const controlled = value !== undefined ? { value, onChange: (e: { target: { value: string } }) => onChange?.(e) } : { defaultValue };
   return (
     <div className="inp2" style={style}>
       {textarea ? (
-        <textarea placeholder={placeholder} {...(controlled as object)} />
+        <textarea placeholder={placeholder} disabled={disabled} {...(controlled as object)} />
       ) : (
-        <input type={type} placeholder={placeholder} {...(controlled as object)} />
+        <input type={type} placeholder={placeholder} disabled={disabled} {...(controlled as object)} />
       )}
+    </div>
+  );
+}
+
+export function DomainInput({
+  value,
+  onChange,
+  suffix,
+  placeholder = '如 test',
+  invalid = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  suffix: string;
+  placeholder?: string;
+  invalid?: boolean;
+}) {
+  return (
+    <div className={'domain-input' + (invalid ? ' invalid' : '')}>
+      <input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      <span className="domain-suffix">{suffix}</span>
     </div>
   );
 }

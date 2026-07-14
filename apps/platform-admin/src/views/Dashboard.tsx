@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { LineChart, RangePicker, Dropdown, InfoDot, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { platformDaily, platformSnapshot, rangeMetrics } from '@aba/mock';
+import { LineChart, RangePicker, Dropdown, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
+import { compareMetric, comparisonPeriodLabel, currentPeriodLabel, metricHelp, orgOptionLabel, orgOptionValue, platformDaily, platformSnapshot, rangeMetrics } from '@aba/mock';
 
 // 平台后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
 // 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
@@ -14,16 +14,19 @@ export function Dashboard() {
   const prev = rangeMetrics(platformDaily, days, days);
   const n = fmtCn;
   const chartSlice = days <= 1 ? platformDaily.slice(-7) : cur.slice;
+  const periodKind = days <= 1 ? 'today' as const : 'range' as const;
 
   const Delta = ({ c, p }: { c: number; p: number }) => {
-    const v = p > 0 ? ((c - p) / p) * 100 : 0;
+    const comparison = compareMetric(c, p, 'count');
+    if (!comparison.comparable) return <div className="delta">{comparison.label}</div>;
+    const v = comparison.value ?? 0;
     const up = v >= 0;
     return (
       <div className={'delta ' + (up ? 'up' : 'down')}>
         <span style={up ? undefined : { display: 'inline-flex', transform: 'rotate(180deg)' }}>
           <Icon id="i-up" w={11} h={11} />
         </span>
-        {Math.abs(v).toFixed(1)}% 较上一周期
+        {Math.abs(v).toFixed(1)}% 较上一周期 <span className="period-compare">{comparisonPeriodLabel(days)}</span>
       </div>
     );
   };
@@ -35,8 +38,11 @@ export function Dashboard() {
           <div className="pt">主控台</div>
         </div>
         <div className="pa">
-          <Dropdown label="全部机构" options={['全部机构', 'XX 出版社', 'YY 教育', 'ZZ 少儿', 'AA 文化集团']} onSelect={setOrg} style={{ minWidth: 140 }} />
-          <button className="btn btn-ghost btn-sm" onClick={() => toast('导出报表')}>
+          <Dropdown label="全部机构" options={['全部机构', ...['XX 出版社', 'YY 教育', 'ZZ 少儿', 'AA 文化集团'].map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ minWidth: 190 }} />
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook('平台主控台报表', [
+            { name: '实时总览', title: '平台主控台 · 实时总览', subtitle: `${scope} · 截至导出时刻的实时快照，不参与环比`, headers: ['指标', '数值', '单位', '统计口径'], rows: [['入驻机构数', platformSnapshot.orgs, '家', '已创建且未删除'], ['累计用户', platformSnapshot.totalUsers, '人', '按用户 ID 精确去重'], ['累计 GMV', platformSnapshot.totalGmv, '元', '历史已支付订单'], ['净 GMV', platformSnapshot.totalGmv - 18100, '元', '累计 GMV - 成功退款'], ['提问总量', platformSnapshot.totalQuestions, '条', '历史累计含追问']], widths: [22, 18, 12, 42] },
+            { name: '经营分析', title: '平台主控台 · 经营分析', subtitle: `${scope} · 当前区间 ${currentPeriodLabel(days)} · ${comparisonPeriodLabel(days)}`, headers: ['数据类型', '指标或日期', '数值', '单位', '统计口径'], rows: [['KPI', '活跃用户', cur.activeUsers, '人', '区间精确去重'], ['KPI', '新增会员', cur.newMembers, '人', '区间精确去重'], ['KPI', '区间 GMV', cur.gmv, '元', '区间已支付'], ['KPI', '区间提问数', cur.questions, '条', '含追问'], ...chartSlice.map((d) => ['趋势', d.mmdd, d.questions, '条', days <= 1 ? '小时趋势展示近7日演示数据' : '自然日趋势'])], widths: [14, 22, 18, 12, 42] },
+          ]); toast('正在生成 XLSX 报表'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
@@ -54,7 +60,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             入驻机构数
-            <InfoDot text="平台已创建且未删除的机构总数。统计口径：实时快照。" />
+            <InfoDot text={metricHelp('平台已创建且未删除的机构总数。', 'snapshot')} />
           </div>
           <div className="val">{n(platformSnapshot.orgs)}<span className="uu">家</span></div>
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
@@ -64,7 +70,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             累计用户
-            <InfoDot text="全平台各机构 C 端去重注册用户数合计。统计区间：开通至今（实时快照）。" />
+            <InfoDot text={metricHelp('全平台各机构 C 端注册用户数合计，按用户 ID 精确去重。', 'snapshot')} />
           </div>
           <div className="val">{n(platformSnapshot.totalUsers)}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
@@ -74,7 +80,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             累计 GMV（成交总额）
-            <InfoDot text="全平台各机构已支付订单金额合计。统计区间：开通至今（实时快照）。资金 100% 进入各机构账户。" />
+            <InfoDot text={metricHelp('全平台各机构已支付订单金额合计，资金 100% 进入各机构账户。', 'snapshot', 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>
@@ -87,7 +93,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             净 GMV（扣退款）
-            <InfoDot text="全平台累计 GMV − 累计退款金额（约 ¥18,100 · 退款率 2.1%），即全平台各机构净收入合计（资金 100% 进入各机构账户，平台不参与分账）。统计区间：开通至今（实时快照）。" />
+            <InfoDot text={metricHelp('全平台累计 GMV 减累计成功退款金额，即各机构净收入合计；平台不参与分账。', 'snapshot', 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>
@@ -100,7 +106,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             提问总量
-            <InfoDot text="全平台 C 端历史累计提问条数合计。统计区间：开通至今（实时快照）。" />
+            <InfoDot text={metricHelp('全平台 C 端历史累计提问条数合计。', 'snapshot')} />
           </div>
           <div className="val">{n(platformSnapshot.totalQuestions)}<span className="uu">条</span></div>
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
@@ -129,7 +135,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             活跃用户
-            <InfoDot text="所选区间内全平台有登录或提问行为的去重用户数（今日＝当日 DAU；区间为去重后近似）。随时间筛选变化。" />
+            <InfoDot text={metricHelp('所选区间内有登录或提问行为的用户数，按用户 ID 精确去重；今日为截至当前时刻的 DAU。', periodKind)} />
           </div>
           <div className="val">{n(cur.activeUsers)}<span className="uu">人</span></div>
           <Delta c={cur.activeUsers} p={prev.activeUsers} />
@@ -140,7 +146,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             新增会员
-            <InfoDot text="所选区间内全平台新开通会员的去重用户数。随时间筛选变化。" />
+            <InfoDot text={metricHelp('所选区间内新获得有效会员权益的用户数，按用户 ID 精确去重。', periodKind)} />
           </div>
           <div className="val">{n(cur.newMembers)}<span className="uu">人</span></div>
           <Delta c={cur.newMembers} p={prev.newMembers} />
@@ -151,7 +157,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             区间 GMV
-            <InfoDot text="所选区间内全平台已支付订单金额合计。随时间筛选变化。" />
+            <InfoDot text={metricHelp('所选区间内全平台已支付订单金额合计。', periodKind, 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>
@@ -165,7 +171,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             区间提问数
-            <InfoDot text="所选区间内全平台 C 端新增提问条数(含追问)。随时间筛选变化。" />
+            <InfoDot text={metricHelp('所选区间内全平台 C 端新增提问条数，包含追问。', periodKind)} />
           </div>
           <div className="val">{n(cur.questions)}<span className="uu">条</span></div>
           <Delta c={cur.questions} p={prev.questions} />

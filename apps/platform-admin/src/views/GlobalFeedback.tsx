@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, RangePicker, DataGrid, FeedbackDetailModal, type Col, type MediaItem } from '@aba/ui-admin';
+import { Search, Dropdown, RangePicker, DataGrid, FeedbackDetailModal, exportWorkbook, type Col, type MediaItem } from '@aba/ui-admin';
+import { orgOptionLabel, orgOptionValue } from '@aba/mock';
 
 // 平台超管 · 全域答案反馈（0614b 新增）：跨机构汇总全平台答案反馈，复用机构后台答案反馈工作台；
 // 列表 + 详情多一列「归属机构」，顶部支持机构筛选。
@@ -46,15 +47,8 @@ export function GlobalFeedback() {
   );
 
   const exportText = () => {
-    const lines = rows.map((r) => `【${r.time}】${r.org} · ${nickOf(r.user)}${r.member ? '（会员）' : ''} · ${r.tag}\nQ：${r.q}\nA：${r.answer}\n`);
-    const blob = new Blob(['全域答案反馈导出（仅问答文本，不含媒体 / 溯源）\n\n' + lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '全域答案反馈_问答文本.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('已导出问答文本（不含媒体 / 溯源）');
+    void exportWorkbook('全域答案反馈', [{ name: '反馈明细', title: '平台全域答案反馈', subtitle: `机构=${org} · 标签=${tag} · 搜索=${q || '无'} · 仅含问答文本与必要元数据，不含媒体/溯源`, headers: ['反馈 ID', '归属机构', '问题', 'AI 答案', '反馈标签', '反馈人', '会员状态', '提交时间'], rows: rows.map((r) => [r.id, r.org, r.q, r.answer, r.tag, nickOf(r.user), r.member ? '会员' : '非会员', r.time]), widths: [16, 22, 38, 72, 18, 18, 14, 22] }]);
+    toast('正在生成 XLSX');
   };
 
   const columns: Col<FB>[] = [
@@ -85,13 +79,13 @@ export function GlobalFeedback() {
         <div className="pa">
           <button className="btn btn-ghost btn-sm" onClick={exportText}>
             <Icon id="i-dl" w={14} h={14} />
-            导出问答文本
+            导出 XLSX
           </button>
         </div>
       </div>
       <div className="orders-filter">
         <Search placeholder="搜索问题 / 反馈人" minWidth={220} value={q} onChange={setQ} />
-        <Dropdown label="机构" options={['全部', ...orgNames]} onSelect={setOrg} style={{ width: 160 }} />
+        <Dropdown label="机构" options={['全部', ...orgNames.map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ width: 190 }} />
         <Dropdown label="反馈标签" options={TAGS} onSelect={setTag} />
         <RangePicker label="提交时间" />
       </div>

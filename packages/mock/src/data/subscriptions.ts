@@ -41,7 +41,7 @@ export const MY_ORG_SUBS: Subscription[] = [
 ];
 
 // 当前生效订阅卡视图模型（含其生效加油包累加后的「已用 / 上限」三项）；无生效订阅返回 null
-export interface SubCardRow { k: string; used: number; limit: number; unit: string; info: string }
+export interface SubCardRow { k: string; used: number; limit: number; unit: string; kind: 'occupancy' | 'consumption'; info: string }
 export interface SubCardVM {
   plan?: string;
   status: string;
@@ -57,12 +57,15 @@ export function currentSubCard(subs: Subscription[]): SubCardVM | null {
   const packs = subs.filter((s) => s.type === '加油包' && s.status === '生效' && s.parentId === base.id);
   const tidy = (n: number) => Number(n.toFixed(2));
   const sumP = (k: keyof Subscription) => packs.reduce((n, p) => n + (parseFloat((p[k] as string) ?? '0') || 0), 0);
-  const row = (k: string, bk: keyof Subscription, uk: keyof Subscription, unit: string): SubCardRow => {
+  const row = (k: string, bk: keyof Subscription, uk: keyof Subscription, unit: string, kind: 'occupancy' | 'consumption'): SubCardRow => {
     const b = parseFloat((base[bk] as string) ?? '0') || 0;
     const add = sumP(bk);
     const limit = tidy(b + add);
     const used = tidy((parseFloat((base[uk] as string) ?? '0') || 0) + sumP(uk));
-    return { k, used, limit, unit, info: add > 0 ? `基础 ${b} ${unit} + 生效加油包 ${add} ${unit}，合计 ${limit} ${unit}` : `订阅额度 ${b} ${unit}` };
+    const basis = kind === 'occupancy'
+      ? '“当前占用”按机构真实内容实时统计并跨订阅延续；删除可释放。'
+      : '“本周期消耗”绑定当前订阅周期且不可回收；新订阅生效时归零，旧额度不结转。';
+    return { k, used, limit, unit, kind, info: `${add > 0 ? `基础 ${b} ${unit} + 生效加油包 ${add} ${unit}，当前上限 ${limit} ${unit}。` : `当前订阅上限 ${b} ${unit}。`}${basis}` };
   };
   return {
     plan: base.plan,
@@ -71,6 +74,6 @@ export function currentSubCard(subs: Subscription[]): SubCardVM | null {
     startDate: base.startDate,
     endDate: base.endDate,
     owner: base.owner,
-    rows: [row('KP 数', 'kp', 'kpUsed', '个'), row('存储', 'storage', 'storageUsed', 'GB'), row('Token', 'token', 'tokenUsed', '亿')],
+    rows: [row('KP 数', 'kp', 'kpUsed', '个', 'occupancy'), row('存储', 'storage', 'storageUsed', 'GB', 'occupancy'), row('Token', 'token', 'tokenUsed', '亿', 'consumption')],
   };
 }

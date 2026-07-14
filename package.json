@@ -16,7 +16,8 @@
     "build:mobile": "npm --workspace apps/mobile-h5 run build",
     "build:org": "npm --workspace apps/org-admin run build",
     "build:platform": "npm --workspace apps/platform-admin run build",
-    "manifest:check": "node scripts/manifest-check.mjs"
+    "manifest:check": "node scripts/manifest-check.mjs",
+    "test:adversarial": "node scripts/adversarial-tests.mjs"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5",

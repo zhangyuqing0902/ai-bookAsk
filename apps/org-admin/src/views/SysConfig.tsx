@@ -29,7 +29,7 @@ export function SysConfig() {
         <div className="fm-row">
           <div className="lab">续费规则</div>
           <div className="ctl">
-            <div className="inp2 disabled">按月自动续费,到期前 72h 宽限期 · 暂不可编辑</div>
+            <div className="inp2 disabled">支持随时退订，到期赠 72 小时会员缓冲使用期 · 暂不可编辑</div>
           </div>
         </div>
         <div className="fm-row" style={{ borderTop: 'none', paddingTop: 6 }}>

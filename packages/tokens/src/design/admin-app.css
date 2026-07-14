@@ -1026,8 +1026,9 @@ a {
   padding: 12px 0;
 }
 .modal-card .fm-row .lab {
-  width: 72px;
+  width: 96px;
   text-align: right;
+  white-space: nowrap; /* 避免「机构域名前缀 / 联系人手机号」等 6 字标签在窄列里断词折行 */
 }
 
 /* 横向滚动表格（#16/#27 订单号全展开 + 左右滑动） */
@@ -1611,6 +1612,26 @@ a {
 .quota-alert b {
   font-weight: 700;
 }
+/* 实时同步导入 KP 的只读横幅（分享 Tab 权限）：中性提示、非告警色 */
+.kp-readonly-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 14px 0 2px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--surface-warm, #FBF7F0);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--amber);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.kp-readonly-banner svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--amber);
+}
 .plan-spec {
   font-size: 12.5px;
   color: var(--ink-2);
@@ -2133,3 +2154,17 @@ a {
   right: auto;
   left: 0;
 }
+/* V1.4 机构域名：可编辑前缀与环境固定后缀共用一个输入框，分隔清晰。 */
+.domain-input{display:flex;align-items:stretch;max-width:520px;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;transition:border-color .18s,box-shadow .18s}
+.domain-input:focus-within{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(75,87,232,.10)}
+.domain-input.invalid{border-color:var(--terra)}
+.domain-input input{min-width:0;flex:1;border:0;outline:0;background:transparent;padding:10px 12px;color:var(--ink);font:inherit}
+.domain-input .domain-suffix{display:flex;align-items:center;padding:0 13px;border-left:1px solid var(--line);background:var(--surface-warm);color:var(--ink-3);font-family:var(--mono);white-space:nowrap}
+/* 禁用输入框：整个 .inp2 盒子置灰（此前只灰了内层 input、外层白底盒子没变，观感像"文字淡"而非"禁用"）。
+   底色统一用 --surface-warm，与「机构域名前缀」固定后缀的灰保持一致（更浅、偏暖冷调） */
+.inp2:has(input:disabled),.inp2:has(textarea:disabled){background:var(--surface-warm);border-color:var(--line);cursor:not-allowed}
+.inp2 input:disabled,.inp2 textarea:disabled{background:transparent;color:var(--ink-3);cursor:not-allowed}
+.period-compare{margin-left:6px;color:var(--ink-3);font-size:11px;font-weight:400}
+.quota-kind{display:inline-flex;align-items:center;margin-left:6px;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.02em}
+.quota-kind.occupancy{background:var(--indigo-soft);color:var(--indigo-ink)}
+.quota-kind.consumption{background:var(--amber-soft);color:var(--amber-ink)}

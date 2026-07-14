@@ -149,6 +149,24 @@ export function OrderDetail() {
               </div>
             </div>
           )}
+
+          {!!o.refunds?.length && (
+            <div className="od-card">
+              <div className="od-h">退款记录</div>
+              {o.refunds.map((refund) => (
+                <div className="refund-detail-item" key={refund.id}>
+                  <div className="od-row"><span className="k">退款金额</span><span className="v refund-amount">{refund.amount}</span></div>
+                  <div className="od-row"><span className="k">退款状态</span><span className={'v refund-state ' + (refund.status === '退款成功' ? 'success' : refund.status === '退款失败' ? 'failed' : 'processing')}>{refund.status}</span></div>
+                  <div className="od-row"><span className="k">退款单号</span><span className="v">{refund.id}</span></div>
+                  <div className="od-row"><span className="k">申请时间</span><span className="v">{refund.createdAt}</span></div>
+                </div>
+              ))}
+              <ul className="refund-policy-note">
+                <li>全额退款仅撤销由该订单单独产生的权益。</li>
+                <li>部分退款及其他独立赠送、兑换权益不受影响。</li>
+              </ul>
+            </div>
+          )}
         </div>
       </div>
       <MediaPreview item={preview} onClose={() => setPreview(null)} />

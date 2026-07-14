@@ -8,6 +8,7 @@ export interface CurrentSubRow {
   used: number;
   limit: number;
   unit: string;
+  kind: 'occupancy' | 'consumption';
   info: string;
 }
 export interface CurrentSubData {
@@ -66,9 +67,10 @@ export function CurrentSubCard({
                   <div className="quota-head">
                     <span className="quota-k">
                       {r.k}
+                      <span className={'quota-kind ' + r.kind}>{r.kind === 'occupancy' ? '占用量' : '消耗量'}</span>
                       <InfoDot text={r.info} />
                     </span>
-                    <span className="quota-v mono">{r.used} <span className="quota-lim">/ {r.limit} {r.unit}</span></span>
+                    <span className="quota-v mono"><small>{r.kind === 'occupancy' ? '当前占用' : '本周期消耗'}</small> {r.used} <span className="quota-lim">/ {r.kind === 'occupancy' ? '当前上限' : '本周期额度'} {r.limit} {r.unit}</span></span>
                   </div>
                   <div className="quota-track">
                     <span className="quota-bar"><i className={'quota-fill ' + tone(pct)} style={{ width: pct + '%' }} /></span>

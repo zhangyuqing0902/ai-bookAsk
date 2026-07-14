@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { LineChart, RangePicker, InfoDot, CurrentSubCard, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, currentSubCard } from '@aba/mock';
+import { LineChart, RangePicker, InfoDot, CurrentSubCard, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
+import { compareMetric, comparisonPeriodLabel, currentPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, currentSubCard } from '@aba/mock';
 
 // 机构后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
 // 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
@@ -12,16 +12,19 @@ export function Dashboard() {
   const prev = rangeMetrics(orgDaily, days, days);
   const n = fmtCn;
   const chartSlice = days <= 1 ? orgDaily.slice(-7) : cur.slice;
+  const periodKind = days <= 1 ? 'today' as const : 'range' as const;
 
   const Delta = ({ c, p }: { c: number; p: number }) => {
-    const v = p > 0 ? ((c - p) / p) * 100 : 0;
+    const comparison = compareMetric(c, p, 'count');
+    if (!comparison.comparable) return <div className="delta">{comparison.label}</div>;
+    const v = comparison.value ?? 0;
     const up = v >= 0;
     return (
       <div className={'delta ' + (up ? 'up' : 'down')}>
         <span style={up ? undefined : { display: 'inline-flex', transform: 'rotate(180deg)' }}>
           <Icon id="i-up" w={11} h={11} />
         </span>
-        {Math.abs(v).toFixed(1)}% 较上一周期
+        {Math.abs(v).toFixed(1)}% 较上一周期 <span className="period-compare">{comparisonPeriodLabel(days)}</span>
       </div>
     );
   };
@@ -33,7 +36,10 @@ export function Dashboard() {
           <div className="pt">主控台</div>
         </div>
         <div className="pa">
-          <button className="btn btn-ghost btn-sm" onClick={() => toast('导出报表')}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { const sub = currentSubCard(MY_ORG_SUBS); void exportWorkbook('机构主控台报表', [
+            { name: '实时总览', title: '机构主控台 · 实时总览', subtitle: 'XX 出版社 · 截至导出时刻的实时快照，不参与环比', headers: ['分类', '指标', '数值', '单位', '统计口径'], rows: [[ '经营', '累计 GMV', orgSnapshot.totalGmv, '元', '历史已支付订单'], ['经营', '累计退款', 1860, '元', '历史成功退款'], ['经营', '净 GMV', orgSnapshot.totalGmv - 1860, '元', '累计 GMV - 成功退款'], ['用户', '当前会员', orgSnapshot.currentMembers, '人', '实时权益快照'], ['用户', '累计注册用户', orgSnapshot.totalRegistered, '人', '按用户 ID 精确去重'], ...(sub?.rows.map((r) => [r.kind === 'occupancy' ? '资源占用' : '周期消耗', r.k, r.used, r.unit, r.info]) ?? [])], widths: [16, 22, 18, 12, 48] },
+            { name: '经营分析', title: '机构主控台 · 经营分析', subtitle: `当前区间 ${currentPeriodLabel(days)} · ${comparisonPeriodLabel(days)}`, headers: ['数据类型', '指标或日期', '数值', '单位', '统计口径'], rows: [['KPI', '活跃用户', cur.activeUsers, '人', '区间精确去重'], ['KPI', '新增会员', cur.newMembers, '人', '区间精确去重'], ['KPI', '区间 GMV', cur.gmv, '元', '区间已支付'], ['KPI', '区间提问数', cur.questions, '条', '含追问'], ...chartSlice.flatMap((d) => [['趋势-DAU', d.mmdd, d.dau, '人', '自然日'], ['趋势-新增会员', d.mmdd, d.newMembers, '人', '自然日']])], widths: [18, 22, 18, 12, 36] },
+          ]); toast('正在生成 XLSX 报表'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
@@ -56,7 +62,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             累计 GMV（成交总额）
-            <InfoDot text="历史累计已支付订单金额合计(会员+永享;兑换码计 0)。统计区间：开通至今（实时快照）。" />
+            <InfoDot text={metricHelp('历史累计已支付订单金额合计（会员 + 永享；兑换码计 0）。', 'snapshot', 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>
@@ -69,7 +75,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             累计退款 / 退款率
-            <InfoDot text="历史累计已成功退款金额；退款率 = 退款金额 ÷ GMV。统计区间：开通至今。" />
+            <InfoDot text={metricHelp('历史累计成功退款金额；退款率 = 退款金额 ÷ GMV。', 'snapshot', 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>
@@ -83,7 +89,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             净 GMV（扣退款）
-            <InfoDot text="累计 GMV − 累计退款金额，反映实际到账净收入。统计区间：开通至今（实时快照）。" />
+            <InfoDot text={metricHelp('累计 GMV 减累计成功退款金额，反映实际到账净收入。', 'snapshot', 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>
@@ -96,7 +102,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             当前会员数
-            <InfoDot text="当前拥有有效会员权益的去重用户数。统计口径：实时快照。" />
+            <InfoDot text={metricHelp('当前拥有有效会员权益的用户数，按用户 ID 精确去重。', 'snapshot')} />
           </div>
           <div className="val">{n(orgSnapshot.currentMembers)}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--amber-soft)', color: 'var(--amber-ink)' }}>
@@ -106,7 +112,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             累计注册用户
-            <InfoDot text="本机构 C 端去重注册用户数。统计区间：开通至今（实时快照）。" />
+            <InfoDot text={metricHelp('本机构 C 端注册用户数，按用户 ID 精确去重。', 'snapshot')} />
           </div>
           <div className="val">{n(orgSnapshot.totalRegistered)}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
@@ -135,7 +141,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             活跃用户
-            <InfoDot text="所选区间内有登录或提问行为的去重用户数（今日＝当日 DAU；区间为去重后近似）。随时间筛选变化。" />
+            <InfoDot text={metricHelp('所选区间内有登录或提问行为的用户数，按用户 ID 精确去重；今日为截至当前时刻的 DAU。', periodKind)} />
           </div>
           <div className="val">{n(cur.activeUsers)}<span className="uu">人</span></div>
           <Delta c={cur.activeUsers} p={prev.activeUsers} />
@@ -146,7 +152,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             新增会员
-            <InfoDot text="所选区间内新开通会员的去重用户数。随时间筛选变化。" />
+            <InfoDot text={metricHelp('所选区间内新获得有效会员权益的用户数，按用户 ID 精确去重。', periodKind)} />
           </div>
           <div className="val">{n(cur.newMembers)}<span className="uu">人</span></div>
           <Delta c={cur.newMembers} p={prev.newMembers} />
@@ -157,7 +163,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             区间 GMV
-            <InfoDot text="所选区间内已支付订单金额合计(会员+永享)。随时间筛选变化。" />
+            <InfoDot text={metricHelp('所选区间内已支付订单金额合计（会员 + 永享）。', periodKind, 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>
@@ -171,7 +177,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             区间提问数
-            <InfoDot text="所选区间内 C 端新增提问条数(含追问)。随时间筛选变化。" />
+            <InfoDot text={metricHelp('所选区间内 C 端新增提问条数，包含追问。', periodKind)} />
           </div>
           <div className="val">{n(cur.questions)}<span className="uu">条</span></div>
           <Delta c={cur.questions} p={prev.questions} />

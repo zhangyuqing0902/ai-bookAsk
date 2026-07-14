@@ -70,7 +70,7 @@ export function Member() {
               <button className="btn btn-amber" style={{ width: '100%', justifyContent: 'center', padding: 14 }} onClick={guard(pay)}>
                 立即开通
               </button>
-              <div className="grace-note">可随时退订 · 到期前 72h 宽限期</div>
+              <div className="grace-note">支持随时退订，到期赠 72 小时会员缓冲使用期</div>
             </div>
           </div>
         </div>

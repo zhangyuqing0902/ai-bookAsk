@@ -7,6 +7,8 @@ interface Kp {
   name: string;
   cover: string;
   source: '自建' | '共享';
+  /** 共享来源的导入方式：realtime = 实时同步（只读），snapshot = 独立快照（可编辑）；自建为 undefined */
+  shareMode?: 'realtime' | 'snapshot';
   status: string;
   statusCls: string;
   agent: string;
@@ -16,8 +18,8 @@ interface Kp {
 const KPS: Kp[] = [
   { name: '心血管分册', cover: '', source: '自建', status: '已发', statusCls: 'tag-jade', agent: '李医生', files: '12', asks: '1.2k' },
   { name: '儿科学', cover: 'c2', source: '自建', status: '未发', statusCls: 'tag-line', agent: '王老师', files: '8', asks: '340' },
-  { name: '内科精要', cover: 'c3', source: '共享', status: '已发', statusCls: 'tag-jade', agent: '—', files: '20', asks: '5k' },
-  { name: '外科学-快照', cover: 'c4', source: '共享', status: '已发', statusCls: 'tag-jade', agent: '赵', files: '6', asks: '88' },
+  { name: '内科精要', cover: 'c3', source: '共享', shareMode: 'realtime', status: '已发', statusCls: 'tag-jade', agent: '—', files: '20', asks: '5k' },
+  { name: '外科学-快照', cover: 'c4', source: '共享', shareMode: 'snapshot', status: '已发', statusCls: 'tag-jade', agent: '赵', files: '6', asks: '88' },
 ];
 
 // 机构后台 · 知识产品 KP 列表（搜索 + 状态/来源筛选 + 空态 + 新建/导入弹窗）
@@ -29,6 +31,8 @@ export function KpList() {
   const nav = useNavigate();
   const [create, setCreate] = useState(false);
   const [imp, setImp] = useState(false);
+  const [impLink, setImpLink] = useState('');
+  const [impPassword, setImpPassword] = useState('');
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('全部');
   const [source, setSource] = useState('全部');
@@ -86,7 +90,7 @@ export function KpList() {
       ) : (
         <div className="kp-grid">
           {pageList.map((kp, i) => (
-            <div className="kp-card" key={kp.name} onClick={() => nav('/kps/' + ((curPage - 1) * PAGE_SIZE + i + 1))}>
+            <div className="kp-card" key={kp.name} onClick={() => nav('/kps/' + ((curPage - 1) * PAGE_SIZE + i + 1) + (kp.shareMode ? `?share=${kp.shareMode}` : ''))}>
               <div className={'kp-cover ' + kp.cover}>
                 <div className="ct">{kp.name}</div>
               </div>
@@ -156,7 +160,11 @@ export function KpList() {
             <button className="btn btn-ghost btn-sm" onClick={() => setImp(false)}>
               取消
             </button>
-            <button className="btn btn-primary btn-sm" onClick={() => { setImp(false); toast('已导入分享 KP'); }}>
+            <button className="btn btn-primary btn-sm" onClick={() => {
+              if (!impLink.trim() || !impPassword.trim()) return toast('请填写分享链接与密码');
+              if (/xx-press|本机构|\/own(?:\/|$)/i.test(impLink)) return toast('不能导入本机构分享的知识产品');
+              setImp(false); setImpLink(''); setImpPassword(''); toast('已导入分享 KP');
+            }}>
               导入
             </button>
           </>
@@ -164,13 +172,13 @@ export function KpList() {
       >
         <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
           <div className="lab">分享链接<span className="req">*</span></div>
-          <div className="ctl"><TextInput placeholder="粘贴分享链接" /></div>
+          <div className="ctl"><TextInput placeholder="粘贴分享链接" value={impLink} onChange={(e) => setImpLink(e.target.value)} /></div>
         </div>
         <div className="fm-row">
           <div className="lab">密码<span className="req">*</span></div>
-          <div className="ctl"><TextInput placeholder="输入提取密码" /></div>
+          <div className="ctl"><TextInput placeholder="输入提取密码" value={impPassword} onChange={(e) => setImpPassword(e.target.value)} /></div>
         </div>
-        <div className="imp-hint">实时同步：列表直显并标「共享」；独立快照：名称加「-快照」后缀。</div>
+        <div className="imp-hint">仅允许导入其他机构生成的分享，本机构分享将被阻断。实时同步不占 KP/存储、内容只读并消耗本机构 Token；独立快照占 KP/存储且可编辑。</div>
       </Modal>
     </>
   );

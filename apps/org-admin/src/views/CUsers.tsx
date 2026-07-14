@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, DataGrid, type Col } from '@aba/ui-admin';
+import { Search, Dropdown, DataGrid, exportWorkbook, type Col } from '@aba/ui-admin';
 
 interface U {
   i: number;
@@ -69,7 +69,7 @@ export function CUsers() {
         <Search placeholder="搜索手机号 / 微信号 / 昵称" minWidth={240} value={q} onChange={setQ} />
         <Dropdown label="会员状态" options={['全部', '会员', '非会员']} onSelect={setMember} />
         <div className="grow" />
-        <button className="btn btn-ghost btn-sm" onClick={() => toast('导出用户（当前筛选结果）')}>
+        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook('机构C端用户', [{ name: '用户明细', title: '机构 C 端用户', subtitle: `筛选：会员状态=${member}；关键词=${q || '无'}`, headers: ['昵称', '手机号', '微信号', '地区', '性别', '会员状态', '已购永享', '累计 GMV', '最新登录'], rows: rows.map((u) => [u.nick, u.phone, u.wx, u.region, u.gender, u.member ? '会员' : '非会员', u.yx, u.gmv, u.lastLogin]), widths: [20, 16, 18, 22, 10, 14, 14, 16, 22] }]); toast('正在生成 XLSX'); }}>
           <Icon id="i-dl" w={14} h={14} />
           导出
         </button>

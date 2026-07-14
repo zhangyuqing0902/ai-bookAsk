@@ -1,4 +1,5 @@
 export * from './orgs';
+export * from './platformOrgs';
 export * from './kps';
 export * from './conversations';
 export * from './orders';

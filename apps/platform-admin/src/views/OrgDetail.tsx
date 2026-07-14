@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { Dropdown, TextInput, InfoDot, CurrentSubCard, DateTimeRangeField, Modal, ConfirmDialog, SubPackDrawer, type PackForm, DataGrid, type Col, pickFile, pickImageColor, ACCEPT, UNIT_NOTE } from '@aba/ui-admin';
-import { MY_ORG_SUBS, currentSubCard, subStatus, type Subscription } from '@aba/mock';
+import { Dropdown, TextInput, DomainInput, InfoDot, CurrentSubCard, DateTimeRangeField, RangePicker, Modal, ConfirmDialog, SubPackDrawer, type PackForm, DataGrid, type Col, pickFile, pickImageColor, ACCEPT, UNIT_NOTE } from '@aba/ui-admin';
+import { MY_ORG_SUBS, PLATFORM_ORGS, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, type Subscription } from '@aba/mock';
 
 // 0613-2：套餐 / 配额独立成 Tab；用量看板重排（配额进度重点 + 2×2）；微信配置分区卡片
 // 0615：「套餐 / 配额」Tab 改造为订阅闭环（当前生效订阅只读 + 订阅记录 + 新建续签 / 升级）
 const TABS = ['基本资料', '订阅配额', '机构配置', '用量看板', '品牌外观'];
 const SUBTABS = ['LLM 配置', '联网配置', '微信配置'];
 
-// 机构套餐预设（KP 数 / 存储 GB / 月度 Token 亿）；0614c：Token 值只填数字、单位「亿」放后缀 / 单位标（与 KP「个」、存储「GB」一致）；定制版手填
+// 机构套餐预设（KP 数 / 存储 GB / 当前订阅周期 Token 亿）；Token 值只填数字、单位「亿」放后缀 / 单位标；定制版手填
 const PLAN_NAMES = ['体验版', '基础版', '专业版', '旗舰版', '定制版', '不限版'];
 const PLANS: Record<string, { kp: string; storage: string; token: string }> = {
   体验版: { kp: '3', storage: '5', token: '0.1' }, // 付费前试用,额度整体最小
@@ -21,9 +21,14 @@ const PLANS: Record<string, { kp: string; storage: string; token: string }> = {
 };
 const PLAN_CLS_D: Record<string, string> = { 体验版: 'tag-line', 基础版: 'tag-line', 专业版: 'tag-indigo', 旗舰版: 'tag-amber', 不限版: 'tag-jade', 定制版: 'tag-jade' };
 const SUB_ST_CLS: Record<string, string> = { 生效: 'ok', 未生效: 'none', 已过期: 'expired' };
+const USAGE_BY_RANGE: Record<string, { active: string; added: string; questions: string; gmv: string; payUsers: string; token: string; calls: string; response: string }> = {
+  今日: { active: '1,240 人', added: '48 人', questions: '1,180 条', gmv: '¥1.1万', payUsers: '32 人', token: '62万 token', calls: '1.8万 次', response: '1.7s' },
+  '近 7 天': { active: '5,600 人', added: '320 人', questions: '3.2万 条', gmv: '¥25.6万', payUsers: '210 人', token: '860万 token', calls: '24万 次', response: '1.8s' },
+  '30 天': { active: '1.2万 人', added: '1,280 人', questions: '12.8万 条', gmv: '¥104.7万', payUsers: '860 人', token: '3,620万 token', calls: '102万 次', response: '1.9s' },
+};
 
 // 用量看板卡片（顶部色条 + 标题 + 指标行分隔 + 数值强调）
-function UsageCard({ title, rows }: { title: string; rows: [string, string, string][] }) {
+function UsageCard({ title, rows, periodDays }: { title: string; rows: [string, string, string][]; periodDays?: number }) {
   return (
     <div className="usage-card">
       <div className="uc-title">
@@ -35,9 +40,9 @@ function UsageCard({ title, rows }: { title: string; rows: [string, string, stri
           <div className="uc-row" key={k}>
             <span className="uc-k">
               {k}
-              <InfoDot text={info} />
+              <InfoDot text={metricHelp(info, periodDays ? (periodDays === 1 ? 'today' : 'range') : 'snapshot', k.includes('率') ? 'rate' : k.includes('响应') ? 'duration' : 'count')} />
             </span>
-            <span className="uc-v mono">{v}</span>
+            <span className="uc-v mono">{v}{periodDays && <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>}</span>
           </div>
         ))}
       </div>
@@ -48,6 +53,13 @@ function UsageCard({ title, rows }: { title: string; rows: [string, string, stri
 // 平台后台 · 机构详情
 export function OrgDetail() {
   const nav = useNavigate();
+  // 从列表带过来的机构编号（r.i）读取当前机构；机构主数据与列表共用同一份 PLATFORM_ORGS。
+  const { id } = useParams();
+  const org = PLATFORM_ORGS.find((o) => String(o.i) === id) ?? PLATFORM_ORGS[0];
+  const role = platformOrgRole(org); // 'parent' | 'child' | 'ordinary'
+  const parentName = org.parentId ? PLATFORM_ORGS.find((o) => o.id === org.parentId)?.name ?? '—' : null;
+  // 普通机构可选上级 = 其它顶级机构（无上级者，排除自身）；选中后它即成为父机构（两层制）
+  const superiorOptions = ['无（顶级机构）', ...PLATFORM_ORGS.filter((o) => o.parentId === null && o.id !== org.id).map((o) => o.name)];
   const [tab, setTab] = useState(0);
   const [sub, setSub] = useState(0);
   const [net, setNet] = useState(true);
@@ -55,6 +67,12 @@ export function OrgDetail() {
   const [quota, setQuota] = useState(PLANS['专业版']);
   const [primary, setPrimary] = useState('#4B57E8');
   const [secondary, setSecondary] = useState('#8B6CF6');
+  const [domainPrefix, setDomainPrefix] = useState(org.domainPrefix);
+  const [usageRange, setUsageRange] = useState('近 7 天');
+  const domainCheck = validateDomainPrefix(domainPrefix);
+  const domainSuffix = tenantDomainSuffix(window.location.hostname);
+  const usage = USAGE_BY_RANGE[usageRange] ?? USAGE_BY_RANGE['近 7 天'];
+  const usagePeriodDays = usageRange === '今日' ? 1 : usageRange === '30 天' ? 30 : 7;
 
   const matchesPlan = (q: { kp: string; storage: string; token: string }, name: string) =>
     name !== '定制版' && q.kp === PLANS[name].kp && q.storage === PLANS[name].storage && q.token === PLANS[name].token;
@@ -233,8 +251,9 @@ export function OrgDetail() {
           <Icon id="i-chevL" />
           返回
         </span>
-        <span className="kpd-name">XX 出版社</span>
-        <span className="tag-s tag-jade">正常</span>
+        <span className="kpd-name">{org.name}</span>
+        <span className={'tag-s ' + org.statusCls}>{org.status}</span>
+        {role === 'parent' && <span className="tag-s tag-indigo">父机构</span>}
         {tab === 0 && (
           <span className="kpd-status">
             <button className="btn btn-primary btn-sm" onClick={() => toast('已保存')}>
@@ -256,7 +275,14 @@ export function OrgDetail() {
         <div className="fm-card">
           <div className="fm-row">
             <div className="lab">机构名称<span className="req">*</span></div>
-            <div className="ctl"><TextInput defaultValue="XX 出版社" style={{ maxWidth: 320 }} /></div>
+            <div className="ctl"><TextInput key={org.id} defaultValue={org.name} style={{ maxWidth: 360 }} /></div>
+          </div>
+          <div className="fm-row">
+            <div className="lab">机构域名前缀<span className="req">*</span></div>
+            <div className="ctl">
+              <DomainInput value={domainPrefix} onChange={setDomainPrefix} suffix={domainSuffix} invalid={!!domainPrefix && !domainCheck.valid} />
+              {!!domainPrefix && !domainCheck.valid && <div style={{ fontSize: 12, color: 'var(--terra)', marginTop: 5 }}>{domainCheck.error}</div>}
+            </div>
           </div>
           {/* 0614b：机构联系人手机号——平台后台直接明文展示（不加密）；小问号说明重复规则 */}
           <div className="fm-row">
@@ -282,10 +308,25 @@ export function OrgDetail() {
           </div>
           <div className="fm-row">
             <div className="lab">上级机构</div>
-            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Dropdown label="无" options={['无', 'XX 出版集团']} style={{ width: 200 }} />
-              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>选填，仅顶级机构可作上级（集团→分社两层）</span>
-            </div>
+            {role === 'child' ? (
+              // 子机构：上级只读，不可改
+              <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <TextInput value={parentName ?? '—'} disabled style={{ width: 240 }} />
+                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>该机构已是子机构，上级机构不可修改</span>
+              </div>
+            ) : role === 'parent' ? (
+              // 父机构：已有下级，不能再挂上级（否则超过父 / 子两层）——字段禁用并说明原因
+              <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <TextInput value="无（本机构为父机构）" disabled style={{ width: 240 }} />
+                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>该机构已是父机构，不能再设上级机构（仅支持父 / 子两层）</span>
+              </div>
+            ) : (
+              // 普通机构：可选一个顶级机构作为上级（选后自身成为子机构）
+              <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Dropdown label="无（顶级机构）" options={superiorOptions} onSelect={() => toast('已选择上级机构（保存后生效）')} style={{ width: 240 }} />
+                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>仅顶级机构可被选为上级；设定后本机构将成为其子机构</span>
+              </div>
+            )}
           </div>
           <div className="fm-row">
             <div className="lab">备注</div>
@@ -294,7 +335,7 @@ export function OrgDetail() {
           <div className="fm-row">
             <div className="lab">状态</div>
             <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="tag-s tag-jade">正常</span>
+              <span className={'tag-s ' + org.statusCls}>{org.status}</span>
               <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>状态变更请在机构管理的操作列进行</span>
             </div>
           </div>
@@ -505,12 +546,12 @@ export function OrgDetail() {
                     <div className="ctl"><TextInput defaultValue="••••••••••••••6c2e" style={{ maxWidth: 320 }} /></div>
                   </div>
                   <div className="fm-row">
-                    <div className="lab">网页授权回调域名</div>
+                    <div className="lab">网页授权回调地址</div>
                     <div className="ctl"><TextInput defaultValue="ai-book-ask-mobile-h5.zhangyuqing.top" style={{ maxWidth: 380 }} /></div>
                   </div>
                   <ul className="wx-lim">
                     <li>须为「已认证服务号」，订阅号不支持网页授权获取用户信息。</li>
-                    <li>回调域名须与公众号后台「设置与开发 → 网页授权域名」完全一致（不含 http:// 与路径）。</li>
+                    <li>回调地址须与公众号后台配置完全一致，并包含协议与实际回调路径。</li>
                     <li>AppSecret 仅在公众号后台可见，重置后需同步更新此处。</li>
                   </ul>
                   <div style={{ marginTop: 4 }}>
@@ -534,13 +575,13 @@ export function OrgDetail() {
                     <div className="ctl"><TextInput defaultValue="••••••••••••9d4f" style={{ maxWidth: 320 }} /></div>
                   </div>
                   <div className="fm-row">
-                    <div className="lab">授权回调域名</div>
+                    <div className="lab">授权回调地址</div>
                     <div className="ctl"><TextInput defaultValue="ai-book-ask-mobile-h5.zhangyuqing.top" style={{ maxWidth: 380 }} /></div>
                   </div>
                   <ul className="wx-lim">
                     <li>用于「非微信浏览器」打开时唤起微信扫码登录（开放平台网站应用 / 二维码授权）。</li>
                     <li>须在微信开放平台创建「网站应用」并通过审核，与公众号为不同 AppID。</li>
-                    <li>授权回调域名须与开放平台「网站应用 → 授权回调域」完全一致。</li>
+                    <li>授权回调地址须与开放平台网站应用配置完全一致，并包含协议与实际回调路径。</li>
                   </ul>
                   <div style={{ marginTop: 4 }}>
                     <button className="btn btn-primary btn-sm" onClick={() => toast('已保存微信开放平台配置')}>保存</button>
@@ -589,53 +630,55 @@ export function OrgDetail() {
       {/* —— 用量看板（配额进度重点 + 2×2） —— */}
       {tab === 3 && (
         <>
-          {/* 0615-6：用量看板顶部配额改用当前生效订阅卡（与订阅 Tab、机构后台主控台同款；此处不显商务负责人 / 新建按钮） */}
+          <div className="dash-section-title">实时订阅与资源占用 <span className="dash-realtime-tag">实时</span><span className="dash-section-sub">· 不随时间筛选变化</span></div>
           <CurrentSubCard data={currentSubCard(subs)} showOwner={false} />
           {/* 0614：阈值预警短信演示（达 70/80/90/95% 给机构联系人发短信） */}
           <div className="quota-alert">
             <Icon id="i-warn" w={15} h={15} />
             <span>
-              Token 已用 <b>88%</b>，已于 06-12、06-13 向机构联系人（张三 · 138****8888）发送 <b>70% / 80%</b> 预警短信；达 <b>90% / 95%</b> 将再次提醒。配额可在「订阅配额」调整。
+              Token 本订阅周期消耗已达 <b>88%</b>，已向机构联系人（张三 · 13800138888）发送 <b>70% / 80%</b> 预警；KP 数与存储展示当前真实占用，Token 展示本周期不可回收消耗。
             </span>
           </div>
           <div className="grid2" style={{ marginTop: 16 }}>
             <UsageCard
-              title="活跃度"
+              title="内容存量（实时快照）"
               rows={[
-                ['DAU', '1,240 人', '当日去重活跃用户(登录或提问)。统计区间：自然日 0:00 至当前。'],
-                ['WAU', '5,600 人', '近 7 个自然日内去重活跃用户。统计区间：近 7 天滚动。'],
-                ['MAU', '1.2万 人', '近 30 个自然日内去重活跃用户。统计区间：近 30 天滚动。'],
-                ['累计 C 端', '1.25万 人', '该机构 C 端去重注册用户总数。统计区间：开通至今。'],
-                ['新增 C 端', '320 人', '所选区间内首次注册的 C 端用户数。统计区间：随时间区间(默认今日)。'],
+                ['KP 当前占用', '40 个', '机构当前实际占用 = 自建 KP + 独立快照导入；实时同步导入不占 KP 名额。跨订阅延续，删除/归档符合释放条件后才回收。'],
+                ['已发 / 未发 / 下架', '30 / 8 / 2 个', '当前状态快照；仅已发布参与新用户检索。'],
+                ['存储当前占用', '62 GB', '机构当前全部文件的真实存储占用，跨订阅延续；删除文件后回收。'],
               ]}
             />
             <UsageCard
-              title="内容"
+              title="用户存量（实时快照）"
               rows={[
-                ['KP 总数', '40 个', '该机构已创建且未删除的 KP 总数(含已发/未发/已下架)。'],
-                ['已发 / 未发 / 下架', '30 / 8 / 2 个', '按 KP 当前状态拆分。仅已发布参与 C 端检索。'],
-                ['累计提问', '32万 条', 'C 端历史累计提问条数(含追问)。统计区间：开通至今。'],
+                ['累计 C 端', '1.25万 人', '开通至今注册用户数，按用户 ID 精确去重，不参与环比。'],
+                ['当前会员', '860 人', '当前处于付费期或赠送 72 小时缓冲使用期的会员人数，实时快照。'],
               ]}
             />
           </div>
+          <div className="dash-section-head" style={{ marginTop: 24 }}>
+            <div className="dash-section-title" style={{ margin: 0 }}>区间运营分析 <span className="dash-section-sub">· {usageRange} · 指标随筛选联动</span></div>
+            <RangePicker presets={['今日', '近 7 天', '30 天']} defaultActive={1} onChange={(r) => setUsageRange(r.label)} />
+          </div>
           <div className="grid2" style={{ marginTop: 16 }}>
             <UsageCard
-              title="商业化"
+              title="活跃与内容使用"
+              periodDays={usagePeriodDays}
               rows={[
-                ['累计 GMV', '¥8.6万', '已支付订单金额合计(会员+永享)。统计区间：开通至今。'],
-                ['当前会员', '860 人', '当前拥有有效会员权益的去重用户数。实时快照。'],
-                ['永享订单', '540 单', '永享买断已支付订单数。统计区间：开通至今。'],
-                ['付费转化', '6.9%', '付费用户 / 累计用户。统计区间：开通至今。'],
-                ['退款金额', '¥1,860', '已成功退款金额合计。统计区间：开通至今。'],
-                ['退款率', '2.1%', '退款金额 / 累计 GMV。'],
+                ['活跃用户', usage.active, `所选${usageRange}内登录或提问的用户，按用户 ID 精确去重。`],
+                ['新增 C 端', usage.added, `所选${usageRange}内首次注册的用户数。`],
+                ['区间提问', usage.questions, `所选${usageRange}内新增提问条数，包含追问。`],
               ]}
             />
             <UsageCard
-              title="LLM 用量（平台默认）"
+              title="商业化与 LLM 消耗"
+              periodDays={usagePeriodDays}
               rows={[
-                ['tokens', '0.3亿 token', '该机构消耗的平台默认 LLM token 数（单位统一为亿）。统计区间：近 7 天。'],
-                ['调用次数', '3.2万 次', '模型被请求次数。统计区间：近 7 天。'],
-                ['平均响应', '1.8s', '单次调用首字返回平均耗时。统计区间：近 7 天。'],
+                ['区间 GMV', usage.gmv, `所选${usageRange}内已支付会员与永享订单金额。`],
+                ['付费用户', usage.payUsers, `所选${usageRange}内产生有效支付的用户，按用户 ID 精确去重。`],
+                ['Token 消耗量', usage.token, `所选${usageRange}内平台默认 LLM 输入与输出 token 消耗；属于不可回收消耗量。`],
+                ['调用次数', usage.calls, `所选${usageRange}内模型请求次数。`],
+                ['平均响应', usage.response, `所选${usageRange}内从请求到首字返回的平均耗时。`],
               ]}
             />
           </div>

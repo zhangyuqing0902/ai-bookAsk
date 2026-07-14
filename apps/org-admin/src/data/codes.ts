@@ -4,10 +4,12 @@ export interface Batch {
   redeemed: number;
   total: number;
   duration: string;
+  validFrom?: string;
+  validTo?: string;
   createdAt: string;
 }
 export const BATCHES: Batch[] = [
-  { id: 'B2026SBH', name: '2026 数博会活动', redeemed: 128, total: 500, duration: '3 个月', createdAt: '2026-05-18 09:30' },
+  { id: 'B2026SBH', name: '2026 数博会活动', redeemed: 128, total: 500, duration: '3 个月', validFrom: '2026-05-20 00:00', validTo: '2026-08-31 23:59', createdAt: '2026-05-18 09:30' },
   { id: 'B2026NCS', name: '内部测试批次', redeemed: 2, total: 10, duration: '6 个月', createdAt: '2026-05-20 14:10' },
   { id: 'B2026VIP', name: 'VIP 客户回馈', redeemed: 46, total: 100, duration: '12 个月', createdAt: '2026-04-29 16:02' },
   { id: 'B2026SPR', name: '春季读书月', redeemed: 210, total: 300, duration: '1 个月', createdAt: '2026-04-15 10:20' },

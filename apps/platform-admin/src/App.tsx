@@ -100,8 +100,7 @@ const PLATFORM_ACCOUNT: AccountInfo = {
   account: 'superadmin',
   name: '超级管理员',
   roleName: '平台超级管理员',
-  phone: '188****0000',
-  email: 'admin@ai-book-ask.cn',
+  phone: '18800000000',
   status: 'active',
   initial: '超',
 };

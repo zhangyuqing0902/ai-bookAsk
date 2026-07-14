@@ -18,9 +18,9 @@ interface PAccount {
   createdAt: string;
 }
 const SEED: PAccount[] = [
-  { id: 'p1', account: 'superadmin', name: '超级管理员', role: '平台超级管理员', phone: '188****0000', status: '启用', createdAt: '2025-12-01 09:00:00' },
-  { id: 'p2', account: 'ops_lina', name: '李娜', role: '平台运营', phone: '139****5678', status: '启用', createdAt: '2026-01-20 10:12:30' },
-  { id: 'p3', account: 'fin_wang', name: '王财务', role: '平台财务', phone: '137****2222', status: '停用', createdAt: '2026-02-15 14:30:05' },
+  { id: 'p1', account: 'superadmin', name: '超级管理员', role: '平台超级管理员', phone: '18800000000', status: '启用', createdAt: '2025-12-01 09:00:00' },
+  { id: 'p2', account: 'ops_lina', name: '李娜', role: '平台运营', phone: '13912345678', status: '启用', createdAt: '2026-01-20 10:12:30' },
+  { id: 'p3', account: 'fin_wang', name: '王财务', role: '平台财务', phone: '13700222222', status: '停用', createdAt: '2026-02-15 14:30:05' },
 ];
 
 export function PlatformAccounts() {

@@ -83,8 +83,7 @@ const ORG_ACCOUNT: AccountInfo = {
   orgName: 'XX 出版社 · 临床医学分社',
   parentOrgName: 'XX 出版社集团',
   roleName: '机构管理员',
-  phone: '138****1234',
-  email: 'zhangsan@xx-press.cn',
+  phone: '13800131234',
   status: 'active',
   initial: '张',
 };

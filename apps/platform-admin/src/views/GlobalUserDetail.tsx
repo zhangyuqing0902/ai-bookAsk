@@ -15,7 +15,7 @@ interface GUser {
   lastLogin: string;
 }
 
-const FALLBACK: GUser = { nick: '微信昵称A', wx: 'wx_abc', phone: '138****8888', org: 'XX 出版社', member: true, yx: 3, gmv: 129.6, lastLogin: '2026-06-06 21:30:11' };
+const FALLBACK: GUser = { nick: '微信昵称A', wx: 'wx_abc', phone: '13800138888', org: 'XX 出版社', member: true, yx: 3, gmv: 129.6, lastLogin: '2026-06-06 21:30:11' };
 const YX: MediaItem[] = [
   { kind: 'image', name: '心电图示例' },
   { kind: 'audio', name: '专题讲座音频' },

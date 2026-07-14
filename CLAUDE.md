@@ -23,7 +23,7 @@
 ```bash
 npm install                    # 第一次装依赖
 npm run dev                    # 同时起三端
-npm run dev:mobile             # 只起前台 H5（5173）
+npm run dev:mobile             # 只起前台 H5（5170，5173 让给其他项目常驻，勿用）
 npm run dev:org                # 只起机构后台（5174）
 npm run dev:platform           # 只起平台超管（5175）
 ```
@@ -31,7 +31,7 @@ npm run dev:platform           # 只起平台超管（5175）
 ## 验证清单（每个 Phase 收口前）
 
 1. `npm run dev` 三端启动无错
-2. 浏览器分别打开 5173/5174/5175
+2. 浏览器分别打开 5170/5174/5175（端口被占时 vite 会自动换，以启动日志实际端口为准）
 3. 移动端 Chrome DevTools 设 375×812
 4. 跑通该 Phase 金链条
 5. 对照 `docs/page-mapping.md` 自查

@@ -79,7 +79,7 @@ export function MyBooks() {
               </span>
             ))}
           </div>
-          <div className="bk-tip">展示全部扫过纸书，首扫解锁相应权益</div>
+          <div className="bk-tip">首扫永久解锁该 KP 当前及未来新增的全部内容</div>
           {books.length ? (
             <div className="yx-grid">
               {books.map((b) => (

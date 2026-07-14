@@ -203,6 +203,13 @@
 .seg{display:inline-flex;background:#EEF0F6;border-radius:10px;padding:3px;gap:3px;}
 .seg b{font-size:13px;font-weight:600;padding:7px 16px;border-radius:8px;color:var(--ink-2);cursor:pointer;}
 .seg b.on{background:var(--surface);color:var(--indigo-ink);box-shadow:var(--sh-sm);font-weight:700;}
+/* 锁定态分段控件：取值由上下文（如创建入口页签）决定、整体不可交互。
+   区别于「只把一行文字置灰」的廉价观感——整个分段控件呈锁定态：灰底、not-allowed、
+   选中段用中性灰填充（可读但明显不可改），未选段更淡。 */
+.seg-locked{cursor:not-allowed;}
+.seg-locked b{cursor:not-allowed;color:var(--ink-3);}
+.seg-locked b.on{background:var(--surface);color:var(--ink-2);box-shadow:var(--sh-sm);font-weight:700;}
+.seg-locked b.on .lock-ic{vertical-align:-2px;margin-right:5px;opacity:.55;}
 .radio-list{display:flex;flex-direction:column;gap:10px;}
 .radio-opt{display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border:1px solid var(--line);
   border-radius:12px;cursor:pointer;transition:.15s;}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 import { Search, Dropdown, EmptyState } from '@aba/ui-admin';
+import { orgOptionLabel, orgOptionValue } from '@aba/mock';
 
 // 平台超管 · 全域 Agent 人设（0614b 新增）：跨机构 Agent 聚合只读视图，复用机构后台 Agent 卡片视觉；每卡显示归属机构。
 interface GAgent {
@@ -41,7 +42,7 @@ export function GlobalAgents() {
       </div>
       <div className="filter">
         <Search placeholder="搜索 Agent 名称" minWidth={220} value={q} onChange={setQ} />
-        <Dropdown label="机构" options={['全部', ...orgNames]} onSelect={setOrg} style={{ width: 180 }} />
+        <Dropdown label="机构" options={['全部', ...orgNames.map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ width: 190 }} />
       </div>
       {list.length === 0 ? (
         <div className="card card-pad">

@@ -1,0 +1,22 @@
+const puppeteer = require('puppeteer-core');
+const path = require('path');
+const OUT = path.resolve(__dirname, '../ppt-assets');
+const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+(async () => {
+  const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'] });
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
+  await page.goto('http://localhost:5175/orgs/ORG001', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await sleep(1800);
+  await page.evaluate(() => { const t = [...document.querySelectorAll('button,[role=tab],div,span')].find((e) => e.textContent.trim() === '订阅配额'); if (t) (t.closest('button,[role=tab]') || t).click(); });
+  await sleep(900);
+  await page.screenshot({ path: path.join(OUT, '13-plat-quota-tab.png') });
+  console.log('OK   13-plat-quota-tab.png');
+  await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((e) => /新建订阅/.test(e.textContent)); if (b) b.click(); });
+  await page.waitForFunction(() => /体验版/.test(document.body.innerText) && /不限版/.test(document.body.innerText), { timeout: 8000 });
+  await sleep(500);
+  await page.screenshot({ path: path.join(OUT, '12-plat-new-subscription.png') });
+  console.log('OK   12-plat-new-subscription.png');
+  await browser.close();
+})().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

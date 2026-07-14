@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { LineChart, RangePicker, Dropdown, InfoDot, UNIT_NOTE } from '@aba/ui-admin';
+import { LineChart, RangePicker, Dropdown, InfoDot, exportWorkbook, UNIT_NOTE } from '@aba/ui-admin';
+import { comparisonPeriodLabel, metricHelp, orgOptionLabel, orgOptionValue } from '@aba/mock';
 
 // 平台后台 · 模型用量（平台默认 LLM）。0610:两段式(实时总览 + 经营分析)。
 // 0614:经营分析全部指标 + 总量趋势 + Top 机构排行 按 今日/近7天/30天 真联动；删「当期」硬编码，改按所选时间显示。
@@ -80,6 +81,8 @@ export function ModelUsage() {
   const [rangeLabel, setRangeLabel] = useState('近 7 天');
   const [org, setOrg] = useState('全部');
   const d = RANGE[rangeLabel] ?? RANGE['近 7 天'];
+  const periodKind = rangeLabel === '今日' ? 'today' as const : 'range' as const;
+  const periodDays = rangeLabel === '今日' ? 1 : rangeLabel === '30 天' ? 30 : 7;
   const orgSeries = (ORG_BASE[org] ?? ORG_BASE['XX 出版社']).map((v) => Math.max(1, Math.round(v * d.orgFactor)));
 
   return (
@@ -89,8 +92,8 @@ export function ModelUsage() {
           <div className="pt">全域模型用量</div>
         </div>
         <div className="pa">
-          <Dropdown label="全部" options={['全部', 'XX 出版社', 'YY 教育', 'ZZ 少儿']} onSelect={setOrg} style={{ minWidth: 140 }} />
-          <button className="btn btn-ghost btn-sm" onClick={() => toast('导出')}>
+          <Dropdown label="全部" options={['全部', ...['XX 出版社', 'YY 教育', 'ZZ 少儿'].map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ minWidth: 190 }} />
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook('全域模型用量', [{ name: '指标总览', title: '平台全域模型用量', subtitle: `机构范围=${org} · 当前区间=${rangeLabel} · ${comparisonPeriodLabel(periodDays)}`, headers: ['指标', '数值', '单位', '统计口径'], rows: [['累计 tokens', '1.28亿', 'token', '实时快照，不参与环比'], ['累计调用次数', '362万', '次', '实时快照，不参与环比'], ['区间 tokens', d.tokens, 'token', '输入+输出'], ['区间调用次数', d.callVal, '次', '模型请求'], ['平均响应', d.resp, '秒', '请求到首字']], widths: [24, 20, 14, 42] }, { name: '用量趋势', title: `模型用量趋势 · ${rangeLabel}`, headers: ['时间', '总 tokens', '机构范围'], rows: d.x.map((x, i) => [x, org === '全部' ? d.total[i] : orgSeries[i], org]), widths: [20, 20, 24] }, { name: '机构排行', title: `Top 机构 token 排行 · ${rangeLabel}`, headers: ['机构', 'Token 用量'], rows: d.top.map((r) => [r.nm, r.pv]), widths: [24, 20] }]); toast('正在生成 XLSX'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
@@ -107,7 +110,7 @@ export function ModelUsage() {
         <div className="kpi">
           <div className="lab">
             累计 tokens
-            <InfoDot text="平台默认 LLM 自开通至今消耗的总 token 数(输入+输出)。统计口径：实时快照。" />
+            <InfoDot text={metricHelp('平台默认 LLM 自开通至今消耗的输入与输出 token 总数。', 'snapshot')} />
           </div>
           <div className="val">
             1.28亿<span className="uu">token</span>
@@ -116,7 +119,7 @@ export function ModelUsage() {
         <div className="kpi">
           <div className="lab">
             累计调用次数
-            <InfoDot text="平台默认 LLM 自开通至今被请求的总次数。统计口径：实时快照。" />
+            <InfoDot text={metricHelp('平台默认 LLM 自开通至今被请求的总次数。', 'snapshot')} />
           </div>
           <div className="val">
             362万<span className="uu">次</span>
@@ -136,40 +139,40 @@ export function ModelUsage() {
         <div className="kpi">
           <div className="lab">
             区间 tokens
-            <InfoDot text="平台默认 LLM 在所选机构 / 区间内消耗的总 token 数(输入+输出)。随上方时间区间变化。" />
+            <InfoDot text={metricHelp('平台默认 LLM 在所选机构和区间内消耗的输入与输出 token 总数。', periodKind)} />
           </div>
           <div className="val">
             {d.tokens}<span className="uu">token</span>
           </div>
           <div className="delta up">
             <Icon id="i-up" w={11} h={11} />
-            {d.tkDelta}
+            {d.tkDelta}<span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
           </div>
         </div>
         <div className="kpi">
           <div className="lab">
             区间调用次数
-            <InfoDot text="平台默认 LLM 在所选区间内被请求的次数。随上方时间区间变化。" />
+            <InfoDot text={metricHelp('平台默认 LLM 在所选机构和区间内被请求的次数。', periodKind)} />
           </div>
           <div className="val">
             {d.callVal}<span className="uu">{d.callUnit}</span>
           </div>
           <div className="delta up">
             <Icon id="i-up" w={11} h={11} />
-            {d.callDelta}
+            {d.callDelta}<span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
           </div>
         </div>
         <div className="kpi">
           <div className="lab">
             平均响应
-            <InfoDot text="单次模型调用从请求到首字返回的平均耗时。随上方时间区间变化。" />
+            <InfoDot text={metricHelp('所选机构和区间内，单次模型调用从请求到首字返回的平均耗时。', periodKind, 'duration')} />
           </div>
           <div className="val">
             {d.resp}<span className="u">s</span>
           </div>
           <div className="delta up">
             <Icon id="i-up" w={11} h={11} />
-            {d.respNote}
+            {d.respNote}<span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
           </div>
         </div>
       </div>

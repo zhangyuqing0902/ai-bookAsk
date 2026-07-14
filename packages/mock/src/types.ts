@@ -153,7 +153,7 @@ export interface Subscription {
   plan?: string; // 仅「订阅」有套餐：基础版 / 专业版 / 旗舰版 / 定制版
   kp: string; // 额度 / 加量增量（KP 个）
   storage: string; // 存储（GB）
-  token: string; // 月度 Token（亿）
+  token: string; // 当前订阅周期 Token（亿）
   kpUsed?: string; // 已用（演示）
   storageUsed?: string;
   tokenUsed?: string;

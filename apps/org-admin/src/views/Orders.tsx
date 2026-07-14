@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, DataGrid, RangePicker, Modal, ConfirmDialog, TextInput, type Col } from '@aba/ui-admin';
+import { Search, Dropdown, DataGrid, RangePicker, Modal, ConfirmDialog, TextInput, exportWorkbook, type Col } from '@aba/ui-admin';
 import { AORDERS, byPayDesc, MY_ORG, type AOrder } from '../data/orders';
 import { useRefundStore, operatorLabel } from '../refundStore';
 
@@ -124,7 +124,7 @@ export function Orders() {
         <Dropdown label="订单状态" options={['全部', '已支付', '已核销']} onSelect={setStatus} />
         <Dropdown label="退款状态" options={['全部', '未退款', '退款中', '部分退款', '全额退款']} onSelect={setRfStatus} />
         <div className="grow" />
-        <button className="btn btn-ghost btn-sm" onClick={() => toast('导出订单')}>
+        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook('机构订单', [{ name: '订单明细', title: '机构订单管理', subtitle: `类型=${type} · 订单状态=${status} · 退款状态=${rfStatus} · 搜索=${q || '无'}`, headers: ['订单号', '类型', '知识产品', '金额', '支付方式', '订单状态', '退款状态', '用户', '下单时间', '支付时间', '兑换时间'], rows: rows.map((r) => [r.id, r.type, r.kp ?? '—', r.amount, r.payMethod, r.status, refundStatusOf(r), r.user, r.orderTime, r.payTime, r.redeemTime ?? '—']), widths: [24, 12, 22, 12, 16, 14, 14, 18, 22, 22, 22] }]); toast('正在生成 XLSX'); }}>
           <Icon id="i-dl" w={14} h={14} />
           导出
         </button>

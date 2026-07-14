@@ -5,7 +5,7 @@
       "name": "mobile",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:mobile"],
-      "port": 5173
+      "port": 5170
     },
     {
       "name": "org",

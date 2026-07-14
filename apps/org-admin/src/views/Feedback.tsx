@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, RangePicker, DataGrid, FeedbackDetailModal, type Col, type MediaItem } from '@aba/ui-admin';
+import { Search, Dropdown, RangePicker, DataGrid, FeedbackDetailModal, exportWorkbook, type Col, type MediaItem } from '@aba/ui-admin';
 
 // 机构后台 · 答案反馈工作台（0613-2：从数据看板独立成「数据中心」一级菜单）
 // 列表（分页 + 按标签/时间/问题搜）→ 详情（问题 + AI 答案，含当时推送的图/音/视多模态知识）；
@@ -47,17 +47,10 @@ export function Feedback() {
 
   const rows = DATA.filter((r) => (!q || r.q.includes(q) || r.user.includes(q)) && (tag === '全部' || r.tag === tag));
 
-  // 导出：仅问答文本（不含媒体 / 溯源）
+  // 导出：结构化 XLSX，仅问答文本与必要反馈元数据（不含媒体 / 溯源）
   const exportText = () => {
-    const lines = rows.map((r) => `【${r.time}】${nickOf(r.user)}${r.member ? '（会员）' : ''} · ${r.tag}\nQ：${r.q}\nA：${r.answer}\n`);
-    const blob = new Blob(['答案反馈导出（仅问答文本，不含媒体 / 溯源）\n\n' + lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '答案反馈_问答文本.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('已导出问答文本（不含媒体 / 溯源）');
+    void exportWorkbook('机构答案反馈', [{ name: '反馈明细', title: '机构答案反馈', subtitle: `反馈标签=${tag} · 搜索=${q || '无'} · 仅含问答文本与必要元数据，不含媒体/溯源`, headers: ['反馈 ID', '问题', 'AI 答案', '反馈标签', '反馈人', '会员状态', '关联 KP', '提交时间'], rows: rows.map((r) => [r.id, r.q, r.answer, r.tag, nickOf(r.user), r.member ? '会员' : '非会员', r.kp, r.time]), widths: [16, 38, 72, 18, 18, 14, 28, 22] }]);
+    toast('正在生成 XLSX');
   };
 
   const columns: Col<FB>[] = [
@@ -87,7 +80,7 @@ export function Feedback() {
         <div className="pa">
           <button className="btn btn-ghost btn-sm" onClick={exportText}>
             <Icon id="i-dl" w={14} h={14} />
-            导出问答文本
+            导出 XLSX
           </button>
         </div>
       </div>
