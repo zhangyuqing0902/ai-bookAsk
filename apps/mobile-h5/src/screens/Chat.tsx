@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { useDemoStore } from '@aba/mock';
+import { useDemoStore, KPS } from '@aba/mock';
 import { useChatStore, nextMsgId, type ChatMsg } from '../chatStore';
 import { usePhoneGate } from '../usePhoneGate';
 
@@ -12,6 +12,8 @@ interface Media {
   // 权益改造:受限资源门槛——'member'=会员内容(开会员看)、'forever'=永享内容(单独买断,不需会员)
   tier?: 'member' | 'forever';
   price?: number; // 永享价(tier=forever 时;付费墙金额取此值)
+  // 0716 #1.2:关联的知识 KP;该 KP 被下架/删除时,会话里引用它的媒体走失效展示(不再进预览/付费墙)
+  kpId?: string;
 }
 type Msg = ChatMsg;
 
@@ -23,7 +25,26 @@ const DEMO_MEDIA: Media[] = [
   { kind: 'image', name: '血压监测记录表', locked: false },
   { kind: 'audio', name: '专家讲解 · 低钠饮食', locked: true, tier: 'member' },
   { kind: 'video', name: '示范 · 家庭血压测量', locked: true, tier: 'forever', price: 9.9 },
+  // 0714 #5:引用了已下架 KP(unlisted)——停止公开查看,显「已下架」,点击提示不弹付费墙
+  { kind: 'image', name: '围手术期评估图', locked: false, kpId: 'kp_anesthesia' },
+  // 0716 #1.2:引用了已删除 KP(deleted 软删)——内容下线,显「已失效」,点击提示内容已被移除
+  { kind: 'video', name: '急诊超声操作示范', locked: false, kpId: 'kp_ultrasound_old' },
 ];
+
+// 0716 #1.2:会话引用媒体的失效判定——关联 KP 下架=已下架(停止公开查看)、删除=已失效(内容下线)
+type DeadKind = 'offshelf' | 'invalid';
+const mediaDead = (m: Media): DeadKind | null => {
+  if (!m.kpId) return null;
+  const st = KPS.find((k) => k.id === m.kpId)?.status;
+  if (st === 'unlisted') return 'offshelf';
+  if (st === 'deleted') return 'invalid';
+  return null;
+};
+const DEAD_LABEL: Record<DeadKind, string> = { offshelf: '已下架', invalid: '已失效' };
+const DEAD_TOAST: Record<DeadKind, string> = {
+  offshelf: '该内容已下架，暂不可查看',
+  invalid: '该内容已失效，若有问题请联系客服',
+};
 const DEMO_FOLLOWUPS = ['那运动方面要注意什么?', '可以喝咖啡吗?', '需要长期服药吗?'];
 const ANSWER =
   '控制饮食的关键是低钠饮食,每日食盐摄入应小于 5g;同时增加钾的摄入,多吃新鲜蔬果,限制饱和脂肪与酒精。建议规律监测血压,并在医生指导下调整用药方案。';
@@ -331,6 +352,16 @@ export function Chat() {
               <div className="fl more">…等 4 个文件</div>
             </div>
           </div>
+          {/* 0714 #5:引用了已下架的知识 KP——名后加灰标,点击不跳转、仅 toast 失效提示 */}
+          <div className="src-item tap" onClick={() => toast(DEAD_TOAST.offshelf, 3000)}>
+            <div className="src-cover" style={{ filter: 'grayscale(1)', opacity: 0.55 }}>
+              <span className="sp" />
+            </div>
+            <div className="src-meta">
+              <div className="kp">围手术期麻醉管理精要<span className="src-dead">已下架</span></div>
+              <div className="fl">术后镇痛管理.pdf · p.15</div>
+            </div>
+          </div>
           {/* 浅灰分隔线:上为知识 KP,下为互联网检索内容 */}
           <div className="src-divider" />
           <div
@@ -451,8 +482,16 @@ function AiMsg({
               <span className="mz-title">相关媒体资源</span>
             </div>
             <div className="media-strip" style={{ overflowX: 'auto' }}>
-              {DEMO_MEDIA.map((m, i) =>
-                m.locked ? (
+              {DEMO_MEDIA.map((m, i) => {
+                // 0714 #5:关联 KP 已下架/已失效 → 封面置灰 + 角标,点击只提示,不进预览、不弹付费墙
+                const dead = mediaDead(m);
+                if (dead) return (
+                  <div className="media-thumb dead tap" key={i} onClick={() => toast(DEAD_TOAST[dead], 3000)}>
+                    <span className="media-dead">{DEAD_LABEL[dead]}</span>
+                    <span className="ph">{m.name}</span>
+                  </div>
+                );
+                return m.locked ? (
                   // 会话内直接点付费资源 → 直接弹付费墙(不进预览)
                   <div className="media-thumb locked tap" key={i} onClick={() => onPay(m)}>
                     {/* 权益改造:封面右上角权益标签——会员(amber)/永享(珊瑚) */}
@@ -471,8 +510,8 @@ function AiMsg({
                   <div className="media-thumb tap" key={i} onClick={() => onOpen(DEMO_MEDIA, i)}>
                     <span className="ph">{m.name}</span>
                   </div>
-                ),
-              )}
+                );
+              })}
             </div>
           </div>
         )}

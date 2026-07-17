@@ -1,30 +1,17 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, DataGrid, Modal, TextInput, CredentialDialog, genPassword, type Col, type Credential } from '@aba/ui-admin';
+import { Search, Dropdown, DataGrid, Modal, TextInput, CredentialDialog, exportWorkbook, genPassword, type Col, type Credential } from '@aba/ui-admin';
+import { PLAT_ROLES, PLATFORM_ACCOUNT_SEED, type PAccount } from '../data/platformAccounts';
+import { buildPlatformAccountsSpec } from '../exports/platformAccounts';
 
 // 平台超管 · 平台账户（0615-2 新增）。
 // 与「机构账户」明显区分：平台账户是平台方人员（平台超管 / 运营 / 财务），平台级角色、无所属机构；
 // 机构账户归属某机构、用机构级角色。两者各自独立菜单（机构账户在「机构管理」组，平台账户在「系统设置」组）。
-const PLAT_ROLES = ['平台超级管理员', '平台运营', '平台财务'];
+// 0714：mock 数据下移 ../data/platformAccounts；筛选行右侧新增「导出」（exports/platformAccounts.ts spec）。
 const ROLE_CLS: Record<string, string> = { 平台超级管理员: 'tag-indigo', 平台运营: 'tag-jade', 平台财务: 'tag-amber' };
 
-interface PAccount {
-  id: string;
-  account: string;
-  name: string;
-  role: string;
-  phone: string;
-  status: '启用' | '停用';
-  createdAt: string;
-}
-const SEED: PAccount[] = [
-  { id: 'p1', account: 'superadmin', name: '超级管理员', role: '平台超级管理员', phone: '18800000000', status: '启用', createdAt: '2025-12-01 09:00:00' },
-  { id: 'p2', account: 'ops_lina', name: '李娜', role: '平台运营', phone: '13912345678', status: '启用', createdAt: '2026-01-20 10:12:30' },
-  { id: 'p3', account: 'fin_wang', name: '王财务', role: '平台财务', phone: '13700222222', status: '停用', createdAt: '2026-02-15 14:30:05' },
-];
-
 export function PlatformAccounts() {
-  const [list, setList] = useState<PAccount[]>(SEED);
+  const [list, setList] = useState<PAccount[]>(PLATFORM_ACCOUNT_SEED);
   const [q, setQ] = useState('');
   const [role, setRole] = useState('全部');
   const [status, setStatus] = useState('全部');
@@ -103,6 +90,11 @@ export function PlatformAccounts() {
         <Search placeholder="账户名称 / 姓名" minWidth={220} value={q} onChange={setQ} />
         <Dropdown label="角色" options={['全部', ...PLAT_ROLES]} onSelect={setRole} style={{ width: 160 }} />
         <Dropdown label="状态" options={['全部', '启用', '停用']} onSelect={setStatus} />
+        <div className="grow" />
+        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildPlatformAccountsSpec({ rows, filters: [['关键词', q || '无'], ['角色', role], ['状态', status]] })); toast('正在导出'); }}>
+          <Icon id="i-dl" w={14} h={14} />
+          导出
+        </button>
       </div>
 
       <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的平台账户' }} minWidth={900} pageUnit="个" />

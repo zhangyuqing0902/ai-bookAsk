@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Calendar, fmtD } from './Calendar';
 
 // 服务有效期等「开始 ~ 截止」选择（0614c）：日历与主控台共用 Calendar（可点标题选年 / 月）；
@@ -16,11 +16,14 @@ export function DateTimeRangeField({
   defaultStart,
   defaultEnd,
   withTime = false,
+  fieldWidth,
   onChange,
 }: {
   defaultStart?: string;
   defaultEnd?: string;
   withTime?: boolean;
+  /** 字段宽度覆盖（px）——带时分秒的完整区间需 ~380px 才能一行展示，默认 266 */
+  fieldWidth?: number;
   /** 选好「应用」后回调（年月日字符串），供调用方做有效期校验等 */
   onChange?: (start: string, end: string) => void;
 }) {
@@ -50,12 +53,25 @@ export function DateTimeRangeField({
     onChange?.(fmtD(start), fmtD(e));
   };
 
+  // 0714：点击时测量下方剩余空间，不足则面板向上弹，保证点击即完整可见
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [dropUp, setDropUp] = useState(false);
+  const toggle = () => {
+    if (!open && wrapRef.current) {
+      const rect = wrapRef.current.getBoundingClientRect();
+      const popH = withTime ? 470 : 380; // 日历 + 时分秒 + 底栏的近似高度
+      const below = window.innerHeight - rect.bottom;
+      setDropUp(below < popH && rect.top > below); // 下方放不下且上方更宽裕 → 向上弹
+    }
+    setOpen((o) => !o);
+  };
+
   return (
-    <div className="dtr">
-      <div className="dt-input dtr-field" onClick={() => setOpen((o) => !o)}>
+    <div className="dtr" ref={wrapRef}>
+      <div className="dt-input dtr-field" style={fieldWidth ? { width: fieldWidth, whiteSpace: 'nowrap' } : undefined} onClick={toggle}>
         {val || <span style={{ color: 'var(--ink-3)' }}>选择开始 ~ 截止{withTime ? '时间' : '日期'}</span>}
       </div>
-      <div className={'dr-pop calpop dtr-pop' + (open ? ' show' : '')}>
+      <div className={'dr-pop calpop dtr-pop' + (dropUp ? ' up' : '') + (open ? ' show' : '')}>
         <Calendar start={start} end={end} onPick={pick} initialView={start} />
         {withTime && (
           <div className="dtr-times">

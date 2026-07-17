@@ -86,8 +86,41 @@ export function pickImageColor(onColors: (primary: string, secondary: string, na
 export const ACCEPT = {
   image: 'image/png,image/jpeg,image/gif,image/jpg',
   audio: 'audio/*',
+  // 0716 #11：TTS 参考音仅限 MP3 / WAV
+  tts: '.mp3,.wav,audio/mpeg,audio/wav,audio/x-wav',
   video: 'video/*',
   doc: '.doc,.docx,.pdf',
   cert: '.pem',
   cover: 'image/png,image/jpeg,image/jpg',
 };
+
+// 0716 #11：选取 TTS 参考音并校验——格式 MP3/WAV、时长 3~10 秒（真实读取音频元数据）。
+// 通过 onPick(name, durationSec) 回调；不合规走 onReject(reason)。
+export function pickAudio(onPick: (name: string, durationSec: number) => void, onReject?: (reason: string) => void) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = ACCEPT.tts;
+  inp.style.display = 'none';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0];
+    if (!f) { inp.remove(); return; }
+    if (!/\.(mp3|wav)$/i.test(f.name)) { onReject?.('仅支持 MP3 / WAV 格式'); inp.remove(); return; }
+    const url = URL.createObjectURL(f);
+    const audio = document.createElement('audio');
+    audio.preload = 'metadata';
+    audio.onloadedmetadata = () => {
+      const d = audio.duration;
+      URL.revokeObjectURL(url);
+      if (!isFinite(d) || d < 3 || d > 10) {
+        onReject?.(`音频时长需在 3~10 秒之间（当前约 ${isFinite(d) ? d.toFixed(1) : '未知'} 秒）`);
+        return;
+      }
+      onPick(f.name, d);
+    };
+    audio.onerror = () => { URL.revokeObjectURL(url); onReject?.('音频解析失败，请重试'); };
+    audio.src = url;
+    inp.remove();
+  };
+  document.body.appendChild(inp);
+  inp.click();
+}

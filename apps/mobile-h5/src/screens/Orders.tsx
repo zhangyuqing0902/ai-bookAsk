@@ -4,12 +4,24 @@ import { Icon } from '@aba/ui';
 import { ORDERS, byPayDesc } from '../data/orders';
 
 const TABS = ['全部', '会员', '永享', '兑换码'] as const;
+// 0716 #4：订单支付成功才落库，故无「待支付」态；状态维度只留 已支付 / 退款售后。
+const STATUS_CHIPS = ['全部', '已支付', '退款/售后'] as const;
+// 把自由文本的 o.status 归并到两类状态分组（供状态 chips 过滤）
+const statusGroup = (s: string): string => {
+  if (s === '部分退款' || s === '全额退款' || s === '退款中') return '退款/售后';
+  return '已支付'; // 已支付 / 已核销 等均归「已支付」
+};
 
-// 16 我的订单（4 Tab；按付款时间降序；点击进详情）
+// 16 我的订单（类型 Tab + 状态 chips 双维度过滤；按付款时间降序；点击进详情）
 export function Orders() {
   const nav = useNavigate();
   const [tab, setTab] = useState(0);
-  const list = ORDERS.filter((o) => tab === 0 || o.type === TABS[tab]).slice().sort(byPayDesc);
+  const [statusChip, setStatusChip] = useState<(typeof STATUS_CHIPS)[number]>('全部');
+  // 0716 #5：兑换码 tab 不做状态筛选（能显示的兑换码必为已核销），忽略 statusChip
+  const isRedeemTab = tab === 3;
+  const list = ORDERS.filter(
+    (o) => (tab === 0 || o.type === TABS[tab]) && (isRedeemTab || statusChip === '全部' || statusGroup(o.status) === statusChip),
+  ).slice().sort(byPayDesc);
   return (
     <>
       <div className="h5-top">
@@ -29,6 +41,16 @@ export function Orders() {
             </div>
           ))}
         </div>
+        {/* 0715 #7：订单状态 chips（第二维度）；0716 #5：兑换码 tab 隐藏状态筛选 */}
+        {!isRedeemTab && (
+          <div className="fchips">
+            {STATUS_CHIPS.map((s) => (
+              <span key={s} className={'fchip' + (statusChip === s ? ' on' : '')} onClick={() => setStatusChip(s)}>
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="scrollY" style={{ paddingTop: 8 }}>
           {list.map((o) => (
             <div className="order tap" key={o.id} onClick={() => nav('/me/orders/' + o.id)}>

@@ -566,18 +566,28 @@ a {
   right: 10px;
   color: var(--indigo-ink);
 }
-/* 5.1:额度行——每额度可填数字或切「不限」(定制版可混合) */
-.quota-edit { display: flex; gap: 16px; flex-wrap: nowrap; align-items: center; }
-.quota-cell { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.quota-cell .quota-unit { font-size: 13px; color: var(--ink-3); }
-/* 2:不限版额度禁止输入,静态显「不限」(灰底禁用感,高度对齐输入框 inp2 11px) */
-.quota-cell .quota-unlim-static { display: inline-flex; align-items: center; justify-content: center; width: 72px; padding: 11px 0; font-size: 13px; font-weight: 600; color: var(--ink-3); background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
-/* 三-3:不限态——主题色淡底胶囊,完整文案「知识KP不限」,点击恢复输入 */
-/* 三-3:不限态胶囊高度对齐输入框(inp2 padding 11px),消除高度不一致 */
-.quota-cell .quota-unlim-val { display: inline-flex; align-items: center; font-weight: 700; color: var(--indigo-ink); font-size: 13px; line-height: 1.3; background: var(--indigo-soft); border: 1px solid var(--indigo); border-radius: 10px; padding: 11px 14px; cursor: pointer; }
-/* 三-3:不限切换——主题色描边(非绿) */
-.quota-cell .quota-unlim-tog { font-size: 11px; padding: 3px 9px; border-radius: 9px; border: 1px solid var(--line); color: var(--ink-3); cursor: pointer; transition: 0.15s; }
-.quota-cell .quota-unlim-tog:hover { border-color: var(--indigo); color: var(--indigo-ink); }
+/* 0715 #8：额度改「三张横排指标卡」——顶部圆形图标 + 指标名 + 占用/消耗标签，下方步进器 + 单位。
+   订阅额度（.quota-edit）与加油包加量额度（SubPackDrawer 的 .pf-fields）共用同一套卡片 + 步进器视觉。 */
+.quota-edit { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+/* 0716 二批 #6：额度卡默认不高亮（普通描边白底），仅悬浮或聚焦输入框时高亮（靛边框 + 淡靛底，对齐套餐卡选中态）。 */
+.quota-card { display: flex; flex-direction: column; gap: 11px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); transition: border-color 0.15s, background 0.15s; }
+.quota-card:hover,
+.quota-card:focus-within { border-color: var(--indigo); background: var(--indigo-soft); }
+.quota-card .qc-head { display: flex; align-items: center; gap: 8px; }
+/* 圆底图标容器（范式同 proto-admin 的 .pi-ic，主题色淡底） */
+.quota-card .qc-ic { width: 30px; height: 30px; flex: none; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: var(--indigo-soft); border: 1px solid var(--line); color: var(--indigo-ink); }
+.quota-card .qc-ic svg { width: 16px; height: 16px; }
+.quota-card .qc-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+/* 数字步进器：[−] 输入 [+] 单位 */
+.qty-stepper { display: inline-flex; align-items: center; gap: 8px; }
+.qty-stepper .qty-btn { width: 30px; height: 32px; flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; line-height: 1; color: var(--ink-2); background: var(--surface-warm); border: 1px solid var(--line); border-radius: 9px; cursor: pointer; transition: 0.15s; }
+.qty-stepper .qty-btn:hover:not(:disabled) { border-color: var(--indigo); color: var(--indigo-ink); background: var(--indigo-soft); }
+.qty-stepper .qty-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.qty-stepper .qty-input { width: 56px; height: 32px; text-align: center; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; outline: none; transition: 0.15s; }
+.qty-stepper .qty-input:focus { border-color: var(--indigo); }
+.qty-stepper .qty-unit { font-size: 13px; color: var(--ink-3); }
+/* 禁用态（不限版）：静态「不限」不可编辑 */
+.qty-stepper--off .qty-static { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--ink-3); background: var(--surface-warm); border: 1px solid var(--line); border-radius: 9px; }
 /* 5.3:前台访问地址说明——问号 hover 面板,无序两行不换行 */
 .kp-tip { position: relative; display: inline-flex; cursor: help; }
 .kp-tip-pop { position: absolute; left: -8px; top: calc(100% + 7px); z-index: 200; background: rgba(24,26,33,.96); border-radius: 8px; box-shadow: var(--sh-md); padding: 7px 12px; display: none; }
@@ -714,9 +724,10 @@ a {
   color: var(--ink);
   font-weight: 600;
 }
+/* 0716 二批 #6：加油包新建表单底色由淡紫改浅灰白（与下方历史列表区分靠描边 + 底色轻对比） */
 .pack-form {
-  background: var(--indigo-soft);
-  border: 1px solid rgba(75, 87, 232, 0.22);
+  background: var(--surface-2, #F6F7FB);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 16px;
@@ -999,6 +1010,21 @@ a {
   margin: 18px 0 12px;
 }
 .dash-section-head .dash-section-title {
+  margin: 0;
+}
+/* 0716 #14：数据看板「区间分析」工具条——标题在左、区间选择器在右，就近承载时间筛选 */
+.board-rangebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 12px;
+  padding: 10px 14px;
+  background: var(--surface-2, #F6F7FB);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.board-rangebar .dash-section-title {
   margin: 0;
 }
 .dash-section-sub {
@@ -1632,6 +1658,11 @@ a {
   margin-top: 2px;
   color: var(--amber);
 }
+/* 0716 二批 #5.3：实时同步 KP 操作级只读——数据可读，仅操作按钮置灰（可点击提示无权限） */
+.cover-up .ops.ops-deny span {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .plan-spec {
   font-size: 12.5px;
   color: var(--ink-2);
@@ -2164,7 +2195,8 @@ a {
    底色统一用 --surface-warm，与「机构域名前缀」固定后缀的灰保持一致（更浅、偏暖冷调） */
 .inp2:has(input:disabled),.inp2:has(textarea:disabled){background:var(--surface-warm);border-color:var(--line);cursor:not-allowed}
 .inp2 input:disabled,.inp2 textarea:disabled{background:transparent;color:var(--ink-3);cursor:not-allowed}
-.period-compare{margin-left:6px;color:var(--ink-3);font-size:11px;font-weight:400}
+/* 0715 #1：对比时间独占第二行（flex-basis 100% 触发换行），避免长文案（今日档「对比昨日 00:00-13:45」）被卡片 overflow 截断 */
+.period-compare{flex-basis:100%;margin-left:0;margin-top:1px;color:var(--ink-3);font-size:10px;font-weight:400}
 .quota-kind{display:inline-flex;align-items:center;margin-left:6px;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.02em}
 .quota-kind.occupancy{background:var(--indigo-soft);color:var(--indigo-ink)}
 .quota-kind.consumption{background:var(--amber-soft);color:var(--amber-ink)}

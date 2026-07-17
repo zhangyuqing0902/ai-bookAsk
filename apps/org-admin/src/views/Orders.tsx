@@ -4,6 +4,18 @@ import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, DataGrid, RangePicker, Modal, ConfirmDialog, TextInput, exportWorkbook, type Col } from '@aba/ui-admin';
 import { AORDERS, byPayDesc, MY_ORG, type AOrder } from '../data/orders';
 import { useRefundStore, operatorLabel } from '../refundStore';
+import { buildOrdersSpec } from '../exports/orders';
+
+// 0714 #3：三个时间筛选（下单 / 支付 / 兑换）接真过滤的区间载荷；days=0 表示「不限」
+type TimeRange = { days: number; label: string; start?: Date; end?: Date };
+const RANGE_UNLIMITED: TimeRange = { days: 0, label: '不限' };
+// 字符串日期（yyyy-MM-dd HH:mm:ss）落在区间内；无该字段的行在启用筛选时排除
+const inRange = (v: string | undefined, r: TimeRange) => {
+  if (!r.days || !r.start || !r.end) return true;
+  if (!v) return false;
+  const t = new Date(v.replace(/-/g, '/')).getTime();
+  return !isNaN(t) && t >= r.start.getTime() && t <= r.end.getTime();
+};
 
 const TYPES = ['全部', '会员', '永享', '兑换码'];
 // 订单状态配色：已支付=ok(青)、已核销=none(灰)
@@ -25,6 +37,10 @@ export function Orders() {
   const [type, setType] = useState('全部');
   const [status, setStatus] = useState('全部');
   const [rfStatus, setRfStatus] = useState('全部');
+  // 0714 #3：下单 / 支付 / 兑换时间区间（默认不限）
+  const [orderRange, setOrderRange] = useState<TimeRange>(RANGE_UNLIMITED);
+  const [payRange, setPayRange] = useState<TimeRange>(RANGE_UNLIMITED);
+  const [redeemRange, setRedeemRange] = useState<TimeRange>(RANGE_UNLIMITED);
   const refunds = useRefundStore((s) => s.refunds);
   const startRefund = useRefundStore((s) => s.startRefund);
   const [refundOrder, setRefundOrder] = useState<AOrder | null>(null);
@@ -41,7 +57,11 @@ export function Orders() {
       (!q || r.id.includes(q) || r.user.includes(q)) &&
       (type === '全部' || r.type === type) &&
       (status === '全部' || r.status === status) &&
-      (rfStatus === '全部' || refundStatusOf(r) === rfStatus),
+      (rfStatus === '全部' || refundStatusOf(r) === rfStatus) &&
+      // 0714 #3：三个时间区间真过滤（days=0 不限；无对应字段的行在启用筛选时排除）
+      inRange(r.orderTime, orderRange) &&
+      inRange(r.payTime, payRange) &&
+      inRange(r.redeemTime, redeemRange),
   ).slice().sort(byPayDesc);
 
   const openRefund = (r: AOrder) => {
@@ -124,15 +144,17 @@ export function Orders() {
         <Dropdown label="订单状态" options={['全部', '已支付', '已核销']} onSelect={setStatus} />
         <Dropdown label="退款状态" options={['全部', '未退款', '退款中', '部分退款', '全额退款']} onSelect={setRfStatus} />
         <div className="grow" />
-        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook('机构订单', [{ name: '订单明细', title: '机构订单管理', subtitle: `类型=${type} · 订单状态=${status} · 退款状态=${rfStatus} · 搜索=${q || '无'}`, headers: ['订单号', '类型', '知识产品', '金额', '支付方式', '订单状态', '退款状态', '用户', '下单时间', '支付时间', '兑换时间'], rows: rows.map((r) => [r.id, r.type, r.kp ?? '—', r.amount, r.payMethod, r.status, refundStatusOf(r), r.user, r.orderTime, r.payTime, r.redeemTime ?? '—']), widths: [24, 12, 22, 12, 16, 14, 14, 18, 22, 22, 22] }]); toast('正在生成 XLSX'); }}>
+        {/* 0714：导出走 spec 纯函数（exports/orders.ts）；退款状态注入 refund store 现值 */}
+        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildOrdersSpec({ rows, filters: { q, type, status, rfStatus, orderRange: orderRange.label, payRange: payRange.label, redeemRange: redeemRange.label }, refundStatusOf })); toast('正在导出'); }}>
           <Icon id="i-dl" w={14} h={14} />
           导出
         </button>
       </div>
+      {/* 0714 #3：三个时间筛选接真过滤（预设 不限 / 近 7 天 / 30 天，自定义走日历） */}
       <div className="orders-ranges">
-        <div className="range-col"><RangePicker label="下单时间" /></div>
-        <div className="range-col"><RangePicker label="支付时间" /></div>
-        <div className="range-col"><RangePicker label="兑换时间" /></div>
+        <div className="range-col"><RangePicker label="下单时间" presets={['不限', '近 7 天', '30 天']} presetDays={[0, 7, 30]} defaultActive={0} onChange={setOrderRange} /></div>
+        <div className="range-col"><RangePicker label="支付时间" presets={['不限', '近 7 天', '30 天']} presetDays={[0, 7, 30]} defaultActive={0} onChange={setPayRange} /></div>
+        <div className="range-col"><RangePicker label="兑换时间" presets={['不限', '近 7 天', '30 天']} presetDays={[0, 7, 30]} defaultActive={0} onChange={setRedeemRange} /></div>
       </div>
       <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的订单' }} minWidth={1440} pageUnit="单" />
 

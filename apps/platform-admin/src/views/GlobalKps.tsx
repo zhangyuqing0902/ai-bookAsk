@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon } from '@aba/ui';
-import { Search, Dropdown, EmptyState } from '@aba/ui-admin';
+import { Icon, toast } from '@aba/ui';
+import { Search, Dropdown, EmptyState, exportWorkbook } from '@aba/ui-admin';
 import { KPS, ORGS, orgOptionLabel, orgOptionValue } from '@aba/mock';
+import { KP_STAT } from '../data/kpStatus';
+import { buildGlobalKpsSpec } from '../exports/globalKps';
 
 // 平台超管 · 全域知识 KP（0614b：表格 → 卡片，复用机构后台 KP 列表视觉；每卡显示归属机构；只读监管）。
-const STAT: Record<string, { t: string; cls: string }> = {
-  published: { t: '已发布', cls: 'tag-jade' },
-  draft: { t: '草稿', cls: 'tag-line' },
-  archived: { t: '已下架', cls: 'tag-amber' },
-};
+// 0714：状态映射下移 ../data/kpStatus（与导出 spec 共用）；筛选行右侧新增「导出」（exports/globalKps.ts spec）。
 const COVERS = ['', 'c2', 'c3', 'c4'];
 
 type Kp = (typeof KPS)[number];
@@ -23,11 +21,13 @@ export function GlobalKps() {
   const orgName = (id: string) => ORGS.find((o) => o.id === id)?.name ?? id;
   const orgNames = [...new Set(KPS.map((k) => orgName(k.orgId)))];
 
+  // 0716 #1.1（二批）：已删除（物理删除）的 KP 不在平台列表展示，仅数据库留存
   const rows = KPS.filter(
     (k) =>
+      k.status !== 'deleted' &&
       (!q || k.name.includes(q)) &&
       (org === '全部' || orgName(k.orgId) === org) &&
-      (status === '全部' || STAT[k.status]?.t === status),
+      (status === '全部' || KP_STAT[k.status]?.t === status),
   );
 
   return (
@@ -41,6 +41,11 @@ export function GlobalKps() {
         <Search placeholder="搜索 KP 名称" minWidth={240} value={q} onChange={setQ} />
         <Dropdown label="机构" options={['全部', ...orgNames.map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ width: 190 }} />
         <Dropdown label="状态" options={['全部', '已发布', '草稿', '已下架']} onSelect={setStatus} />
+        <div className="grow" />
+        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildGlobalKpsSpec({ rows, filters: [['关键词', q || '无'], ['机构', org], ['状态', status]] })); toast('正在导出'); }}>
+          <Icon id="i-dl" w={14} h={14} />
+          导出
+        </button>
       </div>
       {rows.length === 0 ? (
         <div className="card card-pad">
@@ -49,7 +54,7 @@ export function GlobalKps() {
       ) : (
         <div className="kp-grid">
           {rows.map((k, i) => {
-            const s = STAT[k.status] ?? { t: k.status, cls: 'tag-line' };
+            const s = KP_STAT[k.status] ?? { t: k.status, cls: 'tag-line' };
             return (
               <div className="kp-card" key={k.orgId + k.name} style={{ cursor: 'pointer' }} onClick={() => nav('/global-kps/' + (i + 1))} title={`查看「${k.name}」详情`}>
                 <div className={'kp-cover ' + COVERS[i % COVERS.length]}>

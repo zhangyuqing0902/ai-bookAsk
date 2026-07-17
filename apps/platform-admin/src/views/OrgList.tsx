@@ -1,20 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon } from '@aba/ui';
-import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DomainInput, DataGrid, type Col } from '@aba/ui-admin';
+import { Icon, toast } from '@aba/ui';
+import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DomainInput, DataGrid, exportWorkbook, type Col } from '@aba/ui-admin';
 import { PLATFORM_ORGS, platformOrgRole, secondaryTenantDomain, suspensionImpact, tenantDomainSuffix, validateDomainPrefix, type PlatformOrg } from '@aba/mock';
+import { limitOf } from '../data/orgPlans';
+import { buildOrgListSpec } from '../exports/orgList';
+import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 
 // 机构主数据（含父/子机构树）已下沉到 @aba/mock（PLATFORM_ORGS），机构列表与机构详情共用同一份，
 // 不再在页面里本地维护一份 INIT。父/子/普通三态标签统一由 platformOrgRole 从机构树推导。
-// 套餐预设上限（KP 个 / 存储 GB / 当前订阅周期 Token 亿），与机构详情套餐一致
-const PLAN_Q: Record<string, { kp: number; storage: number; token: number }> = {
-  基础版: { kp: 10, storage: 20, token: 0.5 },
-  专业版: { kp: 50, storage: 100, token: 2 },
-  旗舰版: { kp: 200, storage: 500, token: 10 },
-};
+// 0714：套餐预设上限下移 ../data/orgPlans（与导出 spec 共用）；层级读 orgTree 覆盖（#1 子机构改父 / 取消关联
+// 后上级机构列与父机构 tag 即时联动）；新增筛选行「导出」（exports/orgList.ts spec）。
 const PLAN_RANK: Record<string, number> = { 基础版: 1, 专业版: 2, 旗舰版: 3, 定制版: 4 };
 const PLAN_CLS: Record<string, string> = { 基础版: 'tag-line', 专业版: 'tag-indigo', 旗舰版: 'tag-amber', 定制版: 'tag-jade' };
-const limitOf = (r: PlatformOrg) => r.custom ?? PLAN_Q[r.plan];
 
 // 配额单元格：已用 / 上限。0615-6：去掉按使用率变色（整列太花）——统一普通文字，
 // 已用黑字、「/ 上限」灰字；用量预警仍由机构详情用量看板进度条体现。
@@ -42,14 +40,17 @@ export function OrgList() {
   const [newParent, setNewParent] = useState('无（顶级机构）');
   const domainCheck = validateDomainPrefix(domainPrefix, data.map((r) => r.domainPrefix));
   const domainSuffix = tenantDomainSuffix(window.location.hostname);
+  // 0714 #1：应用「子机构改父 / 取消关联」层级覆盖后的机构数据（列表展示 / 角色推导 / 导出统一读它）
+  const overrides = useOrgTree((s) => s.parentOverrides);
+  const effData = applyOrgOverrides(data, overrides);
 
-  const nameOf = (id: string | null) => (id ? data.find((r) => r.id === id)?.name ?? '—' : '—');
+  const nameOf = (id: string | null) => (id ? effData.find((r) => r.id === id)?.name ?? '—' : '—');
   // 候选上级 = 顶级机构（自身无上级），保证只有「集团→分社」两层
-  const topLevelNames = data.filter((r) => r.parentId === null).map((r) => r.name);
+  const topLevelNames = effData.filter((r) => r.parentId === null).map((r) => r.name);
   // 上级机构筛选项 = 实际作为上级出现过的机构名（去重）
-  const parentNames = [...new Set(data.filter((r) => r.parentId !== null).map((r) => nameOf(r.parentId)))];
+  const parentNames = [...new Set(effData.filter((r) => r.parentId !== null).map((r) => nameOf(r.parentId)))];
 
-  const rows = data.filter((r) => {
+  const rows = effData.filter((r) => {
     const parentName = nameOf(r.parentId);
     return (
       // 模糊匹配同时命中：机构名称、机构 ID、上级机构名称
@@ -72,7 +73,7 @@ export function OrgList() {
 
   const columns: Col<PlatformOrg>[] = [
     { header: '机构 ID', className: 'mono', cell: (r) => r.id },
-    { header: '机构名称', className: 'strong', cell: (r) => <>{r.name}{platformOrgRole(r, data) === 'parent' && <span className="tag-s tag-indigo" style={{ marginLeft: 6 }}>父机构</span>}</> },
+    { header: '机构名称', className: 'strong', cell: (r) => <>{r.name}{platformOrgRole(r, effData) === 'parent' && <span className="tag-s tag-indigo" style={{ marginLeft: 6 }}>父机构</span>}</> },
     { header: '二级机构域名', className: 'mono', cell: (r) => secondaryTenantDomain(r.domainPrefix) },
     { header: '状态', cell: (r) => <span className={'tag-s ' + r.statusCls}>{r.status}</span>, sortValue: (r) => r.status },
     { header: '上级机构', cell: (r) => (r.parentId === null ? <span className="muted">—</span> : nameOf(r.parentId)) },
@@ -117,6 +118,11 @@ export function OrgList() {
         <Dropdown label="机构状态" options={['全部', '正常', '停用']} onSelect={setStatus} />
         <Dropdown label="套餐" options={['全部', '基础版', '专业版', '旗舰版', '定制版']} onSelect={setPlan} />
         <Dropdown label="上级机构" options={['全部', ...parentNames]} onSelect={setParent} style={{ width: 180 }} />
+        <div className="grow" />
+        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildOrgListSpec({ rows, all: effData, filters: [['关键词', q || '无'], ['机构状态', status], ['套餐', plan], ['上级机构', parent]] })); toast('正在导出'); }}>
+          <Icon id="i-dl" w={14} h={14} />
+          导出
+        </button>
       </div>
       <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的机构', sub: '换个名称或状态试试' }} minWidth={1480} pageUnit="家" />
 
@@ -166,7 +172,7 @@ export function OrgList() {
         <div className="fm-row">
           <div className="lab">上级机构</div>
           <div className="ctl">
-            <Dropdown label="无（顶级机构）" options={['无（顶级机构）', ...topLevelNames.map((name) => data.some((x) => x.parentId === data.find((r) => r.name === name)?.id) ? `${name}（父机构）` : name)]} onSelect={setNewParent} style={{ width: 260 }} />
+            <Dropdown label="无（顶级机构）" options={['无（顶级机构）', ...topLevelNames.map((name) => effData.some((x) => x.parentId === effData.find((r) => r.name === name)?.id) ? `${name}（父机构）` : name)]} onSelect={setNewParent} style={{ width: 260 }} />
             {/* 提示紧贴字段，不再放到弹窗最底部远离控件 */}
             <div className="hint">仅顶级机构可被选为上级；选定后本机构将成为其子机构（仅支持父 / 子两层）。</div>
           </div>
@@ -195,7 +201,7 @@ export function OrgList() {
         confirmText={confirm?.status === '正常' ? '确认停用' : '确认恢复'}
         desc={
           confirm?.status === '正常' ? (
-            <>停用「{confirm?.name}」后，仅该机构后台与前台暂停。{confirm ? suspensionImpact(data.some((x) => x.parentId === confirm.id)).message : ''}</>
+            <>停用「{confirm?.name}」后，仅该机构后台与前台暂停。{confirm ? suspensionImpact(effData.some((x) => x.parentId === confirm.id)).message : ''}</>
           ) : (
             <>恢复「{confirm?.name}」后，该机构的后台与前台访问将立即解封。</>
           )

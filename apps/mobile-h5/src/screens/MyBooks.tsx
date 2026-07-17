@@ -8,9 +8,22 @@ import { useChatStore } from '../chatStore';
 // 0613-2：文案精简一行、去永享标、点卡片进该 KP 会话、卡片重排(名称两行高+扫码时间钉底对齐)、右上角「扫一扫」调相机扫码进会话。
 // 0614：右上角图标改「扫一扫」；扫码 / 点卡片进入该 KP 的「全新会话」(清空会话回到欢迎态)。
 // 0615：去掉卡片 hover 放大高亮（仅保留可点击）；点卡片先在屏幕中上方弹 3 秒 toast「即将进入「KP 名」AI 会话」再进会话。
+// 0716 二批 #1.3：KP 状态对 C 端统一两级呈现（与我的永享/历史会话一致）——
+//   unlisted＝「已下架」：已解锁权益保留照常进会话，未解锁点击提示联系客服；
+//   deleted＝「已失效」：内容下线，无论是否解锁均拦截并提示联系客服。
+
+// 演示 grant：已下架 KP（后扫未解锁）+ 已删除 KP（首扫已解锁但内容下线,统一「已失效」拦截）。
+// 初始 bookGrants 在 @aba/mock 的 store 里（不改 mock 包），组件侧拼接。
+const DEMO_OFFSHELF_GRANTS = [
+  { kpId: 'kp_anesthesia', scannedAt: '2026-06-20', unlocked: false },
+  { kpId: 'kp_ultrasound_old', scannedAt: '2026-05-18', unlocked: true },
+];
+
 export function MyBooks() {
   const nav = useNavigate();
-  const grants = useDemoStore((s) => s.user.bookGrants ?? []);
+  const storeGrants = useDemoStore((s) => s.user.bookGrants ?? []);
+  // 避免每次 render 生成新数组引用导致 useMemo 失效
+  const grants = useMemo(() => [...storeGrants, ...DEMO_OFFSHELF_GRANTS], [storeGrants]);
   const resetChat = useChatStore((s) => s.setMessages);
   const [q, setQ] = useState('');
   const [bookFilter, setBookFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
@@ -29,7 +42,8 @@ export function MyBooks() {
     return grants
       .map((g) => {
         const kp = KPS.find((k) => k.id === g.kpId);
-        return kp ? { kp, scannedAt: g.scannedAt, unlocked: g.unlocked } : null;
+        // offShelf＝已下架（可能保留权益）、dead＝已失效（删除,一律拦截）
+        return kp ? { kp, scannedAt: g.scannedAt, unlocked: g.unlocked, offShelf: kp.status === 'unlisted', dead: kp.status === 'deleted' } : null;
       })
       .filter((b): b is NonNullable<typeof b> => !!b)
       .filter((b) => b.kp.name.toLowerCase().includes(kw))
@@ -83,16 +97,36 @@ export function MyBooks() {
           {books.length ? (
             <div className="yx-grid">
               {books.map((b) => (
-                <div className="yx-card tap" key={b.kp.id} onClick={() => enterFresh(b.kp.name)}>
+                <div
+                  className="yx-card tap"
+                  key={b.kp.id}
+                  onClick={() => {
+                    // 已失效(删除)一律拦截；已下架且未解锁拦截；已下架但已解锁的权益保留,照常进会话
+                    if (b.dead) {
+                      toast(`当前「${b.kp.name}」已失效，若有问题请联系客服`);
+                      return;
+                    }
+                    if (b.offShelf && !b.unlocked) {
+                      toast(`当前「${b.kp.name}」已下架，若有问题请联系客服`);
+                      return;
+                    }
+                    enterFresh(b.kp.name);
+                  }}
+                >
                   <div className="bk-cover">
                     <span className="bk-init">{b.kp.name.slice(0, 1)}</span>
                     {/* 3.3:首扫绑定显「已解锁」标(皇冠示意会员级权益);后扫未解锁不显状态(界面保持干净) */}
-                    {b.unlocked && (
+                    {/* 0716 二批 #1.3:删除显「已失效」、下架显「已下架」(优先于「已解锁」,同一位置只放一个标) */}
+                    {b.dead ? (
+                      <span className="bk-offshelf">已失效</span>
+                    ) : b.offShelf ? (
+                      <span className="bk-offshelf">已下架</span>
+                    ) : b.unlocked ? (
                       <span className="bk-unlocked">
                         <Icon id="i-crown" w={11} h={11} />
                         已解锁
                       </span>
-                    )}
+                    ) : null}
                   </div>
                   <div className="bk-meta">
                     <div className="bk-name">{b.kp.name}</div>

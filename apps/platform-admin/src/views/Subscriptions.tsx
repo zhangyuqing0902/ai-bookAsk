@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, DataGrid, exportWorkbook, type Col, InfoDot, SubPackDrawer, type PackForm } from '@aba/ui-admin';
 import { orgOptionLabel, orgOptionValue, SUBSCRIPTIONS, subStatus, type Subscription } from '@aba/mock';
+import { buildSubscriptionsSpec } from '../exports/subscriptions';
 
 // 平台超管 · 全域订阅订单（0615 新增）。
 // B 端订阅订单（机构→平台）：跨机构汇总所有「订阅」；加油包不在列表展示，挂在各订阅下、经操作列「加油包」抽屉查看 / 新建。
@@ -113,7 +114,7 @@ export function Subscriptions() {
           <div className="pt">订阅订单</div>
         </div>
         <div className="pa">
-          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook('平台订阅订单', [{ name: '订阅明细', title: '平台订阅订单', subtitle: `机构=${org} · 套餐=${plan} · 状态=${status} · 搜索=${q || '无'}；KP/存储已用为机构当前占用，Token 已用为当前订阅周期消耗`, headers: ['订单 ID', '机构', '套餐', 'KP 上限', 'KP 当前占用', '存储上限 GB', '存储当前占用 GB', 'Token 周期额度 亿', 'Token 本周期消耗 亿', '生效日', '到期日', '负责人', '状态'], rows: rows.map((s) => [s.id, s.orgName, s.plan ?? '—', s.kp, s.kpUsed ?? 0, s.storage, s.storageUsed ?? 0, s.token, s.tokenUsed ?? 0, s.startDate, s.endDate, s.owner ?? '—', subStatus(s)]), widths: [26, 24, 14, 14, 18, 18, 22, 20, 24, 16, 16, 16, 14] }]); toast('正在生成 XLSX'); }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildSubscriptionsSpec({ rows, filters: [['关键词', q || '无'], ['机构', org], ['套餐', plan], ['状态', status]] })); toast('正在导出'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>

@@ -286,6 +286,44 @@ body,
 .media-thumb {
   background: repeating-linear-gradient(135deg, #E7EAF2 0 7px, #EEF1F7 7px 14px) !important;
 }
+/* 0714 #5:会话引用媒体关联 KP 已下架/已失效——封面置灰(半透覆盖不动角标) + 珊瑚角标 */
+.media-thumb.dead::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(236, 238, 244, 0.6);
+}
+.media-thumb.dead .ph {
+  opacity: 0.5;
+}
+.media-thumb .media-dead {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 3;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--terra);
+  background: var(--terra-soft);
+  padding: 1px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+/* 溯源抽屉:已下架/已失效知识 KP 条目的灰标(跟在 KP 名后) */
+.src-meta .src-dead {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--terra);
+  background: var(--terra-soft);
+  padding: 1px 6px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
 
 /* —— 参考来源:KP 块 / 互联网块 分隔 + 命中文件列举 —— */
 .src-meta .fl + .fl {
@@ -1294,16 +1332,34 @@ body,
   color: var(--indigo-ink);
   cursor: pointer;
 }
-/* V1.4 订单退款：列表轻量摘要 + 详情分层记录。 */
-.refund-strip{margin-top:10px;padding:8px 10px;border-radius:9px;background:#F3F5F8;border:1px solid #EAEDF2;display:flex;flex-direction:column;gap:6px}
+/* V1.4 订单退款：列表轻量摘要 + 详情分层记录。
+   0714 #8：同屏只保留一处彩色语义——单笔退款进度三色(jade/indigo/terra)；
+   整单状态、条带底色、权益说明全部中性化，退款信息不再压过订单本身。 */
+.refund-strip{margin-top:10px;padding:8px 10px;border-radius:9px;background:var(--surface-warm);border:1px solid var(--line-2);display:flex;flex-direction:column;gap:6px}
 .refund-strip-row{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:8px;font-size:12px;color:var(--ink-3)}
 .refund-strip-row>span:last-child{text-align:right}
 .refund-state{font-weight:700;white-space:nowrap}
 .refund-state.success{color:var(--jade)}
 .refund-state.processing{color:var(--indigo)}
 .refund-state.failed{color:var(--terra)}
-.refund-detail-item{padding:12px 0;border-top:1px solid var(--line)}
+/* 订单卡整单状态(部分退款/全额退款/已核销等)与日期同排中性展示,不做彩色映射 */
+.order-meta>span:first-child{color:var(--ink-2)}
+/* 详情退款记录：去掉外层留白,靠 .od-row 自身 padding 分隔——「退款记录」标题下直接接首行;
+   多笔之间用 item 的 border-top(较深的 --line)分隔,并抑制行自带的 --line-2 细线避免双线 */
+.refund-detail-item{padding:0;border-top:1px solid var(--line)}
 .refund-detail-item:first-of-type{border-top:0}
+.refund-detail-item .od-row:first-child{border-top:0}
 .refund-amount{font-family:var(--mono);font-weight:700;color:var(--ink)!important}
-.refund-policy-note{margin:10px 0 0;padding:10px 12px 10px 28px;border-left:3px solid var(--terra);border-radius:6px;background:rgba(229,83,59,.07);color:var(--ink-2);font-size:12px;line-height:1.7}
+/* 退款权益说明：卡片内底部浅灰小字注释(细分隔线+小圆点前缀),不再用红色警示框 */
+.refund-policy-note{margin:0;padding:10px 16px 12px;border-top:1px solid var(--line-2);list-style:none;color:var(--ink-3);font-size:12px;line-height:1.8}
+.refund-policy-note li::before{content:'·';margin-right:6px}
 .refund-policy-note li+li{margin-top:2px}
+
+/* —— 0714 #18 KP 下架/失效态 —— */
+/* 我的纸书:已下架 KP 的灰底小标(封面右上,替换「已解锁」位置的语义,中性灰不抢戏) */
+.bk-offshelf{position:absolute;top:6px;right:6px;font-size:9px;font-weight:700;color:#fff;background:rgba(23,26,33,.45);padding:2px 7px;border-radius:7px;z-index:2;letter-spacing:.02em}
+/* 我的永享:已删除内容——封面置灰 + 右上「已失效」标(terra-soft 底 terra 字)。
+   标挂在卡片层而非封面内,避免被封面的 grayscale 一起置灰;卡片补 relative 作定位锚点 */
+.yx-card{position:relative}
+.yx-cover.dead{filter:grayscale(1);opacity:.6}
+.yx-dead{position:absolute;top:6px;right:6px;font-size:9px;font-weight:700;color:var(--terra);background:var(--terra-soft);padding:2px 7px;border-radius:7px;z-index:2;letter-spacing:.02em}

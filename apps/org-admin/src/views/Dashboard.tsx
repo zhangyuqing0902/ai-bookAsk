@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot, CurrentSubCard, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { compareMetric, comparisonPeriodLabel, currentPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, currentSubCard } from '@aba/mock';
+import { compareMetric, comparisonPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, currentSubCard } from '@aba/mock';
+import { buildDashboardSpec } from '../exports/dashboard';
 
 // 机构后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
 // 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
@@ -36,10 +37,8 @@ export function Dashboard() {
           <div className="pt">主控台</div>
         </div>
         <div className="pa">
-          <button className="btn btn-ghost btn-sm" onClick={() => { const sub = currentSubCard(MY_ORG_SUBS); void exportWorkbook('机构主控台报表', [
-            { name: '实时总览', title: '机构主控台 · 实时总览', subtitle: 'XX 出版社 · 截至导出时刻的实时快照，不参与环比', headers: ['分类', '指标', '数值', '单位', '统计口径'], rows: [[ '经营', '累计 GMV', orgSnapshot.totalGmv, '元', '历史已支付订单'], ['经营', '累计退款', 1860, '元', '历史成功退款'], ['经营', '净 GMV', orgSnapshot.totalGmv - 1860, '元', '累计 GMV - 成功退款'], ['用户', '当前会员', orgSnapshot.currentMembers, '人', '实时权益快照'], ['用户', '累计注册用户', orgSnapshot.totalRegistered, '人', '按用户 ID 精确去重'], ...(sub?.rows.map((r) => [r.kind === 'occupancy' ? '资源占用' : '周期消耗', r.k, r.used, r.unit, r.info]) ?? [])], widths: [16, 22, 18, 12, 48] },
-            { name: '经营分析', title: '机构主控台 · 经营分析', subtitle: `当前区间 ${currentPeriodLabel(days)} · ${comparisonPeriodLabel(days)}`, headers: ['数据类型', '指标或日期', '数值', '单位', '统计口径'], rows: [['KPI', '活跃用户', cur.activeUsers, '人', '区间精确去重'], ['KPI', '新增会员', cur.newMembers, '人', '区间精确去重'], ['KPI', '区间 GMV', cur.gmv, '元', '区间已支付'], ['KPI', '区间提问数', cur.questions, '条', '含追问'], ...chartSlice.flatMap((d) => [['趋势-DAU', d.mmdd, d.dau, '人', '自然日'], ['趋势-新增会员', d.mmdd, d.newMembers, '人', '自然日']])], widths: [18, 22, 18, 12, 36] },
-          ]); toast('正在生成 XLSX 报表'); }}>
+          {/* 0714：导出走 spec 纯函数（exports/dashboard.ts），与 docs 模板脚本同源；机构名由 spec 内 MY_ORG 提供 */}
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDashboardSpec({ days, rangeLabel, snapshot: orgSnapshot, sub: currentSubCard(MY_ORG_SUBS), cur, prev, chartSlice })); toast('正在导出 报表'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>

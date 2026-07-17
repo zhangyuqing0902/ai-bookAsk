@@ -3,7 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { TextInput } from './Fields';
 import { Modal } from './Modal';
-import { pickFile, ACCEPT } from './Upload';
+import { pickFile, pickAudio, ACCEPT } from './Upload';
+
+// 0716 #11：机构内现有 Agent 名（演示）——用于名称重复校验。
+const EXISTING_AGENT_NAMES = ['李医生', '王护士', '康复助手'];
 
 const DEFAULT_PROMPT =
   '你是一位资深心血管科医生「李医生」。回答需严谨、有出处,优先引用知识库内容并标注来源;语气专业而亲切。遇到受限的图/音/视内容时,引导用户开通会员或单独永享解锁。涉及诊断与用药时提醒用户以线下医嘱为准。';
@@ -24,12 +27,20 @@ export function AgentDetailView({
   const { id } = useParams();
   const isNew = id === 'new';
   const agentType: string = '普通';
+  const originalName = isNew ? '' : '李医生';
   const [crop, setCrop] = useState<null | 'avatar'>(null);
+  const [name, setName] = useState(originalName);
   const [ttsUploaded, setTtsUploaded] = useState(!isNew);
   const [ttsPlaying, setTtsPlaying] = useState(false);
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
 
+  // 0716 #11：保存前校验——名称非空 + 机构内唯一；TTS 参考音必填（格式/时长在上传时已校验）
   const save = () => {
+    const nm = name.trim();
+    if (!nm) return toast('请输入 Agent 名称');
+    const otherNames = EXISTING_AGENT_NAMES.filter((n) => n !== originalName);
+    if (otherNames.includes(nm)) return toast('该 Agent 名称在机构内已存在，请更换');
+    if (!ttsUploaded) return toast('请上传 TTS 参考音');
     toast(isNew ? '已创建 Agent' : promptEditable ? '已保存（含回答 Prompt）' : '已保存');
     if (isNew) nav(backTo);
   };
@@ -61,7 +72,10 @@ export function AgentDetailView({
           </div>
           <div className="fm-row">
             <div className="lab">名称<span className="req">*</span></div>
-            <div className="ctl"><TextInput defaultValue={isNew ? '' : '李医生'} placeholder="请输入 Agent 名称" style={{ maxWidth: 280 }} /></div>
+            <div className="ctl">
+              <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="请输入 Agent 名称" style={{ maxWidth: 280 }} />
+              <div className="hint" style={{ marginTop: 6 }}>名称在机构内不可重复</div>
+            </div>
           </div>
           <div className="fm-row">
             <div className="lab">类型</div>
@@ -86,14 +100,15 @@ export function AgentDetailView({
                     ))}
                   </span>
                   <span className="tts-dur mono">0:08</span>
-                  <span className="tts-reup" onClick={(e) => { e.stopPropagation(); pickFile(ACCEPT.audio, (n) => toast('已替换为 ' + n)); }}>重新上传</span>
+                  <span className="tts-reup" onClick={(e) => { e.stopPropagation(); pickAudio((n) => toast('已替换为 ' + n), (r) => toast(r)); }}>重新上传</span>
                 </div>
               ) : (
-                <button className="btn btn-ghost btn-sm" onClick={() => pickFile(ACCEPT.audio, () => setTtsUploaded(true))}>
+                <button className="btn btn-ghost btn-sm" onClick={() => pickAudio(() => setTtsUploaded(true), (r) => toast(r))}>
                   <Icon id="i-up" w={14} h={14} />
                   上传音频
                 </button>
               )}
+              <div className="hint" style={{ marginTop: 6 }}>格式 MP3 / WAV · 时长 3~10 秒</div>
             </div>
           </div>
           <div className="fm-row">

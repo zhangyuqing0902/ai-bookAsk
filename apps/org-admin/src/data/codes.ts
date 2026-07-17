@@ -10,17 +10,17 @@ export interface Batch {
 }
 export const BATCHES: Batch[] = [
   { id: 'B2026SBH', name: '2026 数博会活动', redeemed: 128, total: 500, duration: '3 个月', validFrom: '2026-05-20 00:00', validTo: '2026-08-31 23:59', createdAt: '2026-05-18 09:30' },
-  { id: 'B2026NCS', name: '内部测试批次', redeemed: 2, total: 10, duration: '6 个月', createdAt: '2026-05-20 14:10' },
-  { id: 'B2026VIP', name: 'VIP 客户回馈', redeemed: 46, total: 100, duration: '12 个月', createdAt: '2026-04-29 16:02' },
-  { id: 'B2026SPR', name: '春季读书月', redeemed: 210, total: 300, duration: '1 个月', createdAt: '2026-04-15 10:20' },
-  { id: 'B2026EDU', name: '校园合作派发', redeemed: 88, total: 200, duration: '6 个月', createdAt: '2026-04-08 15:45' },
-  { id: 'B2026NEW', name: '新用户拉新', redeemed: 320, total: 1000, duration: '1 个月', createdAt: '2026-03-28 11:12' },
-  { id: 'B2026LIV', name: '直播间专属', redeemed: 64, total: 80, duration: '3 个月', createdAt: '2026-03-20 20:08' },
-  { id: 'B2026GFT', name: '老客回馈礼包', redeemed: 30, total: 150, duration: '12 个月', createdAt: '2026-03-12 09:00' },
-  { id: 'B2026EXP', name: '展会扫码领取', redeemed: 156, total: 400, duration: '3 个月', createdAt: '2026-02-26 13:30' },
-  { id: 'B2026PRT', name: '渠道合作分发', redeemed: 12, total: 50, duration: '6 个月', createdAt: '2026-02-18 16:40' },
-  { id: 'B2026OLD', name: '会员续费召回', redeemed: 78, total: 120, duration: '1 个月', createdAt: '2026-02-05 08:55' },
-  { id: 'B2026YER', name: '年货节活动', redeemed: 240, total: 600, duration: '3 个月', createdAt: '2026-01-22 10:05' },
+  { id: 'B2026NCS', name: '内部测试批次', redeemed: 2, total: 10, duration: '6 个月', validFrom: '2026-05-20 00:00', validTo: '2026-08-20 23:59', createdAt: '2026-05-20 14:10' },
+  { id: 'B2026VIP', name: 'VIP 客户回馈', redeemed: 46, total: 100, duration: '12 个月', validFrom: '2026-04-29 00:00', validTo: '2026-10-29 23:59', createdAt: '2026-04-29 16:02' },
+  { id: 'B2026SPR', name: '春季读书月', redeemed: 210, total: 300, duration: '1 个月', validFrom: '2026-04-15 00:00', validTo: '2026-06-15 23:59', createdAt: '2026-04-15 10:20' },
+  { id: 'B2026EDU', name: '校园合作派发', redeemed: 88, total: 200, duration: '6 个月', validFrom: '2026-04-08 00:00', validTo: '2026-10-08 23:59', createdAt: '2026-04-08 15:45' },
+  { id: 'B2026NEW', name: '新用户拉新', redeemed: 320, total: 1000, duration: '1 个月', validFrom: '2026-03-28 00:00', validTo: '2026-06-28 23:59', createdAt: '2026-03-28 11:12' },
+  { id: 'B2026LIV', name: '直播间专属', redeemed: 64, total: 80, duration: '3 个月', validFrom: '2026-03-20 00:00', validTo: '2026-06-20 23:59', createdAt: '2026-03-20 20:08' },
+  { id: 'B2026GFT', name: '老客回馈礼包', redeemed: 30, total: 150, duration: '12 个月', validFrom: '2026-03-12 00:00', validTo: '2027-03-12 23:59', createdAt: '2026-03-12 09:00' },
+  { id: 'B2026EXP', name: '展会扫码领取', redeemed: 156, total: 400, duration: '3 个月', validFrom: '2026-02-26 00:00', validTo: '2026-05-26 23:59', createdAt: '2026-02-26 13:30' },
+  { id: 'B2026PRT', name: '渠道合作分发', redeemed: 12, total: 50, duration: '6 个月', validFrom: '2026-02-18 00:00', validTo: '2026-08-18 23:59', createdAt: '2026-02-18 16:40' },
+  { id: 'B2026OLD', name: '会员续费召回', redeemed: 78, total: 120, duration: '1 个月', validFrom: '2026-02-05 00:00', validTo: '2026-05-05 23:59', createdAt: '2026-02-05 08:55' },
+  { id: 'B2026YER', name: '年货节活动', redeemed: 240, total: 600, duration: '3 个月', validFrom: '2026-01-22 00:00', validTo: '2026-04-22 23:59', createdAt: '2026-01-22 10:05' },
 ];
 
 export interface Code {

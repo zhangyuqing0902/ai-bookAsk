@@ -1,89 +1,33 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, Dropdown, InfoDot, exportWorkbook, UNIT_NOTE } from '@aba/ui-admin';
-import { comparisonPeriodLabel, metricHelp, orgOptionLabel, orgOptionValue } from '@aba/mock';
+import { comparisonPeriodLabel, metricHelp, orgOptionValue, PLATFORM_ORGS, platformOrgRole } from '@aba/mock';
+import { MODEL_USAGE_ORG_BASE, MODEL_USAGE_RANGE, MODEL_USAGE_TOTALS } from '../data/modelUsage';
+import { buildModelUsageSpec } from '../exports/modelUsage';
+import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 
 // 平台后台 · 模型用量（平台默认 LLM）。0610:两段式(实时总览 + 经营分析)。
 // 0614:经营分析全部指标 + 总量趋势 + Top 机构排行 按 今日/近7天/30天 真联动；删「当期」硬编码，改按所选时间显示。
 // 0614b:token / 调用 统一中文万进制（万/亿），并显单位（token / 次）。
-const I = 'var(--indigo)', J = 'var(--jade)', A = 'var(--amber)', G = 'var(--ink-3)';
-type TopRow = { nm: string; pct: number; color: string; pv: string };
-interface MU {
-  tokens: string; // 区间 tokens（万/亿）
-  tkDelta: string;
-  callVal: string;
-  callUnit: string; // 单位后缀（次）
-  callDelta: string;
-  resp: string;
-  respNote: string;
-  x: string[];
-  total: number[]; // 全平台总量趋势
-  top: TopRow[]; // Top 机构 token 排行
-  orgFactor: number; // 单机构趋势相对「近 7 天」基准的缩放
-}
-
-const RANGE: Record<string, MU> = {
-  '今日': {
-    tokens: '62万', tkDelta: '12.4% 较上一周期',
-    callVal: '1.8万', callUnit: '次', callDelta: '7.5% 较上一周期',
-    resp: '1.7', respNote: '优化 0.3s',
-    x: ['00时', '04时', '08时', '12时', '16时', '20时', '现在'],
-    total: [18, 14, 40, 78, 92, 105, 80],
-    top: [
-      { nm: 'XX 出版社', pct: 100, color: I, pv: '45万' },
-      { nm: 'YY 教育', pct: 62, color: J, pv: '28万' },
-      { nm: 'ZZ 少儿', pct: 42, color: A, pv: '19万' },
-      { nm: 'AA 文化集团', pct: 29, color: G, pv: '13万' },
-      { nm: 'BB 数字出版', pct: 20, color: G, pv: '9万' },
-    ],
-    orgFactor: 0.08,
-  },
-  '近 7 天': {
-    tokens: '860万', tkDelta: '9.2% 较上一周期',
-    callVal: '24万', callUnit: '次', callDelta: '6.1% 较上一周期',
-    resp: '1.8', respNote: '优化 0.2s',
-    x: ['05-25', '05-26', '05-27', '05-28', '05-29', '05-30', '05-31'],
-    total: [250, 305, 308, 357, 370, 423, 463],
-    top: [
-      { nm: 'XX 出版社', pct: 100, color: I, pv: '640万' },
-      { nm: 'YY 教育', pct: 62, color: J, pv: '400万' },
-      { nm: 'ZZ 少儿', pct: 44, color: A, pv: '280万' },
-      { nm: 'AA 文化集团', pct: 30, color: G, pv: '190万' },
-      { nm: 'BB 数字出版', pct: 22, color: G, pv: '140万' },
-    ],
-    orgFactor: 1,
-  },
-  '30 天': {
-    tokens: '3,620万', tkDelta: '14.0% 较上一周期',
-    callVal: '102万', callUnit: '次', callDelta: '8.8% 较上一周期',
-    resp: '1.9', respNote: '优化 0.1s',
-    x: ['05-02', '05-07', '05-12', '05-17', '05-22', '05-27', '06-01'],
-    total: [1050, 1180, 1260, 1380, 1520, 1660, 1820],
-    top: [
-      { nm: 'XX 出版社', pct: 100, color: I, pv: '2,600万' },
-      { nm: 'YY 教育', pct: 65, color: J, pv: '1,700万' },
-      { nm: 'ZZ 少儿', pct: 42, color: A, pv: '1,100万' },
-      { nm: 'AA 文化集团', pct: 29, color: G, pv: '760万' },
-      { nm: 'BB 数字出版', pct: 21, color: G, pv: '560万' },
-    ],
-    orgFactor: 4.2,
-  },
-};
-
-// 单机构趋势基准（近 7 天），其余区间按 orgFactor 缩放
-const ORG_BASE: Record<string, number[]> = {
-  'XX 出版社': [120, 150, 140, 175, 165, 205, 225],
-  'YY 教育': [80, 95, 100, 110, 120, 128, 140],
-  'ZZ 少儿': [50, 60, 68, 72, 85, 90, 98],
-};
+// 0714：mock 数据下移 ../data/modelUsage；#5.1 机构下拉改机构主数据全量（父机构带后缀 + 汇总口径说明行）；
+//       导出迁移到 exports/modelUsage.ts spec 纯函数（实时 / 区间 Sheet 分别标注）。
 
 export function ModelUsage() {
   const [rangeLabel, setRangeLabel] = useState('近 7 天');
   const [org, setOrg] = useState('全部');
-  const d = RANGE[rangeLabel] ?? RANGE['近 7 天'];
+  const d = MODEL_USAGE_RANGE[rangeLabel] ?? MODEL_USAGE_RANGE['近 7 天'];
   const periodKind = rangeLabel === '今日' ? 'today' as const : 'range' as const;
   const periodDays = rangeLabel === '今日' ? 1 : rangeLabel === '30 天' ? 30 : 7;
-  const orgSeries = (ORG_BASE[org] ?? ORG_BASE['XX 出版社']).map((v) => Math.max(1, Math.round(v * d.orgFactor)));
+  const orgSeries = (MODEL_USAGE_ORG_BASE[org] ?? MODEL_USAGE_ORG_BASE['XX 出版社']).map((v) => Math.max(1, Math.round(v * d.orgFactor)));
+  // 0714 #5.1：机构下拉 = 机构主数据全量（应用层级覆盖），父机构带后缀；选中父机构显示汇总口径说明
+  const overrides = useOrgTree((s) => s.parentOverrides);
+  const orgs = applyOrgOverrides(PLATFORM_ORGS, overrides);
+  const orgLabel = (name: string) => {
+    const o = orgs.find((x) => x.name === name);
+    return o && platformOrgRole(o, orgs) === 'parent' ? `${name}（父机构）` : name;
+  };
+  const selected = orgs.find((o) => o.name === org);
+  const childNames = selected && platformOrgRole(selected, orgs) === 'parent' ? orgs.filter((o) => o.parentId === selected.id).map((o) => o.name) : [];
 
   return (
     <>
@@ -92,13 +36,21 @@ export function ModelUsage() {
           <div className="pt">全域模型用量</div>
         </div>
         <div className="pa">
-          <Dropdown label="全部" options={['全部', ...['XX 出版社', 'YY 教育', 'ZZ 少儿'].map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ minWidth: 190 }} />
-          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook('全域模型用量', [{ name: '指标总览', title: '平台全域模型用量', subtitle: `机构范围=${org} · 当前区间=${rangeLabel} · ${comparisonPeriodLabel(periodDays)}`, headers: ['指标', '数值', '单位', '统计口径'], rows: [['累计 tokens', '1.28亿', 'token', '实时快照，不参与环比'], ['累计调用次数', '362万', '次', '实时快照，不参与环比'], ['区间 tokens', d.tokens, 'token', '输入+输出'], ['区间调用次数', d.callVal, '次', '模型请求'], ['平均响应', d.resp, '秒', '请求到首字']], widths: [24, 20, 14, 42] }, { name: '用量趋势', title: `模型用量趋势 · ${rangeLabel}`, headers: ['时间', '总 tokens', '机构范围'], rows: d.x.map((x, i) => [x, org === '全部' ? d.total[i] : orgSeries[i], org]), widths: [20, 20, 24] }, { name: '机构排行', title: `Top 机构 token 排行 · ${rangeLabel}`, headers: ['机构', 'Token 用量'], rows: d.top.map((r) => [r.nm, r.pv]), widths: [24, 20] }]); toast('正在生成 XLSX'); }}>
+          <Dropdown label="全部" options={['全部', ...orgs.map((o) => orgLabel(o.name))]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ minWidth: 190 }} />
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildModelUsageSpec({ org, rangeLabel })); toast('正在导出'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
         </div>
       </div>
+
+      {/* 0714 #5.1：选中父机构时显示汇总口径说明（父机构自身 + 全部子机构） */}
+      {childNames.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 12px', padding: '8px 12px', background: 'var(--indigo-soft)', border: '1px solid var(--line)', borderRadius: 10, fontSize: 12.5, color: 'var(--indigo-ink)' }}>
+          <Icon id="i-building" w={14} h={14} />
+          <span>「{org}」为父机构，以下用量已汇总子机构：{childNames.join('、')}（口径 = 父机构自身 + 全部子机构）</span>
+        </div>
+      )}
 
       {/* 实时总览(平台开通至今累计,不随时间筛选变化) */}
       <div className="dash-section-title">
@@ -113,7 +65,7 @@ export function ModelUsage() {
             <InfoDot text={metricHelp('平台默认 LLM 自开通至今消耗的输入与输出 token 总数。', 'snapshot')} />
           </div>
           <div className="val">
-            1.28亿<span className="uu">token</span>
+            {MODEL_USAGE_TOTALS.tokens}<span className="uu">token</span>
           </div>
         </div>
         <div className="kpi">
@@ -122,7 +74,7 @@ export function ModelUsage() {
             <InfoDot text={metricHelp('平台默认 LLM 自开通至今被请求的总次数。', 'snapshot')} />
           </div>
           <div className="val">
-            362万<span className="uu">次</span>
+            {MODEL_USAGE_TOTALS.calls}<span className="uu">次</span>
           </div>
         </div>
       </div>
@@ -144,8 +96,8 @@ export function ModelUsage() {
           <div className="val">
             {d.tokens}<span className="uu">token</span>
           </div>
+          {/* 0716 #12：去掉重复的 JSX 箭头图标，仅保留数据串内嵌的方向箭头（↑/↓），避免双箭头；导出复用同一数据串需保留方向。 */}
           <div className="delta up">
-            <Icon id="i-up" w={11} h={11} />
             {d.tkDelta}<span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
           </div>
         </div>
@@ -158,7 +110,6 @@ export function ModelUsage() {
             {d.callVal}<span className="uu">{d.callUnit}</span>
           </div>
           <div className="delta up">
-            <Icon id="i-up" w={11} h={11} />
             {d.callDelta}<span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
           </div>
         </div>
@@ -171,7 +122,6 @@ export function ModelUsage() {
             {d.resp}<span className="u">s</span>
           </div>
           <div className="delta up">
-            <Icon id="i-up" w={11} h={11} />
             {d.respNote}<span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
           </div>
         </div>

@@ -1,14 +1,30 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, Dropdown, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { compareMetric, comparisonPeriodLabel, currentPeriodLabel, metricHelp, orgOptionLabel, orgOptionValue, platformDaily, platformSnapshot, rangeMetrics } from '@aba/mock';
+import { compareMetric, comparisonPeriodLabel, metricHelp, orgOptionValue, PLATFORM_ORGS, platformDaily, platformSnapshot, platformOrgRole, rangeMetrics } from '@aba/mock';
+import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
+import { buildDashboardSpec } from '../exports/dashboard';
 
 // 平台后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
 // 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
+// 0714：#5.1 机构下拉改用机构主数据全量（父机构带后缀；选中父机构显示「已汇总子机构」口径说明行）；
+//       导出迁移到 exports/dashboard.ts spec 纯函数（与 docs/export-templates 模板同源）。
 export function Dashboard() {
   const [days, setDays] = useState(7);
   const [rangeLabel, setRangeLabel] = useState('近 7 天');
+  const [range, setRange] = useState<{ start?: Date; end?: Date }>({});
   const [org, setOrg] = useState('全部机构');
+  // 机构主数据（应用「子机构改父 / 取消关联」层级覆盖），父机构口径与机构管理一致
+  const overrides = useOrgTree((s) => s.parentOverrides);
+  const orgs = applyOrgOverrides(PLATFORM_ORGS, overrides);
+  // 下拉选项文案：父机构带「（父机构）」后缀（基于覆盖后的机构树实时判定）
+  const orgLabel = (name: string) => {
+    const o = orgs.find((x) => x.name === name);
+    return o && platformOrgRole(o, orgs) === 'parent' ? `${name}（父机构）` : name;
+  };
+  const selected = orgs.find((o) => o.name === org);
+  // 选中父机构 → 汇总口径 = 父机构自身 + 全部子机构（mock 数值不变，说明行到位即可）
+  const childNames = selected && platformOrgRole(selected, orgs) === 'parent' ? orgs.filter((o) => o.parentId === selected.id).map((o) => o.name) : [];
   const scope = org === '全部机构' ? '全平台' : org;
   const cur = rangeMetrics(platformDaily, days);
   const prev = rangeMetrics(platformDaily, days, days);
@@ -38,16 +54,22 @@ export function Dashboard() {
           <div className="pt">主控台</div>
         </div>
         <div className="pa">
-          <Dropdown label="全部机构" options={['全部机构', ...['XX 出版社', 'YY 教育', 'ZZ 少儿', 'AA 文化集团'].map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ minWidth: 190 }} />
-          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook('平台主控台报表', [
-            { name: '实时总览', title: '平台主控台 · 实时总览', subtitle: `${scope} · 截至导出时刻的实时快照，不参与环比`, headers: ['指标', '数值', '单位', '统计口径'], rows: [['入驻机构数', platformSnapshot.orgs, '家', '已创建且未删除'], ['累计用户', platformSnapshot.totalUsers, '人', '按用户 ID 精确去重'], ['累计 GMV', platformSnapshot.totalGmv, '元', '历史已支付订单'], ['净 GMV', platformSnapshot.totalGmv - 18100, '元', '累计 GMV - 成功退款'], ['提问总量', platformSnapshot.totalQuestions, '条', '历史累计含追问']], widths: [22, 18, 12, 42] },
-            { name: '经营分析', title: '平台主控台 · 经营分析', subtitle: `${scope} · 当前区间 ${currentPeriodLabel(days)} · ${comparisonPeriodLabel(days)}`, headers: ['数据类型', '指标或日期', '数值', '单位', '统计口径'], rows: [['KPI', '活跃用户', cur.activeUsers, '人', '区间精确去重'], ['KPI', '新增会员', cur.newMembers, '人', '区间精确去重'], ['KPI', '区间 GMV', cur.gmv, '元', '区间已支付'], ['KPI', '区间提问数', cur.questions, '条', '含追问'], ...chartSlice.map((d) => ['趋势', d.mmdd, d.questions, '条', days <= 1 ? '小时趋势展示近7日演示数据' : '自然日趋势'])], widths: [14, 22, 18, 12, 42] },
-          ]); toast('正在生成 XLSX 报表'); }}>
+          {/* 0715 #6：收起态默认文案改回「全部机构」（首项即全平台口径）；选项首项、state / scope 判断值不变 */}
+          <Dropdown label="全部机构" options={['全部机构', ...orgs.map((o) => orgLabel(o.name))]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ minWidth: 190 }} />
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDashboardSpec({ org, days, rangeLabel, start: range.start, end: range.end })); toast('正在导出 报表'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
         </div>
       </div>
+
+      {/* 0714 #5.1：选中父机构时显示汇总口径说明（父机构自身 + 全部子机构） */}
+      {childNames.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 12px', padding: '8px 12px', background: 'var(--indigo-soft)', border: '1px solid var(--line)', borderRadius: 10, fontSize: 12.5, color: 'var(--indigo-ink)' }}>
+          <Icon id="i-building" w={14} h={14} />
+          <span>「{org}」为父机构，以下数据已汇总子机构：{childNames.join('、')}（口径 = 父机构自身 + 全部子机构）</span>
+        </div>
+      )}
 
       {/* 实时总览（累计 / 存量，不随时间筛选变化） */}
       <div className="dash-section-title">
@@ -128,6 +150,7 @@ export function Dashboard() {
           onChange={(r) => {
             setDays(r.days);
             setRangeLabel(r.label);
+            setRange({ start: r.start, end: r.end });
           }}
         />
       </div>

@@ -21,10 +21,24 @@ export function Dropdown({
   // 选中重置项（全部 / 不限）等同未筛选，回到显示筛选条件名。
   const isReset = val == null || val === '全部' || val === '不限' || val.startsWith('全部');
   const display = isReset ? label : val;
+  // 0714 #8：父机构选项标签化——调用方仍传纯字符串「XX（父机构）」（orgOptionLabel 产出），
+  // 这里只在渲染层把「（父机构）」后缀替换成主题色 tag（与机构管理列表 OrgList 一致）；
+  // key / on 比较 / onSelect 回传仍用完整字符串 o，兼容调用方的 orgOptionValue 剥离逻辑。
+  const PARENT_SUFFIX = '（父机构）';
+  // 0715 #5：用 inline-flex 容器包住裸名 + tag，让 tag 与文字几何垂直居中（原 verticalAlign 无法对齐）
+  const renderOpt = (o: string) =>
+    o.endsWith(PARENT_SUFFIX) ? (
+      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+        {o.slice(0, -PARENT_SUFFIX.length)}
+        <span className="tag-s tag-indigo" style={{ marginLeft: 6 }}>父机构</span>
+      </span>
+    ) : (
+      o
+    );
   return (
     <div style={{ position: 'relative', ...(style?.width ? { width: style.width } : {}) }}>
       <div className={'sel' + (isReset ? '' : ' sel-on')} style={{ justifyContent: 'space-between', cursor: 'pointer', ...style }} onClick={() => setOpen((o) => !o)}>
-        <span>{display}</span>
+        <span>{isReset ? label : renderOpt(display as string)}</span>
         <Icon id="i-chevD" />
       </div>
       {open && (
@@ -58,7 +72,7 @@ export function Dropdown({
                     onSelect?.(o);
                   }}
                 >
-                  {o}
+                  {renderOpt(o)}
                   {dis && <span style={{ fontSize: 11, marginLeft: 6 }}>· 暂未开放</span>}
                 </div>
               );

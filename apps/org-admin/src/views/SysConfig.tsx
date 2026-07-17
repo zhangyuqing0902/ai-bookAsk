@@ -32,6 +32,17 @@ export function SysConfig() {
             <div className="inp2 disabled">支持随时退订，到期赠 72 小时会员缓冲使用期 · 暂不可编辑</div>
           </div>
         </div>
+        {/* 0716 #10：会员价变更警示——无序序号结构化，提醒运营确定后非必要不改，避免续费扣款争议 */}
+        <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
+          <div className="lab" />
+          <div className="ctl">
+            {/* 0716 二批 #9：精简为单行（前两点合并，删后两点） */}
+            <div style={{ background: 'var(--surface-warm, #FBF7F0)', border: '1px solid var(--line)', borderLeft: '3px solid var(--amber)', borderRadius: 10, padding: '11px 14px', maxWidth: 620 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>调价须知</div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.8, color: 'var(--ink-2)' }}>会员价一经确定，非必要请勿修改；已开通自动续费的用户，下一扣费周期将按修改后的价格扣款。</div>
+            </div>
+          </div>
+        </div>
         <div className="fm-row" style={{ borderTop: 'none', paddingTop: 6 }}>
           <div className="lab" />
           <div className="ctl">

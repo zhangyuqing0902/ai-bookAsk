@@ -96,4 +96,43 @@ export const KPS: KnowledgeProduct[] = [
     status: 'published',
     createdAt: '2026-06-05',
   },
+  // 0716 #1.1：KP 下架 / 删除对 C 端影响的演示数据——
+  // unlisted＝已下架（停新售、已解锁权益保留）；deleted＝已删除（软删：内容下线、已购永享标「已失效」，保留历史凭证）
+  {
+    id: 'kp_anesthesia',
+    orgId: 'org_med',
+    name: '围手术期麻醉管理精要',
+    granularity: 'book',
+    description: '术前评估 / 麻醉方案 / 术后镇痛，覆盖 40+ 高危场景处置。',
+    baseTag: 'member',
+    hasForever: true,
+    foreverPrice: 29,
+    status: 'unlisted',
+    createdAt: '2026-04-02',
+  },
+  {
+    id: 'kp_ultrasound_old',
+    orgId: 'org_med',
+    name: '急诊超声快速上手（旧版）',
+    granularity: 'book',
+    description: '旧版内容已由新版替代，本 KP 已删除下线。',
+    baseTag: 'free',
+    hasForever: true,
+    foreverPrice: 19,
+    status: 'deleted',
+    createdAt: '2025-11-20',
+  },
+  // 0714 #5：无任何业务关系（无订单 / 赠送 / 分享 / 导入）的演示 KP——用于演示「物理删除」流。
+  // 与只能软删除的 KP 区分：canPhysicallyDeleteKp 全 0 → allowed: true / action: 'delete'（可彻底删除）。
+  {
+    id: 'kp_demo_deletable',
+    orgId: 'org_med',
+    name: '（演示）新建未上架分册',
+    granularity: 'book',
+    description: '刚创建、尚未上架，无任何订单 / 赠送 / 分享 / 导入关系，可被物理删除。',
+    baseTag: 'free',
+    hasForever: false,
+    status: 'draft',
+    createdAt: '2026-07-10',
+  },
 ];

@@ -3,6 +3,7 @@ import { Icon, toast } from '@aba/ui';
 import { Drawer } from './Drawer';
 import { DataGrid, type Col } from './DataGrid';
 import { TextInput } from './Fields';
+import { QtyStepper } from './QtyStepper';
 
 // 0615-5：机构详情订阅记录 + 全域订阅订单 共用的「加油包」右抽屉。
 // 用本地结构类型（不依赖 @aba/mock），与 OrderDetailView / KpDetailView 同样的解耦约定。
@@ -130,24 +131,27 @@ export function SubPackDrawer({
             )}
           </div>
 
-          {/* 新建表单（#5：KP / 存储 / Token 同一行；三项全 0 不可创建） */}
+          {/* 新建表单（#5：KP / 存储 / Token 同一行；三项全 0 不可创建）
+              0714 #11：每项「指标名 + 占用量/消耗量标签 + 输入框(单位)」清晰分组，与新建订阅额度同款；
+              KP · 存储为占用型（占用量），Token 为消耗型（消耗量） */}
           {adding && (
             <div className="pack-form">
+              {/* 0715 #8：加量额度改三张横排指标卡 + 步进器（与新建订阅额度同款）；
+                  onChange 仍走 setPk，三项全 0 校验（submit）不变。
+                  图标：KP=i-cube、存储=i-file2（无 i-db/i-server，取文件件近似）、Token=i-chip。 */}
               <div className="pf-row">
                 <div className="pf-lab">加量额度</div>
-                <div className="pf-fields">
-                  <span className="pf-unit">
-                    <TextInput value={pk.kp} onChange={(e) => setPk({ ...pk, kp: e.target.value })} style={{ width: 72 }} />
-                    <i>个</i>
-                  </span>
-                  <span className="pf-unit">
-                    <TextInput value={pk.storage} onChange={(e) => setPk({ ...pk, storage: e.target.value })} style={{ width: 72 }} />
-                    <i>GB</i>
-                  </span>
-                  <span className="pf-unit">
-                    <TextInput value={pk.token} onChange={(e) => setPk({ ...pk, token: e.target.value })} style={{ width: 72 }} />
-                    <i>亿</i>
-                  </span>
+                <div className="quota-edit" style={{ flex: 1 }}>
+                  {([['kp', 'KP 数', '个', '占用量', 'i-cube'], ['storage', '存储', 'GB', '占用量', 'i-file2'], ['token', 'Token', '亿', '消耗量', 'i-chip']] as const).map(([field, metric, unit, kind, icon]) => (
+                    <div key={field} className="quota-card">
+                      <div className="qc-head">
+                        <span className="qc-ic"><Icon id={icon} /></span>
+                        <span className="qc-name">{metric}</span>
+                        <span className={'tag-s ' + (kind === '消耗量' ? 'tag-indigo' : 'tag-line')}>{kind}</span>
+                      </div>
+                      <QtyStepper value={pk[field]} onChange={(v) => setPk({ ...pk, [field]: v })} unit={unit} />
+                    </div>
+                  ))}
                 </div>
               </div>
               <div className="pf-row">

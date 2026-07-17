@@ -86,6 +86,9 @@
 .lvl-seg b.on.none{background:var(--ink-3);}
 .lvl-seg b.on.read{background:var(--amber);}
 .lvl-seg b.on.write{background:var(--indigo);}
+/* 0715 #9.1：Prompt 编辑联动锁定态——Agent 人设非「可操作」时置灰不可切换，强制显示只读 */
+.lvl-seg.locked{opacity:.55;}
+.lvl-seg b.is-locked{cursor:not-allowed;}
 /* 0613-2：三态图例 */
 .lvl-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin:4px 0 2px;font-size:12px;color:var(--ink-3);}
 .lvl-legend-label{font-weight:600;color:var(--ink-2);}
@@ -415,6 +418,17 @@
 .perm-item .pi-t{font-size:13.5px;font-weight:600;}
 .perm-item .pi-k{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:2px;}
 
+/* 0716 二批 #7：Agent 人设 → Agent 回答 Prompt 编辑 的父子嵌套（缩进 + 灰色虚线连接线） */
+.perm-agent-col{display:flex;flex-direction:column;}
+.perm-child-wrap{position:relative;margin-left:22px;margin-top:2px;}
+.perm-child-wrap::before{content:'';position:absolute;left:-12px;top:-8px;width:12px;height:32px;
+  border-left:2px dashed var(--ink-3);border-bottom:2px dashed var(--ink-3);border-bottom-left-radius:8px;opacity:.55;}
+.perm-item.perm-item-child{background:var(--indigo-soft);border-radius:8px;padding:8px 10px;}
+/* 0716 二批 #7：「功能权限」标签移到 key 行，标题 / key 行均不换行，右侧开关垂直居中对齐 */
+.perm-item.perm-item-child .pi-t{white-space:nowrap;font-size:13px;}
+.perm-item.perm-item-child .pi-k{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.perm-item .pi-k .tag-s{flex:none;white-space:nowrap;}
+
 /* nowrap / 禁用输入 */
 .upbox .nowrap{white-space:nowrap;}
 .inp2.disabled{background:#F3F4F8;color:var(--ink-3);cursor:not-allowed;border-style:dashed;}
@@ -450,6 +464,8 @@
 /* 0614c：输入框宽度与下拉日历面板（.dr-pop.calpop 266px）一致，对齐成一列 */
 .dtr-field{display:inline-flex;align-items:center;width:266px;}
 .dr-pop.calpop.dtr-pop{left:0;right:auto;}
+/* 0714：下方空间不足时面板向上弹（弹窗底部字段点击即完整可见，无需滚动） */
+.dr-pop.calpop.dtr-pop.up{top:auto;bottom:calc(100% + 8px);}
 .dtr-times{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line-2);}
 .dtr-times label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--ink-2);}
 .dtr-time{min-width:auto;flex:none;padding:5px 8px;}

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { Dropdown, TextInput, DomainInput, InfoDot, CurrentSubCard, DateTimeRangeField, RangePicker, Modal, ConfirmDialog, SubPackDrawer, type PackForm, DataGrid, type Col, pickFile, pickImageColor, ACCEPT, UNIT_NOTE } from '@aba/ui-admin';
+import { Dropdown, Search, TextInput, DomainInput, InfoDot, CurrentSubCard, DateTimeRangeField, RangePicker, Modal, ConfirmDialog, SubPackDrawer, type PackForm, QtyStepper, DataGrid, type Col, pickFile, pickImageColor, ACCEPT, UNIT_NOTE } from '@aba/ui-admin';
 import { MY_ORG_SUBS, PLATFORM_ORGS, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, type Subscription } from '@aba/mock';
+import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 
 // 0613-2：套餐 / 配额独立成 Tab；用量看板重排（配额进度重点 + 2×2）；微信配置分区卡片
 // 0615：「套餐 / 配额」Tab 改造为订阅闭环（当前生效订阅只读 + 订阅记录 + 新建续签 / 升级）
@@ -42,7 +43,8 @@ function UsageCard({ title, rows, periodDays }: { title: string; rows: [string, 
               {k}
               <InfoDot text={metricHelp(info, periodDays ? (periodDays === 1 ? 'today' : 'range') : 'snapshot', k.includes('率') ? 'rate' : k.includes('响应') ? 'duration' : 'count')} />
             </span>
-            <span className="uc-v mono">{v}{periodDays && <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>}</span>
+            {/* 0716 #13：数值与对比周期之间增加水平间距，避免过于紧凑 */}
+            <span className="uc-v mono">{v}{periodDays && <span className="period-compare" style={{ marginLeft: 10 }}>{comparisonPeriodLabel(periodDays)}</span>}</span>
           </div>
         ))}
       </div>
@@ -54,12 +56,33 @@ function UsageCard({ title, rows, periodDays }: { title: string; rows: [string, 
 export function OrgDetail() {
   const nav = useNavigate();
   // 从列表带过来的机构编号（r.i）读取当前机构；机构主数据与列表共用同一份 PLATFORM_ORGS。
+  // 0714 #1：层级读 orgTree 覆盖（子机构改父 / 取消关联后，头部 tag 与三态提示即时联动）。
   const { id } = useParams();
-  const org = PLATFORM_ORGS.find((o) => String(o.i) === id) ?? PLATFORM_ORGS[0];
-  const role = platformOrgRole(org); // 'parent' | 'child' | 'ordinary'
-  const parentName = org.parentId ? PLATFORM_ORGS.find((o) => o.id === org.parentId)?.name ?? '—' : null;
-  // 普通机构可选上级 = 其它顶级机构（无上级者，排除自身）；选中后它即成为父机构（两层制）
-  const superiorOptions = ['无（顶级机构）', ...PLATFORM_ORGS.filter((o) => o.parentId === null && o.id !== org.id).map((o) => o.name)];
+  const overrides = useOrgTree((s) => s.parentOverrides);
+  const setParent = useOrgTree((s) => s.setParent);
+  const allOrgs = applyOrgOverrides(PLATFORM_ORGS, overrides);
+  const org = allOrgs.find((o) => String(o.i) === id) ?? allOrgs[0];
+  const role = platformOrgRole(org, allOrgs); // 'parent' | 'child' | 'ordinary'
+  const parentName = org.parentId ? allOrgs.find((o) => o.id === org.parentId)?.name ?? '—' : null;
+  // 可选上级 = 其它顶级机构（无上级者，排除自身）；选中后对方即成为父机构（两层制）
+  const topLevelOthers = allOrgs.filter((o) => o.parentId === null && o.id !== org.id).map((o) => o.name);
+  const superiorOptions = ['无（顶级机构）', ...topLevelOthers];
+  // #1：改上级 / 取消关联二次确认
+  const [pendingParent, setPendingParent] = useState<string | null>(null); // 目标上级机构名
+  const [unlinkOpen, setUnlinkOpen] = useState(false);
+  const confirmParentChange = () => {
+    if (!pendingParent) return;
+    const target = allOrgs.find((o) => o.name === pendingParent);
+    if (!target) return;
+    setParent(org.id, target.id);
+    setPendingParent(null);
+    toast('已更改上级机构');
+  };
+  const doUnlink = () => {
+    setParent(org.id, null);
+    setUnlinkOpen(false);
+    toast('已取消关联，本机构已转为独立机构');
+  };
   const [tab, setTab] = useState(0);
   const [sub, setSub] = useState(0);
   const [net, setNet] = useState(true);
@@ -111,31 +134,35 @@ export function OrgDetail() {
   const [detail, setDetail] = useState<Subscription | null>(null);
   // 加油包右抽屉（针对某个订阅；表单与校验在共享 SubPackDrawer 内）
   const [drawerSub, setDrawerSub] = useState<Subscription | null>(null);
-  // 0615-7：误建删除（仅"零用量、无加油包、非已过期"可删，保留服务 / 计费历史）
+  // 0714 #17：删除放开到「未生效 / 生效」均可删（已过期不出删除入口），确认弹窗分层护栏：
+  // 基础文案 + 已产生用量的红色强警告 + 「删除≠退款」灰字说明；连带删除名下加油包（doDelete 不变）。
   const [delSub, setDelSub] = useState<Subscription | null>(null);
-  const deletable = (s: Subscription) =>
-    subStatus(s) !== '已过期' &&
-    (parseFloat(s.kpUsed ?? '0') || 0) === 0 &&
-    (parseFloat(s.storageUsed ?? '0') || 0) === 0 &&
-    (parseFloat(s.tokenUsed ?? '0') || 0) === 0 &&
-    packsOf(s.id).length === 0;
+  const deletable = (s: Subscription) => subStatus(s) !== '已过期';
+  const usedOf = (s: Subscription) => ({
+    kp: parseFloat(s.kpUsed ?? '0') || 0,
+    storage: parseFloat(s.storageUsed ?? '0') || 0,
+    token: parseFloat(s.tokenUsed ?? '0') || 0,
+  });
+  const hasUsage = (s: Subscription) => {
+    const u = usedOf(s);
+    return u.kp > 0 || u.storage > 0 || u.token > 0;
+  };
   const doDelete = () => {
     if (!delSub) return;
     setSubs((arr) => arr.filter((s) => s.id !== delSub.id && s.parentId !== delSub.id));
     setDelSub(null);
     toast('已删除订阅订单');
   };
-  // 订阅维度筛选
+  // 订阅维度筛选（0714 #15：商务负责人改模糊搜索，位置提前到套餐之前）
   const [fPlan, setFPlan] = useState('全部');
-  const [fOwner, setFOwner] = useState('全部');
+  const [fOwner, setFOwner] = useState('');
   const [fStatus, setFStatus] = useState('全部');
-  const owners = [...new Set(subs.filter((s) => s.type === '订阅').map((s) => s.owner).filter(Boolean))] as string[];
   const recRows = subs
     .filter(
       (s) =>
         s.type === '订阅' &&
         (fPlan === '全部' || s.plan === fPlan) &&
-        (fOwner === '全部' || s.owner === fOwner) &&
+        (!fOwner || (s.owner ?? '').includes(fOwner)) &&
         (fStatus === '全部' || subStatus(s) === fStatus),
     )
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)); // 默认按创建时间倒序
@@ -309,10 +336,25 @@ export function OrgDetail() {
           <div className="fm-row">
             <div className="lab">上级机构</div>
             {role === 'child' ? (
-              // 子机构：上级只读，不可改
-              <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <TextInput value={parentName ?? '—'} disabled style={{ width: 240 }} />
-                <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>该机构已是子机构，上级机构不可修改</span>
+              // 0714 #1：子机构上级可编辑——可改挂其它顶级机构，或取消关联转为独立机构（均二次确认）
+              <div className="ctl">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <Dropdown
+                    key={parentName ?? 'none'}
+                    label={parentName ?? '—'}
+                    options={topLevelOthers}
+                    onSelect={(v) => { if (v !== parentName) setPendingParent(v); }}
+                    style={{ width: 240 }}
+                  />
+                  <button
+                    className="btn btn-sm"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--indigo)', color: 'var(--indigo)' }}
+                    onClick={() => setUnlinkOpen(true)}
+                  >
+                    取消关联，转为独立机构
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 6 }}>更改仅调整层级关系；子机构数据归属与域名不变（仅支持父 / 子两层）</div>
               </div>
             ) : role === 'parent' ? (
               // 父机构：已有下级，不能再挂上级（否则超过父 / 子两层）——字段禁用并说明原因
@@ -321,13 +363,33 @@ export function OrgDetail() {
                 <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>该机构已是父机构，不能再设上级机构（仅支持父 / 子两层）</span>
               </div>
             ) : (
-              // 普通机构：可选一个顶级机构作为上级（选后自身成为子机构）
+              // 普通机构：可选一个顶级机构作为上级（选后自身成为子机构，二次确认，与 #1 同一链路）
               <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Dropdown label="无（顶级机构）" options={superiorOptions} onSelect={() => toast('已选择上级机构（保存后生效）')} style={{ width: 240 }} />
+                <Dropdown label="无（顶级机构）" options={superiorOptions} onSelect={(v) => { if (v !== '无（顶级机构）') setPendingParent(v); }} style={{ width: 240 }} />
                 <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>仅顶级机构可被选为上级；设定后本机构将成为其子机构</span>
               </div>
             )}
           </div>
+
+          {/* 0714 #1：改上级二次确认 */}
+          <ConfirmDialog
+            open={!!pendingParent}
+            title="更改上级机构"
+            confirmText="确认更改"
+            desc={<>将「{org.name}」的上级机构改为「{pendingParent}」？子机构数据归属与域名不变，仅调整层级关系。</>}
+            onConfirm={confirmParentChange}
+            onClose={() => setPendingParent(null)}
+          />
+          {/* 0714 #1：取消关联二次确认（中等 danger） */}
+          <ConfirmDialog
+            open={unlinkOpen}
+            danger
+            title="取消关联"
+            confirmText="确认取消关联"
+            desc={<>解除后本机构成为独立机构；原父机构「{parentName}」若再无其他子机构，其父机构身份同步解除。机构数据与用户服务不受影响。</>}
+            onConfirm={doUnlink}
+            onClose={() => setUnlinkOpen(false)}
+          />
           <div className="fm-row">
             <div className="lab">备注</div>
             <div className="ctl"><TextInput placeholder="选填" style={{ maxWidth: 420 }} /></div>
@@ -355,8 +417,9 @@ export function OrgDetail() {
             </div>
           </div>
           <div className="orders-filter">
+            {/* 0714 #15：商务负责人由下拉改模糊搜索，且放在套餐之前 */}
+            <Search placeholder="商务负责人" minWidth={170} value={fOwner} onChange={setFOwner} />
             <Dropdown label="套餐" options={['全部', ...PLAN_NAMES]} onSelect={setFPlan} />
-            <Dropdown label="商务负责人" options={['全部', ...owners]} onSelect={setFOwner} style={{ width: 150 }} />
             <Dropdown label="状态" options={['全部', '未生效', '生效', '已过期']} onSelect={setFStatus} />
           </div>
           <DataGrid columns={subCols} rows={recRows} empty={{ title: '暂无订阅订单' }} minWidth={1240} pageUnit="笔" />
@@ -394,21 +457,27 @@ export function OrgDetail() {
             </div>
             <div className="fm-row">
               <div className="lab">额度</div>
-              <div className="ctl quota-edit">
-                {/* 3：删除独立不限切换;2：选「不限版」时三额度禁止输入、静态显「不限」 */}
-                {([['kp', '个'], ['storage', 'GB'], ['token', '亿']] as const).map(([field, unit]) => {
-                  const unlim = quota[field] === '不限';
-                  return (
-                    <span key={field} className="quota-cell">
-                      {unlim ? (
-                        <span className="quota-unlim-static">不限</span>
-                      ) : (
-                        <TextInput value={quota[field]} onChange={(e) => editQuota({ [field]: e.target.value })} style={{ width: 72 }} />
-                      )}
-                      <span className="quota-unit">{unit}</span>
-                    </span>
-                  );
-                })}
+              <div className="ctl">
+                <div className="quota-edit">
+                  {/* 0715 #8：三张横排指标卡——顶部圆形图标 + 指标名 + 占用/消耗标签，下方步进器 + 单位。
+                      步进器 onChange 仍走 editQuota 保持套餐联动；选「不限版」时步进器禁用显静态「不限」。
+                      图标：KP=i-cube、存储=i-file2（无 i-db/i-server，取文件件近似）、Token=i-chip。
+                      KP · 存储为占用型（占用量），Token 为消耗型（消耗量）。 */}
+                  {([['kp', 'KP 数', '个', '占用量', 'i-cube'], ['storage', '存储', 'GB', '占用量', 'i-file2'], ['token', 'Token', '亿', '消耗量', 'i-chip']] as const).map(([field, metric, unit, kind, icon]) => {
+                    const unlim = quota[field] === '不限';
+                    return (
+                      <div key={field} className="quota-card">
+                        <div className="qc-head">
+                          <span className="qc-ic"><Icon id={icon} /></span>
+                          <span className="qc-name">{metric}</span>
+                          <span className={'tag-s ' + (kind === '消耗量' ? 'tag-indigo' : 'tag-line')}>{kind}</span>
+                        </div>
+                        <QtyStepper value={unlim ? '不限' : quota[field]} onChange={(v) => editQuota({ [field]: v })} unit={unit} disabled={unlim} />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 6 }}>占用量（KP · 存储）随内容删除可释放；消耗量（Token）只增不退、订阅周期结束清零重计</div>
               </div>
             </div>
             <div className="fm-row">
@@ -467,16 +536,46 @@ export function OrgDetail() {
             onAdd={addPack}
           />
 
-          {/* 0615-7：误建删除二次确认（仅零用量、无加油包、非已过期的订阅可删） */}
-          <ConfirmDialog
-            open={!!delSub}
-            danger
+          {/* 0714 #17 / #14：删除二次确认（未生效 / 生效均可删）。
+              #14：文案改无序列表结构化呈现、每条一行不折，并把弹窗加宽——ConfirmDialog 无 width prop，
+              故直接用 Modal（width 560）承载并复刻 danger 底部按钮，护栏逻辑（用量>0 才显红警条）不变。 */}
+          <Modal
             title="删除订阅订单"
-            confirmText="删除"
-            desc={delSub ? <>确认删除订阅订单 <b>{delSub.id}</b>（{delSub.plan} · {delSub.startDate} ~ {delSub.endDate}）？该订单尚无任何用量消耗，删除后不可恢复。</> : undefined}
-            onConfirm={doDelete}
+            open={!!delSub}
+            width={560}
             onClose={() => setDelSub(null)}
-          />
+            footer={
+              <>
+                <button className="btn btn-ghost btn-sm" onClick={() => setDelSub(null)}>取消</button>
+                <button
+                  className="btn btn-sm"
+                  style={{ background: 'var(--terra)', borderColor: 'var(--terra)', color: '#fff' }}
+                  onClick={() => { doDelete(); }}
+                >
+                  删除
+                </button>
+              </>
+            }
+          >
+            {delSub && (
+              <div style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.7 }}>
+                <div style={{ marginBottom: 8 }}>
+                  确认删除订阅订单 <b>{delSub.id}</b>（{delSub.plan} · {delSub.startDate} ~ {delSub.endDate}）？
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18, listStyle: 'disc' }}>
+                  <li style={{ whiteSpace: 'nowrap' }}>删除后不可恢复</li>
+                  <li style={{ whiteSpace: 'nowrap' }}>连带删除该订阅下全部加油包（{packsOf(delSub.id).length} 个）</li>
+                  <li style={{ whiteSpace: 'nowrap' }}>机构将立即失去该订阅的配额</li>
+                </ul>
+                {hasUsage(delSub) && (
+                  <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: 'rgba(229,83,59,.10)', color: 'var(--terra)', fontWeight: 600 }}>
+                    ⚠ 该订阅已产生用量（KP {usedOf(delSub).kp} 个 · 存储 {usedOf(delSub).storage} GB · Token {usedOf(delSub).token} 亿），删除将立即中断机构服务
+                  </div>
+                )}
+                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--ink-3)' }}>删除≠退款：不产生退款单，如涉退费走线下商务流程</div>
+              </div>
+            )}
+          </Modal>
         </>
       )}
 
@@ -640,16 +739,17 @@ export function OrgDetail() {
             </span>
           </div>
           <div className="grid2" style={{ marginTop: 16 }}>
+            {/* 0714 #10：卡片标题去「（实时快照）」——分区标题已有「实时」标 */}
             <UsageCard
-              title="内容存量（实时快照）"
+              title="内容存量"
               rows={[
-                ['KP 当前占用', '40 个', '机构当前实际占用 = 自建 KP + 独立快照导入；实时同步导入不占 KP 名额。跨订阅延续，删除/归档符合释放条件后才回收。'],
+                ['KP 当前占用', '40 个', '机构当前实际占用 = 自建 KP + 独立快照导入；实时同步导入不占 KP 名额。跨订阅延续，删除符合释放条件后才回收。'],
                 ['已发 / 未发 / 下架', '30 / 8 / 2 个', '当前状态快照；仅已发布参与新用户检索。'],
                 ['存储当前占用', '62 GB', '机构当前全部文件的真实存储占用，跨订阅延续；删除文件后回收。'],
               ]}
             />
             <UsageCard
-              title="用户存量（实时快照）"
+              title="用户存量"
               rows={[
                 ['累计 C 端', '1.25万 人', '开通至今注册用户数，按用户 ID 精确去重，不参与环比。'],
                 ['当前会员', '860 人', '当前处于付费期或赠送 72 小时缓冲使用期的会员人数，实时快照。'],

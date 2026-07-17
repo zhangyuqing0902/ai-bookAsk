@@ -3,19 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 import { DataGrid, MediaView, type Col, type MediaItem } from '@aba/ui-admin';
 import { AORDERS, byPayDesc, useRefundStore, type AOrder } from '@aba/mock';
+// 0714：GUser 类型改用与列表 / 导出 spec 同一份（../data/globalUsers），不再本地重复定义
+import type { GUser } from '../data/globalUsers';
 
-interface GUser {
-  nick: string;
-  wx: string;
-  phone: string;
-  org: string;
-  member: boolean;
-  yx: number;
-  gmv: number;
-  lastLogin: string;
-}
-
-const FALLBACK: GUser = { nick: '微信昵称A', wx: 'wx_abc', phone: '13800138888', org: 'XX 出版社', member: true, yx: 3, gmv: 129.6, lastLogin: '2026-06-06 21:30:11' };
+const FALLBACK: GUser = { nick: '微信昵称A', wx: 'wx_abc', phone: '13800138888', org: 'XX 出版社', member: true, yx: 3, gmv: 129.6, lastLogin: '2026-06-06 21:30:11', regAt: '2026-01-12 10:03:22' };
 const YX: MediaItem[] = [
   { kind: 'image', name: '心电图示例' },
   { kind: 'audio', name: '专题讲座音频' },

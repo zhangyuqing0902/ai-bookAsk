@@ -17,7 +17,9 @@
     "build:org": "npm --workspace apps/org-admin run build",
     "build:platform": "npm --workspace apps/platform-admin run build",
     "manifest:check": "node scripts/manifest-check.mjs",
-    "test:adversarial": "node scripts/adversarial-tests.mjs"
+    "gen:export-templates": "node --experimental-strip-types --no-warnings scripts/gen-export-templates.ts",
+    "test:adversarial": "node scripts/adversarial-tests.mjs",
+    "test:export-specs": "node --experimental-strip-types --no-warnings scripts/export-spec-tests.ts"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5",

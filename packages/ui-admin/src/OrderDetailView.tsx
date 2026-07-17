@@ -42,7 +42,7 @@ function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
 }
 
 // 订单详情正文（机构后台「订单详情」+ 平台后台「全域订单详情」共用，0614b 抽公共组件）。
-// showOrg=true 时多展示「归属机构」（平台视角）。
+// showOrg=true 时多展示「机构」字段（平台视角；0714 命名统一，原「归属机构」）。
 export function OrderDetailView({ order: o, refund: rf, showOrg }: { order: OrderDetailOrder; refund?: OrderDetailRefund; showOrg?: boolean }) {
   const [preview, setPreview] = useState<MediaItem | null>(null);
 
@@ -50,7 +50,7 @@ export function OrderDetailView({ order: o, refund: rf, showOrg }: { order: Orde
     return (
       <div style={{ maxWidth: 640 }}>
         <div className="fm-card">
-          {showOrg && o.org && <Row k="归属机构" v={o.org} />}
+          {showOrg && o.org && <Row k="机构" v={o.org} />}
           <Row k="类型" v="兑换码核销" />
           <Row k="兑换码" v={o.code || ''} mono />
           <Row k="兑换时间" v={o.redeemTime || ''} mono />
@@ -68,7 +68,7 @@ export function OrderDetailView({ order: o, refund: rf, showOrg }: { order: Orde
     <div style={{ maxWidth: 640 }}>
       <div className="fm-card">
         <div className="fh">基础信息</div>
-        {showOrg && o.org && <Row k="归属机构" v={o.org} />}
+        {showOrg && o.org && <Row k="机构" v={o.org} />}
         <Row k="订单编号" v={o.id} mono />
         <Row k="订单类型" v={o.type} />
         <Row k="金额" v={'¥' + o.amount} mono />

@@ -1,5 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist" },
+  "compilerOptions": {
+    // 0714：导出 spec（src/exports/）被 node --experimental-strip-types 直接运行，
+    // 运行时 import 须带 .ts 后缀 → 开 allowImportingTsExtensions（要求 noEmit；打包由 vite 负责，无需 tsc 产物）。
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
   "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

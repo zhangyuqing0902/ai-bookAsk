@@ -67,6 +67,37 @@ export function Roles() {
   const st = perms[kind][curRole] ?? {};
   const setLvl = (k: string, lvl: Lvl) => setPerms((p) => ({ ...p, [kind]: { ...p[kind], [curRole]: { ...p[kind][curRole], [k]: lvl } } }));
 
+  // 0716 #7/#8：渲染单个权限项（三态开关）。nested=true 时作为嵌套子项（Agent 回答 Prompt 编辑）。
+  // agent.prompt.edit 为「功能权限」——无「无」态，两态（只读 / 可操作）；存量 'none' 按 'read' 显示。
+  const renderItem = (it: [string, string, string], nested = false) => {
+    const isFeature = it[0] === 'agent.prompt.edit';
+    const raw = st[it[0]] ?? 'none';
+    const lvl = isFeature && raw === 'none' ? 'read' : raw;
+    const lvls = isFeature ? LVLS.filter((L) => L.k !== 'none') : LVLS;
+    return (
+      <div className={'perm-item' + (nested ? ' perm-item-child' : '')} key={it[0]}>
+        <div className="pi-l">
+          <span className="pi-ic"><Icon id={it[2]} /></span>
+          <div>
+            {/* 0716 二批 #7：「功能权限」标签移到 key 行——标题保持单行，右侧两态开关垂直居中对齐 */}
+            <div className="pi-t">{it[1]}</div>
+            <div className="pi-k">
+              {it[0]}
+              {isFeature && <span className="tag-s tag-line">功能权限</span>}
+            </div>
+          </div>
+        </div>
+        <div className="lvl-seg">
+          {lvls.map((L) => (
+            <b key={L.k} className={lvl === L.k ? 'on ' + L.k : ''} onClick={() => setLvl(it[0], L.k)}>
+              {L.t}
+            </b>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const createRole = () => {
     const nm = newName.trim();
     if (!nm) return toast('请输入角色名称');
@@ -122,40 +153,44 @@ export function Roles() {
                     <div className="lvl-pop-row"><i className="none" />无：看不见该菜单</div>
                     <div className="lvl-pop-row"><i className="read" />只读：可进入查看，不能编辑 / 操作</div>
                     <div className="lvl-pop-row"><i className="write" />可操作：该功能全部操作可用</div>
+                    {/* 0714 #14：功能权限两态说明 */}
+                    <div className="lvl-pop-row"><i className="read" />功能权限（如 Agent 回答 Prompt 编辑）无「无」态，未授权即只读</div>
                   </div>
                 }
               />
             </div>
             <button className="btn btn-primary btn-sm" onClick={() => toast('已保存权限')}>保存</button>
           </div>
-          {MODULES[kind].map((m) => (
-            <div className="perm-group" key={m.g}>
-              <div className="pg-h">{m.g}</div>
-              <div className="pg-grid">
-                {m.items.map((it) => {
-                  const lvl = st[it[0]] ?? 'none';
-                  return (
-                    <div className="perm-item" key={it[0]}>
-                      <div className="pi-l">
-                        <span className="pi-ic"><Icon id={it[2]} /></span>
-                        <div>
-                          <div className="pi-t">{it[1]}</div>
-                          <div className="pi-k">{it[0]}</div>
-                        </div>
-                      </div>
-                      <div className="lvl-seg">
-                        {LVLS.map((L) => (
-                          <b key={L.k} className={lvl === L.k ? 'on ' + L.k : ''} onClick={() => setLvl(it[0], L.k)}>
-                            {L.t}
-                          </b>
-                        ))}
-                      </div>
+          {MODULES[kind].map((m) => {
+            // 0716 #7/#8/#8.1：机构「产品中心」特殊布局——知识产品 KP（左）与 Agent 人设（右）同行两列；
+            // KP 落左列后其三开关与「查看主控台」垂直对齐（#7）；Agent 回答 Prompt 编辑作为 Agent 人设的
+            // 嵌套子项，仅当「Agent 人设 = 可操作」时展开、带缩进连接线（#8）；无 / 只读时不显示（#8）。
+            const kpItem = m.items.find((i) => i[0] === 'kp.manage');
+            const agentItem = m.items.find((i) => i[0] === 'agent.manage');
+            const promptItem = m.items.find((i) => i[0] === 'agent.prompt.edit');
+            const isProductOrg = kind === 'org' && m.g === '产品中心' && kpItem && agentItem && promptItem;
+            const showPromptChild = (st['agent.manage'] ?? 'none') === 'write';
+            return (
+              <div className="perm-group" key={m.g}>
+                <div className="pg-h">{m.g}</div>
+                {isProductOrg ? (
+                  <div className="pg-grid">
+                    <div>{renderItem(kpItem!)}</div>
+                    <div className="perm-agent-col">
+                      {renderItem(agentItem!)}
+                      {showPromptChild && (
+                        <div className="perm-child-wrap">{renderItem(promptItem!, true)}</div>
+                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                ) : (
+                  <div className="pg-grid">
+                    {m.items.map((it) => renderItem(it))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -163,7 +198,7 @@ export function Roles() {
         title="新建角色"
         open={newRole}
         onClose={() => { setNewRole(false); setNewName(''); }}
-        width={440}
+        width={560}
         footer={
           <>
             <button className="btn btn-ghost btn-sm" onClick={() => { setNewRole(false); setNewName(''); }}>取消</button>
@@ -185,7 +220,7 @@ export function Roles() {
                 平台角色
               </b>
             </div>
-            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>由创建入口页签决定，不可切换</span>
+            {/* 0714 #14：弹窗加宽至 560 让角色类型一行展示；删除「由创建入口页签决定」提示（锁定态已自明） */}
           </div>
         </div>
         <div className="fm-row">
@@ -196,7 +231,14 @@ export function Roles() {
           <div className="lab">备注</div>
           <div className="ctl"><TextInput placeholder="选填" /></div>
         </div>
-        <div className="sub-tip">机构角色用于机构账户、平台角色用于平台账户，两者权限点不同；创建后请在右侧逐项设置权限。</div>
+        {/* 0714 #12：说明换行 + 无序序号呈现（拆成三条 li） */}
+        <div className="sub-tip">
+          <ul>
+            <li>机构角色用于机构账户</li>
+            <li>平台角色用于平台账户，两者权限点不同</li>
+            <li>创建后请在右侧逐项设置权限</li>
+          </ul>
+        </div>
       </Modal>
     </>
   );

@@ -38,7 +38,8 @@ export interface KnowledgeProduct {
   /** 是否带永享标 */
   hasForever: boolean;
   foreverPrice?: number;
-  status: 'draft' | 'published' | 'archived';
+  /** unlisted＝已下架（停新售、存量权益保留）；deleted＝已删除（软删：内容下线、保留审计与 C 端历史凭证、已购标「已失效」，无任何业务关系时才物理移除） */
+  status: 'draft' | 'published' | 'unlisted' | 'deleted';
   createdAt: string;
 }
 

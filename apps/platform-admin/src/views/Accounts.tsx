@@ -1,40 +1,15 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DataGrid, CredentialDialog, genPassword, type Col, type Credential } from '@aba/ui-admin';
+import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DataGrid, CredentialDialog, exportWorkbook, genPassword, type Col, type Credential } from '@aba/ui-admin';
 import { orgOptionLabel, orgOptionValue, revealPhone } from '@aba/mock';
-
-interface Acct {
-  id: string;
-  name: string;
-  person: string;
-  org: string;
-  parent: string;
-  role: string;
-  roleCls: string;
-  status: string;
-  statusCls: string;
-  contact: string;
-}
-const ROWS: Acct[] = [
-  { id: 'AC001', name: 'admin01', person: '张三', org: 'XX 出版集团', parent: '—', role: '管理员', roleCls: 'tag-indigo', status: '正常', statusCls: 'tag-jade', contact: '138****8888' },
-  { id: 'AC002', name: 'view01', person: '李四', org: 'YY 教育', parent: 'XX 出版集团', role: '只读', roleCls: 'tag-line', status: '停用', statusCls: 'tag-terra', contact: '139****0000' },
-  { id: 'AC003', name: 'ops01', person: '王五', org: 'ZZ 少儿', parent: 'XX 出版集团', role: '运营', roleCls: 'tag-jade', status: '正常', statusCls: 'tag-jade', contact: '138****1003' },
-  { id: 'AC004', name: 'admin02', person: '赵敏', org: 'YY 教育', parent: 'XX 出版集团', role: '管理员', roleCls: 'tag-indigo', status: '正常', statusCls: 'tag-jade', contact: '137****1122' },
-  { id: 'AC005', name: 'ops02', person: '钱进', org: 'XX 出版集团', parent: '—', role: '运营', roleCls: 'tag-jade', status: '正常', statusCls: 'tag-jade', contact: '138****1005' },
-  { id: 'AC006', name: 'view02', person: '孙莉', org: 'ZZ 少儿', parent: 'XX 出版集团', role: '只读', roleCls: 'tag-line', status: '正常', statusCls: 'tag-jade', contact: '136****3344' },
-  { id: 'AC007', name: 'ops03', person: '周涛', org: 'YY 教育', parent: 'XX 出版集团', role: '运营', roleCls: 'tag-jade', status: '停用', statusCls: 'tag-terra', contact: '138****1007' },
-  { id: 'AC008', name: 'admin03', person: '吴芳', org: 'ZZ 少儿', parent: 'XX 出版集团', role: '管理员', roleCls: 'tag-indigo', status: '正常', statusCls: 'tag-jade', contact: '135****5566' },
-  { id: 'AC009', name: 'view03', person: '郑昊', org: 'XX 出版集团', parent: '—', role: '只读', roleCls: 'tag-line', status: '正常', statusCls: 'tag-jade', contact: '134****7788' },
-  { id: 'AC010', name: 'ops04', person: '冯雪', org: 'YY 教育', parent: 'XX 出版集团', role: '运营', roleCls: 'tag-jade', status: '正常', statusCls: 'tag-jade', contact: '138****1010' },
-  { id: 'AC011', name: 'admin04', person: '陈晨', org: 'ZZ 少儿', parent: 'XX 出版集团', role: '管理员', roleCls: 'tag-indigo', status: '停用', statusCls: 'tag-terra', contact: '133****9900' },
-  { id: 'AC012', name: 'view04', person: '褚岩', org: 'YY 教育', parent: 'XX 出版集团', role: '只读', roleCls: 'tag-line', status: '正常', statusCls: 'tag-jade', contact: '132****2233' },
-  { id: 'AC013', name: 'ops05', person: '卫东', org: 'XX 出版集团', parent: '—', role: '运营', roleCls: 'tag-jade', status: '正常', statusCls: 'tag-jade', contact: '138****1013' },
-  { id: 'AC014', name: 'admin05', person: '蒋琳', org: 'ZZ 少儿', parent: 'XX 出版集团', role: '管理员', roleCls: 'tag-indigo', status: '正常', statusCls: 'tag-jade', contact: '131****4455' },
-];
+import { ACCOUNT_ROWS, type Acct } from '../data/accounts';
+import { buildAccountsSpec } from '../exports/accounts';
 
 // 平台后台 · 机构账户（新建 / 编辑复用同一弹窗 + 停用/恢复二次确认）
+// 0714：mock 数据下移 ../data/accounts；「所属机构」统一为「机构」；#19 编辑态账户名不可改；
+//       新增筛选行「导出」（exports/accounts.ts spec）。
 export function Accounts() {
-  const [data, setData] = useState<Acct[]>(ROWS);
+  const [data, setData] = useState<Acct[]>(ACCOUNT_ROWS);
   const [modal, setModal] = useState<{ mode: 'new' | 'edit'; row?: Acct } | null>(null);
   const [confirm, setConfirm] = useState<Acct | null>(null);
   const [q, setQ] = useState('');
@@ -51,7 +26,7 @@ export function Accounts() {
   const [fContact, setFContact] = useState('');
 
   // 上级机构筛选项 = 实际作为上级出现过的机构名（去重，剔除 — 顶级）
-  const parentNames = [...new Set(ROWS.filter((r) => r.parent !== '—').map((r) => r.parent))];
+  const parentNames = [...new Set(ACCOUNT_ROWS.filter((r) => r.parent !== '—').map((r) => r.parent))];
 
   const toggleStatus = (t: Acct) => {
     const next = t.status === '正常' ? '停用' : '正常';
@@ -101,7 +76,7 @@ export function Accounts() {
     { header: '账户 ID', className: 'mono', cell: (r) => r.id },
     { header: '账户名', className: 'strong', cell: (r) => r.name },
     { header: '姓名', cell: (r) => r.person },
-    { header: '所属机构', cell: (r) => r.org },
+    { header: '机构', cell: (r) => r.org },
     { header: '联系电话', className: 'mono', cell: (r) => revealPhone(r.contact) },
     // 0610:上级机构 / 角色 / 状态 三列支持点击表头排序
     { header: '上级机构', cell: (r) => (r.parent === '—' ? <span className="muted">—</span> : r.parent), sortValue: (r) => r.parent },
@@ -140,10 +115,15 @@ export function Accounts() {
       </div>
       <div className="filter">
         <Search placeholder="搜索账户名 / 姓名" minWidth={220} value={q} onChange={setQ} />
-        <Dropdown label="所属机构" options={['全部', ...['XX 出版集团', 'YY 教育', 'ZZ 少儿'].map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ width: 190 }} />
+        <Dropdown label="机构" options={['全部', ...['XX 出版集团', 'YY 教育', 'ZZ 少儿'].map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ width: 190 }} />
         <Dropdown label="上级机构" options={['全部', ...parentNames]} onSelect={setParent} style={{ width: 180 }} />
         <Dropdown label="角色" options={['全部', '管理员', '运营', '只读']} onSelect={setRole} />
         <Dropdown label="状态" options={['全部', '正常', '停用']} onSelect={setStatus} />
+        <div className="grow" />
+        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildAccountsSpec({ rows, filters: [['关键词', q || '无'], ['机构', org], ['上级机构', parent], ['角色', role], ['状态', status]] })); toast('正在导出'); }}>
+          <Icon id="i-dl" w={14} h={14} />
+          导出
+        </button>
       </div>
       <DataGrid columns={columns} rows={rows} empty={{ title: '没有匹配的账户' }} pageUnit="个" />
 
@@ -177,14 +157,17 @@ export function Accounts() {
       >
         <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
           <div className="lab">账户名称<span className="req">*</span></div>
-          <div className="ctl"><TextInput value={fAccount} onChange={(e) => setFAccount(e.target.value)} placeholder="登录账户名" /></div>
+          <div className="ctl">
+            {/* 0714 #19：编辑态账户名锁定（登录标识创建后不可改），新建态可填不变 */}
+            <TextInput value={fAccount} onChange={(e) => setFAccount(e.target.value)} placeholder="登录账户名" disabled={!!edit} />
+          </div>
         </div>
         <div className="fm-row">
           <div className="lab">姓名<span className="req">*</span></div>
           <div className="ctl"><TextInput value={fName} onChange={(e) => setFName(e.target.value)} placeholder="真实姓名" /></div>
         </div>
         <div className="fm-row">
-          <div className="lab">所属机构<span className="req">*</span></div>
+          <div className="lab">机构<span className="req">*</span></div>
           <div className="ctl"><Dropdown label={fOrg} options={['XX 出版集团', 'YY 教育', 'ZZ 少儿']} onSelect={setFOrg} style={{ width: 200 }} /></div>
         </div>
         <div className="fm-row">

@@ -143,11 +143,16 @@ export function revealPhone(phone: string) {
 // orgOptionLabel / orgOptionValue 已迁至 data/platformOrgs.ts（从真实机构树按名推导父/子/普通三态），
 // 不再用与实际机构名对不上的硬编码名单。
 
+// 0716 #1.1（二批）：无论有无业务关系均为物理删除——删除后两后台列表不再展示、仅数据库留存，
+//   C 端历史凭证保留并统一标「已失效」。relations 仅决定删除确认弹窗是否展示影响声明。
 export function canPhysicallyDeleteKp(relations: { orders?: number; grants?: number; shares?: number; imports?: number }) {
   const count = (relations.orders ?? 0) + (relations.grants ?? 0) + (relations.shares ?? 0) + (relations.imports ?? 0);
-  return count === 0
-    ? { allowed: true, action: 'delete' as const, reason: '' }
-    : { allowed: false, action: 'archive' as const, reason: '存在订单、赠送、分享或导入关系，只能归档并保留审计记录' };
+  return {
+    allowed: true,
+    action: 'delete' as const,
+    hasRelations: count > 0,
+    reason: count > 0 ? '存在订单、权益、分享或导入关系，删除前需确认对 C 端用户的影响（历史凭证保留并标「已失效」）' : '',
+  };
 }
 
 export function sharePolicy(mode: 'realtime' | 'snapshot') {

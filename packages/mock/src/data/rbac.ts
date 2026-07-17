@@ -6,7 +6,7 @@ export const PERMISSIONS: Permission[] = [
   { key: 'kp.view', group: '知识产品', label: '查看 KP 列表' },
   { key: 'kp.create', group: '知识产品', label: '创建 KP' },
   { key: 'kp.edit', group: '知识产品', label: '编辑 KP 基本信息' },
-  { key: 'kp.publish', group: '知识产品', label: '发布 / 归档 KP' },
+  { key: 'kp.publish', group: '知识产品', label: '发布 / 下架 KP' },
   { key: 'kp.delete', group: '知识产品', label: '删除 KP' },
   // 知识库（文件 / 切片）
   { key: 'kb.upload', group: '知识库', label: '上传文件' },
