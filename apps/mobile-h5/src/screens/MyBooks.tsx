@@ -8,14 +8,15 @@ import { useChatStore } from '../chatStore';
 // 0613-2：文案精简一行、去永享标、点卡片进该 KP 会话、卡片重排(名称两行高+扫码时间钉底对齐)、右上角「扫一扫」调相机扫码进会话。
 // 0614：右上角图标改「扫一扫」；扫码 / 点卡片进入该 KP 的「全新会话」(清空会话回到欢迎态)。
 // 0615：去掉卡片 hover 放大高亮（仅保留可点击）；点卡片先在屏幕中上方弹 3 秒 toast「即将进入「KP 名」AI 会话」再进会话。
-// 0716 二批 #1.3：KP 状态对 C 端统一两级呈现（与我的永享/历史会话一致）——
-//   unlisted＝「已下架」：已解锁权益保留照常进会话，未解锁点击提示联系客服；
-//   deleted＝「已失效」：内容下线，无论是否解锁均拦截并提示联系客服。
+// 0717 #1.1/#1.4：下架＝运营临时禁访问（可重新上架），无论是否解锁一律拦截进会话——
+//   unlisted＝「已下架」：点击提示联系客服；已解锁的并列保留「已解锁」标（权益不清除,重新上架自动恢复）；
+//   deleted＝「已失效」：软删、内容下线，无论是否解锁均拦截并提示联系客服。
 
-// 演示 grant：已下架 KP（后扫未解锁）+ 已删除 KP（首扫已解锁但内容下线,统一「已失效」拦截）。
+// 演示 grant：已下架未解锁 / 已下架已解锁（双标）/ 已删除（「已失效」拦截）。
 // 初始 bookGrants 在 @aba/mock 的 store 里（不改 mock 包），组件侧拼接。
 const DEMO_OFFSHELF_GRANTS = [
   { kpId: 'kp_anesthesia', scannedAt: '2026-06-20', unlocked: false },
+  { kpId: 'kp_icu_manual', scannedAt: '2026-06-02', unlocked: true },
   { kpId: 'kp_ultrasound_old', scannedAt: '2026-05-18', unlocked: true },
 ];
 
@@ -28,6 +29,8 @@ export function MyBooks() {
   const [q, setQ] = useState('');
   const [bookFilter, setBookFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
   const scanRef = useRef<HTMLInputElement>(null);
+  // 扫码演示轮换计数(已发布/已下架/已失效三种 KP 状态循环演示)
+  const scanCount = useRef(0);
 
   // 进入指定纸书 / KP 的全新会话：先清空会话回到欢迎态，再进入 AI 会话。
   // 传入 KP 名则先弹 3 秒过渡提示（toast 跨路由仍显示，进入会话后用户仍可见）。
@@ -69,9 +72,14 @@ export function MyBooks() {
           accept="image/*"
           capture="environment"
           style={{ display: 'none' }}
-          onChange={() => {
-            toast('已识别纸书二维码 · 正在进入全新会话');
-            setTimeout(() => enterFresh(), 700);
+          onChange={(e) => {
+            // 0717 #1.3：扫码统一走 /kp/:id 入口判活(演示轮换:已发布→已下架→已失效,循环)
+            const demoIds = ['kp_neuro', 'kp_anesthesia', 'kp_ultrasound_old'];
+            const id = demoIds[scanCount.current % demoIds.length];
+            scanCount.current += 1;
+            e.target.value = '';
+            toast('已识别知识 KP 二维码');
+            setTimeout(() => nav(`/kp/${id}?src=qr`), 500);
           }}
         />
       </div>
@@ -98,16 +106,16 @@ export function MyBooks() {
             <div className="yx-grid">
               {books.map((b) => (
                 <div
-                  className="yx-card tap"
+                  className={'yx-card tap' + (b.dead || b.offShelf ? ' bk-dim' : '')}
                   key={b.kp.id}
                   onClick={() => {
-                    // 已失效(删除)一律拦截；已下架且未解锁拦截；已下架但已解锁的权益保留,照常进会话
+                    // 0717 #1.1/二批 #3：已失效(软删)与已下架均一律拦截,提示不带 KP 名
                     if (b.dead) {
-                      toast(`当前「${b.kp.name}」已失效，若有问题请联系客服`);
+                      toast('该内容已失效，若有问题请联系客服');
                       return;
                     }
-                    if (b.offShelf && !b.unlocked) {
-                      toast(`当前「${b.kp.name}」已下架，若有问题请联系客服`);
+                    if (b.offShelf) {
+                      toast('该内容已下架，若有问题请联系客服');
                       return;
                     }
                     enterFresh(b.kp.name);
@@ -115,22 +123,21 @@ export function MyBooks() {
                 >
                   <div className="bk-cover">
                     <span className="bk-init">{b.kp.name.slice(0, 1)}</span>
-                    {/* 3.3:首扫绑定显「已解锁」标(皇冠示意会员级权益);后扫未解锁不显状态(界面保持干净) */}
-                    {/* 0716 二批 #1.3:删除显「已失效」、下架显「已下架」(优先于「已解锁」,同一位置只放一个标) */}
-                    {b.dead ? (
-                      <span className="bk-offshelf">已失效</span>
-                    ) : b.offShelf ? (
-                      <span className="bk-offshelf">已下架</span>
-                    ) : b.unlocked ? (
-                      <span className="bk-unlocked">
-                        <Icon id="i-crown" w={11} h={11} />
-                        已解锁
-                      </span>
-                    ) : null}
                   </div>
+                  {/* 3.3:首扫绑定显「已解锁」标(皇冠示意会员级权益);后扫未解锁不显状态(界面保持干净)。
+                      0718 #2：已下架/已失效整卡降透明度(bk-dim)、「已解锁」同步变淡；下架/失效标移到「扫码时间」后面(中性灰) */}
+                  {b.unlocked && (
+                    <span className="bk-tag bk-tag-unlock bk-tag-corner">
+                      <Icon id="i-crown" w={10} h={10} />
+                      已解锁
+                    </span>
+                  )}
                   <div className="bk-meta">
                     <div className="bk-name">{b.kp.name}</div>
-                    <div className="bk-date">扫码 · {b.scannedAt}</div>
+                    <div className="bk-date">
+                      扫码 · {b.scannedAt}
+                      {b.dead ? <span className="bk-st">已失效</span> : b.offShelf ? <span className="bk-st">已下架</span> : null}
+                    </div>
                   </div>
                 </div>
               ))}

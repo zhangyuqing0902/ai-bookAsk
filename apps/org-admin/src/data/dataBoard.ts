@@ -9,8 +9,16 @@ export type KW = { w: string; s: number };
 // 与主控台 Delta 同款渲染；率类指标（退款率/反馈率）给负值更贴近真实（负面指标下降是好事）。
 export interface RangeData {
   // —— 用户域 ——
+  // 0717 二批 #8.2：活跃概览（日活/周活/月活）随区间联动（区间内日均去重口径）并环比——原固定窗口快照弃用
+  dau: string; dauDelta: number;
+  wau: string; wauDelta: number;
+  mau: string; mauDelta: number;
   newUsers: string; newUsersDelta: number;
+  // 0717 二批 #8.4：新增用户迷你趋势折线（随区间联动）
+  newTrend: { x: string[]; v: number[] };
   saoma: number; // 扫码占比%（直接访问 = 100 - saoma）
+  // 0717 二批 #7：来源分布补人数与占比环比（较上一周期,百分点）
+  saomaCnt: string; directCnt: string; saomaDelta: number;
   region: Bar[];
   gender: Bar[];
   // —— 提问域 ——
@@ -35,13 +43,13 @@ export interface RangeData {
   kpFactor: number;
 }
 
-// DAU/WAU/MAU 固定窗口实时快照（不随区间联动；用户分析 Tab 与导出共用）
-export const ACTIVE_SNAPSHOT = { dau: '1,240', wau: '5,600', mau: '1.2万' };
 
 export const RANGE: Record<string, RangeData> = {
   '今日': {
+    dau: '1,240', dauDelta: 2.4, wau: '5,600', wauDelta: 1.8, mau: '1.2万', mauDelta: 3.0,
     newUsers: '48', newUsersDelta: 4.0,
-    saoma: 70,
+    newTrend: { x: ['00时', '04时', '08时', '12时', '16时', '20时', '现在'], v: [3, 2, 7, 11, 9, 10, 6] },
+    saoma: 70, saomaCnt: '34', directCnt: '14', saomaDelta: 1.2,
     region: [{ nm: '上海', pct: 100, color: I, pv: '25%' }, { nm: '北京', pct: 80, color: I, pv: '20%' }, { nm: '广东', pct: 68, color: J, pv: '17%' }, { nm: '江浙', pct: 52, color: A, pv: '13%' }, { nm: '其他', pct: 96, color: G, pv: '25%' }],
     gender: [{ nm: '女', pct: 100, color: T, pv: '53%' }, { nm: '男', pct: 79, color: I, pv: '42%' }, { nm: '未知', pct: 10, color: G, pv: '5%' }],
     askTrend: { x: ['00时', '04时', '08时', '12时', '16时', '20时', '现在'], v: [120, 90, 260, 520, 610, 700, 540] },
@@ -62,8 +70,10 @@ export const RANGE: Record<string, RangeData> = {
     kpFactor: 0.04,
   },
   '7 日': {
+    dau: '1,205', dauDelta: 3.1, wau: '5,600', wauDelta: 2.2, mau: '1.2万', mauDelta: 3.4,
     newUsers: '320', newUsersDelta: 6.0,
-    saoma: 68,
+    newTrend: { x: ['07-09', '07-10', '07-11', '07-12', '07-13', '07-14', '07-15'], v: [38, 42, 45, 50, 44, 48, 53] },
+    saoma: 68, saomaCnt: '216', directCnt: '104', saomaDelta: 2.1,
     region: [{ nm: '上海', pct: 100, color: I, pv: '24%' }, { nm: '北京', pct: 82, color: I, pv: '19%' }, { nm: '广东', pct: 70, color: J, pv: '17%' }, { nm: '江浙', pct: 58, color: A, pv: '14%' }, { nm: '其他', pct: 100, color: G, pv: '26%' }],
     gender: [{ nm: '女', pct: 100, color: T, pv: '54%' }, { nm: '男', pct: 78, color: I, pv: '41%' }, { nm: '未知', pct: 12, color: G, pv: '5%' }],
     askTrend: { x: ['05-25', '05-26', '05-27', '05-28', '05-29', '05-30', '05-31'], v: [3800, 4200, 4000, 4600, 4400, 4800, 5000] },
@@ -84,8 +94,10 @@ export const RANGE: Record<string, RangeData> = {
     kpFactor: 0.25,
   },
   '30 日': {
+    dau: '1,150', dauDelta: 5.0, wau: '5,420', wauDelta: 4.2, mau: '1.2万', mauDelta: 6.1,
     newUsers: '1,280', newUsersDelta: 9.0,
-    saoma: 66,
+    newTrend: { x: ['06-16', '06-21', '06-26', '07-01', '07-06', '07-11', '07-15'], v: [220, 260, 290, 310, 330, 360, 400] },
+    saoma: 66, saomaCnt: '845', directCnt: '435', saomaDelta: -0.8,
     region: [{ nm: '上海', pct: 100, color: I, pv: '23%' }, { nm: '北京', pct: 84, color: I, pv: '19%' }, { nm: '广东', pct: 74, color: J, pv: '17%' }, { nm: '江浙', pct: 62, color: A, pv: '15%' }, { nm: '其他', pct: 100, color: G, pv: '26%' }],
     gender: [{ nm: '女', pct: 100, color: T, pv: '55%' }, { nm: '男', pct: 76, color: I, pv: '40%' }, { nm: '未知', pct: 12, color: G, pv: '5%' }],
     askTrend: { x: ['05-02', '05-07', '05-12', '05-17', '05-22', '05-27', '06-01'], v: [4200, 4500, 4800, 5200, 5600, 6000, 6400] },
@@ -125,44 +137,92 @@ export type RetentionNode = {
   readyDate?: string; // 待成熟节点预计可统计日期，如「8月13日」
 };
 
-const BATCH_LATEST: { nodes: RetentionNode[]; updatedAt: string } = {
-  // 默认批次：只展示最新可统计结果；D+30 尚未到统计时间，演示未成熟态
-  nodes: [
-    { days: 1, label: 'D+1 次日留存', rate: '42%', sample: '1,126', cutoff: '统计至 7月14日注册用户', status: '可统计' },
-    { days: 7, label: 'D+7 7日留存', rate: '25%', sample: '1,048', cutoff: '统计至 7月8日注册用户', status: '可统计' },
-    { days: 30, label: 'D+30 30日留存', rate: null, sample: '968', cutoff: '需注册满 30 天', status: '待成熟', readyDate: '8月13日' },
-  ],
-  updatedAt: '2026-07-15 13:54',
+export type RetentionBatch = { nodes: RetentionNode[]; updatedAt: string };
+
+// 0718 #6：留存 mock 按真实日期联动推算（此前「自定义日期」档写死 6月30日，与所选注册日脱节）。
+// 语义（与功能清单 §7.1 一致）：D+N 留存观察「注册日 D 起、第 N 天仍活跃」的用户占比；
+// 节点可统计 ⇔ 注册日 + N ≤ 今天，否则待成熟（预计可统计日期＝注册日 + N）。
+const DAY_MS = 86400000;
+const at0 = (d: Date) => {
+  const t = new Date(d);
+  t.setHours(0, 0, 0, 0);
+  return t;
+};
+const plus = (d: Date, n: number) => new Date(at0(d).getTime() + n * DAY_MS);
+export const fmtMD = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const stampNow = () => {
+  const t = new Date();
+  return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}`;
+};
+// 稳定伪随机（同一注册日/批次每次渲染数值一致，不闪烁）
+const seedOf = (s: string) => {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
 };
 
-export const RETENTION: Record<string, { nodes: RetentionNode[]; updatedAt: string }> = {
-  '最新可统计': BATCH_LATEST,
-  '近 7 个注册日': {
-    nodes: [
-      { days: 1, label: 'D+1 次日留存', rate: '41%', sample: '2,240', cutoff: '统计至 7月14日注册用户', status: '可统计' },
-      { days: 7, label: 'D+7 7日留存', rate: '24%', sample: '2,105', cutoff: '统计至 7月8日注册用户', status: '可统计' },
-      { days: 30, label: 'D+30 30日留存', rate: null, sample: '1,980', cutoff: '需注册满 30 天', status: '待成熟', readyDate: '8月13日' },
-    ],
-    updatedAt: '2026-07-15 13:54',
-  },
-  '近 30 个注册日': {
-    // 三节点全可统计（这批用户注册已满 30 天）
-    nodes: [
-      { days: 1, label: 'D+1 次日留存', rate: '43%', sample: '8,420', cutoff: '统计至 7月14日注册用户', status: '可统计' },
-      { days: 7, label: 'D+7 7日留存', rate: '27%', sample: '8,015', cutoff: '统计至 7月8日注册用户', status: '可统计' },
-      { days: 30, label: 'D+30 30日留存', rate: '17%', sample: '6,540', cutoff: '统计至 6月15日注册用户', status: '可统计' },
-    ],
-    updatedAt: '2026-07-15 13:54',
-  },
-  '自定义日期': {
-    nodes: [
-      { days: 1, label: 'D+1 次日留存', rate: '40%', sample: '620', cutoff: '统计至 6月30日注册用户', status: '可统计' },
-      { days: 7, label: 'D+7 7日留存', rate: '23%', sample: '590', cutoff: '统计至 6月24日注册用户', status: '可统计' },
-      { days: 30, label: 'D+30 30日留存', rate: '15%', sample: '512', cutoff: '统计至 6月1日注册用户', status: '可统计' },
-    ],
-    updatedAt: '2026-07-15 13:54',
-  },
-};
+const NODE_SPECS: { days: 1 | 7 | 30; label: string; obs: string; rateBase: number; rateSpan: number }[] = [
+  { days: 1, label: 'D+1 次日留存', obs: '次日', rateBase: 37, rateSpan: 9 }, // 37%–45%
+  { days: 7, label: 'D+7 7日留存', obs: '第 7 天', rateBase: 21, rateSpan: 8 }, // 21%–28%
+  { days: 30, label: 'D+30 30日留存', obs: '第 30 天', rateBase: 13, rateSpan: 6 }, // 13%–18%
+];
+
+const isoDay = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+// 单一注册日批次：截止文案即该注册日；各节点按「注册日 + N ≤ 今天」判定可统计
+// 0718：截止文案白话化（原「统计至 {日期}注册用户」不易懂）——直接说「统计哪天注册的人、看他们哪天回不回来」
+// 0718：同一注册日＝同一批人，三个节点共用同一样本（分母相同）；样本随节点递减仅适用于多天批次（retentionForPreset）
+export function retentionForDay(day: Date, today: Date = new Date()): RetentionBatch {
+  const d0 = at0(day);
+  const t0 = at0(today);
+  const sampleBase = 420 + (seedOf(`day-${isoDay(d0)}`) % 380); // 单日注册量 420–799
+  const nodes = NODE_SPECS.map((spec) => {
+    const nodeSeed = seedOf(`day-${isoDay(d0)}-d${spec.days}`);
+    const sample = sampleBase.toLocaleString('en-US');
+    if (plus(d0, spec.days) > t0) {
+      return { days: spec.days, label: spec.label, rate: null, sample, cutoff: `${fmtMD(d0)}注册的用户 · 等满 ${spec.days} 天（${fmtMD(plus(d0, spec.days))}）后可统计`, status: '待成熟' as const, readyDate: fmtMD(plus(d0, spec.days)) };
+    }
+    return {
+      days: spec.days,
+      label: spec.label,
+      rate: `${spec.rateBase + (nodeSeed % spec.rateSpan)}%`,
+      sample,
+      cutoff: `统计 ${fmtMD(d0)}注册的 ${sample} 人 · ${spec.obs}是否回来`,
+      status: '可统计' as const,
+    };
+  });
+  return { nodes, updatedAt: stampNow() };
+}
+
+// 预设批次：最新可统计 / 近 7 个注册日 / 近 30 个注册日——
+// 各节点截止日＝今天 − N（最新已满观察期的注册日），样本随批次窗口放大
+export function retentionForPreset(batch: string, today: Date = new Date()): RetentionBatch {
+  const t0 = at0(today);
+  const sampleBase = batch === '近 30 个注册日' ? 8000 : batch === '近 7 个注册日' ? 2100 : 1050;
+  const nodes = NODE_SPECS.map((spec, i) => {
+    const nodeSeed = seedOf(`batch-${batch}-d${spec.days}-${isoDay(t0)}`);
+    const sample = Math.round(sampleBase * (1 - i * 0.07)).toLocaleString('en-US');
+    return {
+      days: spec.days,
+      label: spec.label,
+      rate: `${spec.rateBase + 2 + (nodeSeed % spec.rateSpan)}%`,
+      sample,
+      cutoff: `统计 ${fmtMD(plus(t0, -spec.days))}注册的 ${sample} 人 · ${spec.obs}是否回来`,
+      status: '可统计' as const,
+    };
+  });
+  return { nodes, updatedAt: stampNow() };
+}
+
+// 页面/导出统一入口：自定义日期带具体注册日，其余走预设批次
+export function retentionFor(batch: string, customDay: Date | null, today: Date = new Date()): RetentionBatch {
+  if (batch === '自定义日期' && customDay) return retentionForDay(customDay, today);
+  return retentionForPreset(batch, today);
+}
 
 // 热门 KP 榜单（基准值 = 30 天量；按 kpFactor 缩放出今日 / 7 日，实现区间联动）
 export type KpRow = [string, number, number]; // [名称, 基准数值, KP id(用于下钻)]

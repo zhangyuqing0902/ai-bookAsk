@@ -40,6 +40,8 @@ export interface KnowledgeProduct {
   foreverPrice?: number;
   /** unlisted＝已下架（停新售、存量权益保留）；deleted＝已删除（软删：内容下线、保留审计与 C 端历史凭证、已购标「已失效」，无任何业务关系时才物理移除） */
   status: 'draft' | 'published' | 'unlisted' | 'deleted';
+  /** 0718 #7：来源标签三态统一——undefined＝自建；realtime＝分享导入·实时（只读）；snapshot＝分享导入·快照（可编辑） */
+  shareMode?: 'realtime' | 'snapshot';
   createdAt: string;
 }
 

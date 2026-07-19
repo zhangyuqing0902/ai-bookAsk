@@ -525,69 +525,97 @@ a {
 
 /* 0615-2：新建订阅弹窗 · 套餐竖排左对齐列表（替代横向卡片，修复变形） */
 /* 5.1:套餐增至 6 个,弹窗套餐列表改 2 列网格(纵向卡片:名 + 规格),更紧凑清晰 */
+/* 0718 美化：悬浮浮起 + 选中渐变底/投影 + 圆形实心对勾徽章 */
 .sub-plan-list {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 .sub-plan-row {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
-  padding: 9px 12px;
+  gap: 4px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
+  background: var(--surface);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
 }
 .sub-plan-row:hover {
-  border-color: var(--ink-3);
+  border-color: rgba(75, 87, 232, 0.45);
+  box-shadow: 0 6px 16px -10px rgba(40, 46, 90, 0.25);
+  transform: translateY(-1px);
 }
 .sub-plan-row.on {
   border-color: var(--indigo);
-  background: var(--indigo-soft);
+  background: linear-gradient(180deg, #f5f7ff 0%, var(--indigo-soft) 100%);
+  box-shadow: 0 8px 20px -12px rgba(75, 87, 232, 0.55);
+}
+.sub-plan-row.on:hover {
+  transform: none;
 }
 .sub-plan-row .spr-name {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
 }
-.sub-plan-row .spr-spec {
-  font-size: 10.5px;
-  color: var(--ink-2);
-  line-height: 1.4;
-  white-space: nowrap;
-}
-.sub-plan-row.on svg {
-  position: absolute;
-  top: 9px;
-  right: 10px;
+.sub-plan-row.on .spr-name {
   color: var(--indigo-ink);
+}
+.sub-plan-row .spr-spec {
+  font-size: 11px;
+  color: var(--ink-2);
+  line-height: 1.45;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* 选中对勾：右上角圆形实心徽章 */
+.sub-plan-row .spr-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--indigo);
+  color: #fff;
+  box-shadow: 0 3px 8px -2px rgba(75, 87, 232, 0.6);
 }
 /* 0715 #8：额度改「三张横排指标卡」——顶部圆形图标 + 指标名 + 占用/消耗标签，下方步进器 + 单位。
    订阅额度（.quota-edit）与加油包加量额度（SubPackDrawer 的 .pf-fields）共用同一套卡片 + 步进器视觉。 */
 .quota-edit { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-/* 0716 二批 #6：额度卡默认不高亮（普通描边白底），仅悬浮或聚焦输入框时高亮（靛边框 + 淡靛底，对齐套餐卡选中态）。 */
-.quota-card { display: flex; flex-direction: column; gap: 11px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); transition: border-color 0.15s, background 0.15s; }
+/* 0716 二批 #6：额度卡默认不高亮（普通描边白底），仅悬浮或聚焦输入框时高亮（靛边框 + 淡靛底，对齐套餐卡选中态）。
+   0718 美化：高亮加淡靛投影；图标改正圆无底描边，高亮时反白；步进器输入数字用等宽字体 + 聚焦光环。 */
+.quota-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
 .quota-card:hover,
-.quota-card:focus-within { border-color: var(--indigo); background: var(--indigo-soft); }
+.quota-card:focus-within { border-color: var(--indigo); background: var(--indigo-soft); box-shadow: 0 10px 22px -14px rgba(75, 87, 232, 0.45); }
 .quota-card .qc-head { display: flex; align-items: center; gap: 8px; }
-/* 圆底图标容器（范式同 proto-admin 的 .pi-ic，主题色淡底） */
-.quota-card .qc-ic { width: 30px; height: 30px; flex: none; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: var(--indigo-soft); border: 1px solid var(--line); color: var(--indigo-ink); }
+/* 正圆图标容器（主题色淡底；卡片高亮时反白保持层次） */
+.quota-card .qc-ic { width: 32px; height: 32px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--indigo-soft); color: var(--indigo-ink); transition: background 0.15s; }
+.quota-card:hover .qc-ic,
+.quota-card:focus-within .qc-ic { background: var(--surface); }
 .quota-card .qc-ic svg { width: 16px; height: 16px; }
 .quota-card .qc-name { font-size: 13px; font-weight: 700; color: var(--ink); }
 /* 数字步进器：[−] 输入 [+] 单位 */
 .qty-stepper { display: inline-flex; align-items: center; gap: 8px; }
 .qty-stepper .qty-btn { width: 30px; height: 32px; flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; line-height: 1; color: var(--ink-2); background: var(--surface-warm); border: 1px solid var(--line); border-radius: 9px; cursor: pointer; transition: 0.15s; }
 .qty-stepper .qty-btn:hover:not(:disabled) { border-color: var(--indigo); color: var(--indigo-ink); background: var(--indigo-soft); }
+.qty-stepper .qty-btn:active:not(:disabled) { transform: scale(0.92); }
 .qty-stepper .qty-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.qty-stepper .qty-input { width: 56px; height: 32px; text-align: center; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; outline: none; transition: 0.15s; }
-.qty-stepper .qty-input:focus { border-color: var(--indigo); }
+.qty-stepper .qty-input { width: 56px; height: 32px; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; outline: none; transition: 0.15s; }
+.qty-stepper .qty-input:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(75, 87, 232, 0.14); }
 .qty-stepper .qty-unit { font-size: 13px; color: var(--ink-3); }
 /* 禁用态（不限版）：静态「不限」不可编辑 */
 .qty-stepper--off .qty-static { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--ink-3); background: var(--surface-warm); border: 1px solid var(--line); border-radius: 9px; }
+/* 0718 美化：额度行脚注（占用/消耗说明），前置小圆点 */
+.quota-note { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: var(--ink-3); margin-top: 8px; line-height: 1.6; }
+.quota-note::before { content: ""; width: 4px; height: 4px; flex: none; border-radius: 50%; background: var(--indigo); opacity: 0.55; margin-top: 7px; }
 /* 5.3:前台访问地址说明——问号 hover 面板,无序两行不换行 */
 .kp-tip { position: relative; display: inline-flex; cursor: help; }
 .kp-tip-pop { position: absolute; left: -8px; top: calc(100% + 7px); z-index: 200; background: rgba(24,26,33,.96); border-radius: 8px; box-shadow: var(--sh-md); padding: 7px 12px; display: none; }
@@ -595,11 +623,13 @@ a {
 .kp-tip-pop ul { margin: 0; padding-left: 15px; }
 .kp-tip-pop li { white-space: nowrap; font-size: 11.5px; color: #fff; line-height: 1.75; }
 /* 0615-2：弹窗底部说明（引用风格淡主题底板，过长换行用无序点） */
+/* 0718 美化：底板加淡靛描边、圆角/内距微调，观感更立体 */
 .sub-tip {
   margin-top: 10px;
-  padding: 10px 13px;
-  border-radius: 9px;
+  padding: 12px 14px;
+  border-radius: 10px;
   background: var(--indigo-soft);
+  border: 1px solid rgba(75, 87, 232, 0.14);
   color: var(--ink-2);
   font-size: 12px;
   line-height: 1.6;
@@ -612,6 +642,34 @@ a {
 }
 .sub-tip li {
   margin: 2px 0;
+}
+/* 0718 美化：新建订阅规则说明——左对齐控件列（lab 96 + gap 14 = 110），2×2 网格 + 自定义小圆点 */
+.sub-tip-rules {
+  margin-left: 110px;
+}
+.sub-tip-rules ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 20px;
+  padding-left: 0;
+  list-style: none;
+}
+.sub-tip-rules li {
+  position: relative;
+  margin: 0;
+  padding-left: 14px;
+  white-space: nowrap;
+}
+.sub-tip-rules li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--indigo);
+  opacity: 0.55;
 }
 
 /* 0615-3：账户凭证弹窗（创建 / 重置密码后展示） */
@@ -1012,17 +1070,20 @@ a {
 .dash-section-head .dash-section-title {
   margin: 0;
 }
-/* 0716 #14：数据看板「区间分析」工具条——标题在左、区间选择器在右，就近承载时间筛选 */
+/* 0717 二批 #8.1：用户留存一行三卡（卡片式,与平台 KPI/图表卡同风格） */
+.ret-card{display:flex;flex-direction:column;gap:12px;}
+.ret-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.ret-rate{font-size:30px;font-weight:600;color:var(--ink);line-height:1.1;}
+.ret-rate-muted{font-size:15px;font-weight:600;color:var(--ink-3);line-height:1.5;}
+.ret-meta{font-size:12px;color:var(--ink-3);line-height:1.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* 0717 二批 #6/#8.4：区间分析条回归轻量样式（无底色边框,撤销吸顶）——左标题右时间筛选 */
 .board-rangebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 22px 0 12px;
-  padding: 10px 14px;
-  background: var(--surface-2, #F6F7FB);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  margin: 26px 0 12px;
 }
 .board-rangebar .dash-section-title {
   margin: 0;
@@ -2192,11 +2253,258 @@ a {
 .domain-input input{min-width:0;flex:1;border:0;outline:0;background:transparent;padding:10px 12px;color:var(--ink);font:inherit}
 .domain-input .domain-suffix{display:flex;align-items:center;padding:0 13px;border-left:1px solid var(--line);background:var(--surface-warm);color:var(--ink-3);font-family:var(--mono);white-space:nowrap}
 /* 禁用输入框：整个 .inp2 盒子置灰（此前只灰了内层 input、外层白底盒子没变，观感像"文字淡"而非"禁用"）。
-   底色统一用 --surface-warm，与「机构域名前缀」固定后缀的灰保持一致（更浅、偏暖冷调） */
-.inp2:has(input:disabled),.inp2:has(textarea:disabled){background:var(--surface-warm);border-color:var(--line);cursor:not-allowed}
-.inp2 input:disabled,.inp2 textarea:disabled{background:transparent;color:var(--ink-3);cursor:not-allowed}
+   0718 #2：禁用置灰统一标准＝「前台访问地址」只读框样式（纸白 --paper 底 + --line-2 实线浅边框 + --ink-2 深灰文字，
+   与 .sel.sel-disabled 一致），修复此前 --surface-warm 另一套灰底造成的两灰并存 */
+.inp2:has(input:disabled),.inp2:has(textarea:disabled){background:var(--paper);border-color:var(--line-2);cursor:not-allowed}
+.inp2 input:disabled,.inp2 textarea:disabled{background:transparent;color:var(--ink-2);cursor:not-allowed}
 /* 0715 #1：对比时间独占第二行（flex-basis 100% 触发换行），避免长文案（今日档「对比昨日 00:00-13:45」）被卡片 overflow 截断 */
 .period-compare{flex-basis:100%;margin-left:0;margin-top:1px;color:var(--ink-3);font-size:10px;font-weight:400}
 .quota-kind{display:inline-flex;align-items:center;margin-left:6px;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.02em}
 .quota-kind.occupancy{background:var(--indigo-soft);color:var(--indigo-ink)}
 .quota-kind.consumption{background:var(--amber-soft);color:var(--amber-ink)}
+
+/* 0718 #4：AI 会员价格两组子面板（连续包月 / 单月）——续费语义标与前台套餐卡一致，每档＝标签+输入框+一行说明 */
+.price-groups{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:8px 0 4px;}
+.price-panel{background:var(--surface-warm);border:1px solid var(--line-2);border-radius:12px;padding:14px 16px 12px;}
+.price-panel-t{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.price-panel-tag{font-size:10px;font-weight:700;line-height:1;color:var(--amber-ink);background:var(--amber-soft);border-radius:6px;padding:3px 7px;white-space:nowrap;}
+.price-panel-tag.gray{color:var(--ink-3);background:#E9ECF3;}
+.price-row{display:flex;align-items:center;gap:10px;margin-top:8px;}
+.price-lab{flex:1;min-width:0;font-size:12.5px;color:var(--ink-2);}
+.price-hint{font-size:11.5px;color:var(--ink-3);line-height:1.6;margin:6px 0 2px;}
+/* 0718 #5：续费规则 + 调价须知合并的灰色说明块（与上方两枚价格面板同宽、左对齐）；
+   0718 #6：纯文字呈现——无「暂不可编辑」小标、无两行间分隔线 */
+.price-note{background:var(--surface-warm);border:1px solid var(--line-2);border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--ink-2);line-height:1.7;}
+.price-note-row + .price-note-row{margin-top:4px;}
+
+/* ============================================================
+   0717 数据看板视觉美化（.dboard 作用域——仅机构后台「数据看板」页生效，
+   不影响主控台 / 平台端复用的 .kpi / .chart-card / .bars 等基础样式）
+   方向：柔边浮起卡片 · 胶囊环比 · 渐变数字与进度 · 圆头 SVG 环图
+   ============================================================ */
+/* —— 卡片：柔化边线、hover 轻微浮起 —— */
+.dboard .kpi,
+.dboard .chart-card {
+  border-color: rgba(23, 26, 33, 0.06);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(23, 26, 33, 0.04), 0 10px 28px -20px rgba(40, 46, 90, 0.22);
+  transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.18s ease;
+}
+.dboard .kpi:hover,
+.dboard .chart-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(75, 87, 232, 0.2);
+  box-shadow: 0 2px 4px rgba(23, 26, 33, 0.04), 0 20px 42px -20px rgba(40, 46, 90, 0.3);
+}
+/* KPI 卡：右上角同色系微光 + hover 时顶部渐变线 */
+.dboard .kpi { padding: 22px 22px 20px; }
+.dboard .kpi::before {
+  content: "";
+  position: absolute;
+  top: -46px;
+  right: -46px;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(75, 87, 232, 0.09), transparent 68%);
+  pointer-events: none;
+}
+.dboard .kpi::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 0;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--grad);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.dboard .kpi:hover::after { opacity: 1; }
+.dboard .kpi .lab { letter-spacing: 0.01em; }
+.dboard .kpi .val { font-size: 34px; margin-top: 13px; letter-spacing: -0.02em; }
+
+/* —— 环比：箭头+数值做成胶囊，说明文字降灰（Kpi / 新增用户 / 来源分布共用结构） —— */
+.dboard .delta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  white-space: nowrap;
+}
+.dboard .delta.up,
+.dboard .delta.down { color: var(--ink-2); }
+.dboard .delta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2.5px 9px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.dboard .delta.up .delta-pill { background: var(--jade-soft); color: #0d9463; }
+.dboard .delta.down .delta-pill { background: var(--terra-soft); color: var(--terra); }
+.dboard .delta-arrow { display: inline-flex; }
+.dboard .delta .delta-txt { color: var(--ink-3); font-size: 11px; font-weight: 400; }
+
+/* —— 段标题：左侧渐变竖条锚点 —— */
+.dboard .dash-section-title {
+  position: relative;
+  padding-left: 13px;
+  font-size: 15px;
+}
+.dboard .dash-section-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--grad);
+}
+
+/* —— 主题 Tab：圆角 hover + 渐变指示条 —— */
+.dboard .tabbar { gap: 6px; border-bottom-color: rgba(23, 26, 33, 0.06); }
+.dboard .tab { padding: 10px 14px; border-radius: 9px 9px 0 0; transition: color 0.15s, background 0.15s; }
+.dboard .tab:hover { color: var(--ink); background: rgba(75, 87, 232, 0.05); }
+.dboard .tab.on { color: var(--indigo-ink); }
+.dboard .tab.on::after { left: 12px; right: 12px; height: 3px; background: var(--grad); }
+
+/* —— 留存卡：渐变率值 + 同比例细条；待成熟改虚线占位卡 —— */
+.dboard .ret-card { gap: 13px; }
+.dboard .ret-rate {
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  align-self: flex-start;
+  background: linear-gradient(120deg, #3d6ff5, #8b6cf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.dboard .ret-track {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--indigo-soft);
+  overflow: hidden;
+}
+.dboard .ret-track span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #3d6ff5, #8b6cf6);
+}
+.dboard .chart-card.ret-pending {
+  background: var(--surface-warm);
+  border: 1.5px dashed rgba(23, 26, 33, 0.15);
+  box-shadow: none;
+}
+.dboard .chart-card.ret-pending:hover {
+  transform: none;
+  border-color: rgba(23, 26, 33, 0.22);
+  box-shadow: none;
+}
+.dboard .ret-pending .ret-rate-muted {
+  display: inline-block;
+  align-self: flex-start;
+  background: #e9ecf4;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* —— 条形图：圆润条体 + 顶部高光 + hover 行底色；颜色仍取数据语义色 —— */
+.dboard .bars { gap: 12px; margin-top: 10px; }
+.dboard .bar-row { padding: 3px 6px; margin: 0 -6px; border-radius: 8px; transition: background 0.14s; }
+.dboard .bar-row:hover { background: var(--surface-warm); }
+.dboard .bar-track { height: 10px; background: #eef0f6; border-radius: 99px; }
+.dboard .bar-fill {
+  display: block;
+  position: relative;
+  border-radius: 99px;
+  min-width: 8px;
+  box-shadow: 0 2px 6px -2px rgba(40, 46, 90, 0.35);
+}
+.dboard .bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 60%);
+}
+
+/* —— 来源分布：SVG 环形图 + 图例行 —— */
+.dboard .db-donut { position: relative; width: 136px; height: 136px; flex: none; }
+.dboard .db-donut svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 8px 14px rgba(75, 87, 232, 0.22));
+}
+.dboard .db-donut-c {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.dboard .db-donut-c b {
+  font-family: var(--mono);
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.dboard .db-donut-c span { font-size: 11px; color: var(--ink-3); }
+.dboard .db-src-legend { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.dboard .db-src-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--surface-warm);
+  font-size: 12.5px;
+  transition: background 0.14s;
+}
+.dboard .db-src-row:hover { background: var(--indigo-soft); }
+.dboard .db-src-row i { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.dboard .db-src-row .nm { color: var(--ink-2); }
+.dboard .db-src-row b {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-left: auto;
+}
+.dboard .db-src-row .cnt {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  width: 52px;
+  text-align: right;
+}
+
+/* —— 卡片标题 / 页脚单位说明 —— */
+.dboard .chart-title { font-size: 14.5px; letter-spacing: 0.01em; }
+.dboard .unit-note { text-align: center; margin-top: 22px; }
+
+/* —— 进场动效（Tab 切换 / 页面载入时浮现；条形与留存条生长） —— */
+@media (prefers-reduced-motion: no-preference) {
+  .dboard .kpi-row,
+  .dboard .grid2 { animation: db-fade 0.32s ease both; }
+  .dboard .bar-fill,
+  .dboard .ret-track span { animation: db-grow-x 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+}
+@keyframes db-fade {
+  from { opacity: 0; transform: translateY(8px); }
+}
+@keyframes db-grow-x {
+  from { width: 0; }
+}

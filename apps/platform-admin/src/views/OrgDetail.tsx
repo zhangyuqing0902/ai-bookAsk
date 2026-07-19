@@ -448,7 +448,8 @@ export function OrgDetail() {
                       <div key={name} className={'sub-plan-row' + (on ? ' on' : '')} onClick={() => selectPlan(name)}>
                         <span className="spr-name">{name}</span>
                         <span className="spr-spec">{name === '定制版' ? '配额自定义' : name === '不限版' ? 'KP / 存储 / Token 均不限' : `KP ${p.kp} 个 · 存储 ${p.storage} GB · Token ${p.token} 亿`}</span>
-                        {on && <Icon id="i-check" w={15} h={15} />}
+                        {/* 0718 美化：选中对勾改圆形实心徽章（样式见 .spr-check） */}
+                        {on && <span className="spr-check"><Icon id="i-check" w={10} h={10} /></span>}
                       </div>
                     );
                   })}
@@ -477,7 +478,7 @@ export function OrgDetail() {
                     );
                   })}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 6 }}>占用量（KP · 存储）随内容删除可释放；消耗量（Token）只增不退、订阅周期结束清零重计</div>
+                <div className="quota-note">占用量（KP · 存储）随内容删除可释放；消耗量（Token）只增不退、订阅周期结束清零重计</div>
               </div>
             </div>
             <div className="fm-row">
@@ -492,9 +493,9 @@ export function OrgDetail() {
               <div className="lab">备注</div>
               <div className="ctl"><TextInput value={note} onChange={(e) => setNote(e.target.value)} placeholder="选填" style={{ maxWidth: 320 }} /></div>
             </div>
-            {/* 0615-6：去掉状态手动开关——状态由有效期自动判定；说明块用无序列表、不换行依次展示（左对齐控件列） */}
-            <div className="sub-tip" style={{ marginLeft: 86 }}>
-              <ul style={{ whiteSpace: 'nowrap' }}>
+            {/* 0615-6：去掉状态手动开关——状态由有效期自动判定；0718 美化：规则说明改 2×2 网格 + 小圆点（.sub-tip-rules，左对齐控件列） */}
+            <div className="sub-tip sub-tip-rules">
+              <ul>
                 <li>同一时间段只能有一个生效订阅</li>
                 <li>有生效订阅时最多再预建 1 期未生效订阅</li>
                 <li>新建有效期不可与已有订阅重叠</li>

@@ -23,6 +23,7 @@ import { WechatPay } from './screens/WechatPay';
 import { PaySuccess } from './screens/PaySuccess';
 import { PayFail } from './screens/PayFail';
 import { QrInvalid } from './screens/QrInvalid';
+import { KpGate } from './screens/KpGate';
 import { Agreement } from './screens/Agreement';
 import { AccountRebind } from './screens/AccountRebind';
 
@@ -61,6 +62,8 @@ function Shell() {
           <Route path="/pay/success" element={<PaySuccess />} />
           <Route path="/pay/fail" element={<PayFail />} />
           <Route path="/qr-invalid" element={<QrInvalid />} />
+          {/* 0717 #1.3/#1.6：KP 前台地址 / 二维码扫码统一入口(状态判活+失效跳转) */}
+          <Route path="/kp/:kpId" element={<KpGate />} />
           <Route path="/agreement/:type" element={<Agreement />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

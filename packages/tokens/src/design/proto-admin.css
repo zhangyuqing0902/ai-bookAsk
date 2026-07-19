@@ -423,7 +423,8 @@
 .perm-child-wrap{position:relative;margin-left:22px;margin-top:2px;}
 .perm-child-wrap::before{content:'';position:absolute;left:-12px;top:-8px;width:12px;height:32px;
   border-left:2px dashed var(--ink-3);border-bottom:2px dashed var(--ink-3);border-bottom-left-radius:8px;opacity:.55;}
-.perm-item.perm-item-child{background:var(--indigo-soft);border-radius:8px;padding:8px 10px;}
+/* 0717 #6：去掉子权限行的紫色背景框,仅保留缩进+虚线连接线表达父子层级 */
+.perm-item.perm-item-child{border-radius:8px;padding:8px 10px;}
 /* 0716 二批 #7：「功能权限」标签移到 key 行，标题 / key 行均不换行，右侧开关垂直居中对齐 */
 .perm-item.perm-item-child .pi-t{white-space:nowrap;font-size:13px;}
 .perm-item.perm-item-child .pi-k{display:flex;align-items:center;gap:6px;white-space:nowrap;}
@@ -431,7 +432,12 @@
 
 /* nowrap / 禁用输入 */
 .upbox .nowrap{white-space:nowrap;}
-.inp2.disabled{background:#F3F4F8;color:var(--ink-3);cursor:not-allowed;border-style:dashed;}
+/* 0717 二批 #5：禁用置灰统一标准＝「前台访问地址」只读框（纸白底+实线浅边框+深灰文字），两后台一致 */
+.inp2.disabled{background:var(--paper);color:var(--ink-2);cursor:not-allowed;border:1px solid var(--line-2);}
+.inp2.disabled input,.inp2.disabled textarea{cursor:not-allowed;color:var(--ink-2);}
+.sel.sel-disabled{background:var(--paper);color:var(--ink-2);border:1px solid var(--line-2);}
+.radio-list .radio-opt.off{cursor:not-allowed;opacity:.55;}
+.radio-list .radio-opt.off .rt,.radio-list .radio-opt.off .rs{color:var(--ink-3);}
 
 /* 日期区间选择器(点击自定义弹出) */
 .dr-pop.calpop{flex-direction:column;gap:0;padding:14px;width:266px;align-items:stretch;}
@@ -497,8 +503,10 @@
   line-height:1;padding:4px 9px;border-radius:6px;letter-spacing:.01em;}
 /* 来源 = 统一灰色小标签 */
 .kp-tag-src{background:var(--surface-warm);color:var(--ink-2);border:1px solid var(--line);}
-/* 发布状态 = 彩色标签(已发=电光靛实底 / 未发=灰描边) */
-.kp-tag-st.tag-jade{background:var(--indigo-soft);color:var(--indigo-ink);}
+/* 发布状态 = 彩色标签（0718 #3：与详情头 tag-s 同色——已发布=玉绿 / 已下架=琥珀 / 草稿=灰描边；
+   原列表「已发布」电光靛取消，列表/详情状态色统一；平台 Agent「机构」类型标已改用 tag-indigo 保持原观感） */
+.kp-tag-st.tag-jade{background:var(--jade-soft);color:var(--jade);}
+.kp-tag-st.tag-amber{background:var(--amber-soft);color:var(--amber-ink);}
 .kp-tag-st.tag-line{background:transparent;color:var(--ink-3);border:1px solid var(--line);}
 /* 5.4:卡片统计提示 = 黑底圆角白字(替代系统默认 title) */
 .has-tip{position:relative;}

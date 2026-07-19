@@ -4,7 +4,7 @@ const path = require('path');
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   Header, Footer, AlignmentType, LevelFormat, HeadingLevel, BorderStyle,
-  WidthType, ShadingType, VerticalAlign, PageNumber,
+  WidthType, ShadingType, VerticalAlign, PageNumber, ImageRun,
 } = require('docx');
 
 const OUT = path.join(__dirname, '..', 'AI问书-新机构入驻微信对接清单.docx');
@@ -54,6 +54,45 @@ function table(headers, rows, widths) {
   return new Table({ width: { size: widths.reduce((a, x) => a + x, 0), type: WidthType.DXA }, columnWidths: widths, borders, rows: trs });
 }
 
+// 二级标题（附录内小节用）
+const H2 = (text) => new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 220, after: 110 }, children: [new TextRun({ text, bold: true, font: CJK, color: CLR.h2, size: 25 })] });
+// 灰色小字提示
+const NOTE = (text) => new Paragraph({ spacing: { after: 120, line: 300 }, children: runs(text, { size: 19, color: CLR.sub }) });
+// 可复制的模板正文块（浅底 + 左强调线，提示"这段是拿去粘贴的"）
+const TPL = (text) => new Paragraph({
+  spacing: { after: 90, line: 320 },
+  shading: { type: ShadingType.CLEAR, fill: 'F7F8FC' },
+  border: { left: { style: BorderStyle.SINGLE, size: 12, color: CLR.h2, space: 8 } },
+  indent: { left: 160, right: 160 },
+  children: runs(text, { size: 21 }),
+});
+
+// 交互图示例：3 列图格（图 + 图注），images = [{file, cap}]
+const SHOT_DIR = path.join(__dirname, '..', 'wechat-daikou', 'assets');
+function shotGrid(images, cols = 3) {
+  const IW = 118, IH = Math.round(IW * 1688 / 814); // 截图含机身外框，按原比例
+  const W = Math.floor(9360 / cols);
+  const b = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const borders = { top: b, bottom: b, left: b, right: b, insideHorizontal: b, insideVertical: b };
+  const rows = [];
+  for (let i = 0; i < images.length; i += cols) {
+    const group = images.slice(i, i + cols);
+    while (group.length < cols) group.push(null);
+    rows.push(new TableRow({
+      children: group.map((g) => new TableCell({
+        width: { size: W, type: WidthType.DXA },
+        margins: { top: 60, bottom: 120, left: 60, right: 60 },
+        verticalAlign: VerticalAlign.TOP,
+        children: g ? [
+          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new ImageRun({ type: 'png', data: fs.readFileSync(path.join(SHOT_DIR, g.file)), transformation: { width: IW, height: IH } })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: runs(g.cap, { size: 17, color: CLR.sub }) }),
+        ] : [new Paragraph({ children: [] })],
+      })),
+    }));
+  }
+  return new Table({ width: { size: 9360, type: WidthType.DXA }, columnWidths: new Array(cols).fill(W), borders, rows });
+}
+
 const doc = new Document({
   styles: { default: { document: { run: { font: CJK, size: 22, color: CLR.ink } } } },
   numbering: {
@@ -87,8 +126,8 @@ const doc = new Document({
           ],
           [
             '微信支付商户平台\n（开通商户号）',
-            ['申请微信支付商户号，完成结算账户与法人认证', '设置 APIv3 密钥、下载 API 证书', '配置支付授权目录（JSAPI）与 H5 支付域名（微信外）', '将商户号与公众号 AppID 绑定', '需提供：商户号 MchID、APIv3 密钥、API 证书（apiclient_cert.pem + apiclient_key.pem）、证书序列号'],
-            '用户支付与退款（微信内 JSAPI / 微信外 H5）',
+            ['申请微信支付商户号，完成结算账户与法人认证', '设置 APIv3 密钥、下载 API 证书', '配置支付授权目录（JSAPI）与 H5 支付域名（微信外）', '将商户号与公众号 AppID 绑定', '**如需售卖「连续包月会员」（自动续费）**：另需申请开通「委托代扣」产品权限，见第四节与附录 A', '需提供：商户号 MchID、APIv3 密钥、API 证书（apiclient_cert.pem + apiclient_key.pem）、证书序列号'],
+            '用户支付与退款（微信内 JSAPI / 微信外 H5）；自动续费扣款',
           ],
           [
             '微信开放平台\n（按需）',
@@ -123,11 +162,77 @@ const doc = new Document({
       BULLET('**证书有效期**：API 证书 / 密钥到期需更换并同步给平台，否则支付 / 退款会中断。'),
       BULLET('**资料齐备**：AppID / AppSecret / MchID / APIv3 密钥 / API 证书（及网站应用 AppID，如需）均备齐后交付平台录入。'),
 
-      // 四、资金说明
-      H1('四、资金说明'),
+      // 四、委托代扣（自动续费）
+      H1('四、开通「委托代扣」（自动续费）'),
+      P('**仅当贵机构要售卖「连续包月会员」时才需要办理。** 若贵机构只售卖「单月会员」或「永享」一次性买断内容，则无需申请，跳过本节即可。'),
+      P('「委托代扣」是微信支付的一项独立产品权限，需在商户号开通后**单独申请**，审核由微信支付完成（通常 1–3 个工作日）：'),
+      BULLET('**申请入口**：微信支付商户平台 → 产品中心 → 产品大全 → 委托代扣 → 申请开通。'),
+      BULLET('**需提交两部分材料**：① 申请理由（业务场景、产品名称、会员权益、会员价格、服务内容）；② 产品交互图（5 张指定页面截图）。'),
+      BULLET('**两个最常见的驳回原因**：申请理由写得过于简单、产品交互图缺张（尤其缺「退订自动续费路径」截图）。材料模板与示例见 **附录 A**，照抄替换即可。'),
+      BULLET('**被驳回后**：在原申请上按驳回原因逐条补充并「重新提交」，不要新建一笔申请。'),
+      P('开通后请告知 AI 问书对接人，平台侧会为贵机构开启「连续包月」售卖入口。'),
+
+      // 五、资金说明
+      H1('五、资金说明'),
       BULLET('机构 C 端用户的支付资金，直接进入机构自己的微信支付商户号。'),
       BULLET('退款由机构在自己的商户号原路退回；平台仅记录订单与退款状态。'),
+      BULLET('自动续费扣款同样进入机构自己的商户号，由机构商户号发起代扣。'),
       new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: '如准备过程中遇到微信侧问题，请联系 AI 问书对接人协助。', font: CJK, size: 20, color: CLR.sub })] }),
+
+      // ============ 附录 A ============
+      new Paragraph({ pageBreakBefore: true, spacing: { after: 60 }, children: [new TextRun({ text: '附录 A', font: CJK, bold: true, size: 32, color: CLR.h1 })] }),
+      new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: '「委托代扣」申请材料模板', font: CJK, bold: true, size: 26, color: CLR.ink })] }),
+      new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: CLR.h2, space: 1 } }, spacing: { after: 140 }, children: [] }),
+      P('各机构需各自向微信提交申请，但**材料内容基本一致**——C 端产品（AI 问书 H5）、会员权益与续费规则由平台统一提供。贵机构只需替换【】中的自有信息，并用**贵机构自己的 H5** 截取交互图。'),
+
+      H2('A.1　申请理由（复制后替换【】内容）'),
+      TPL('「AI 问书」是【机构名称】在微信服务号内以 H5 承载的知识问答服务。【机构名称】将其正版图书 / 专业知识库接入平台，读者扫描纸书或知识页上的二维码进入，即可就书中内容向 AI 提问，答案均标注知识出处。免费用户可进行基础文字问答；用户开通会员后，解锁图音视频深度精讲、实时电话即时问答、VIP 极速优先通道等增值服务。'),
+      TPL('会员提供两种购买方式：**连续包月**——首月【首月折扣价】、次月起【月度价】/ 月，按月自动续费；开通前须勾选同意《会员服务协议》与《自动续费协议》，每次扣费前 3 天短信提醒，用户可随时在「会员中心」一键退订，退订后当期权益仍可用至期满。**单月会员**——【月度价】/ 1 个月，一次性购买，到期自动失效不扣款。'),
+      TPL('本次申请委托代扣，仅用于「连续包月会员」到期后的自动续费扣款。全部为线上虚拟知识服务，不涉及实物发货。服务号：【服务号全称】；商户号：【MchID】；商户主体：【营业执照名称】。'),
+      P('**需替换的占位共 6 处**：'),
+      table(
+        ['占位', '填什么', '从哪里取'],
+        [
+          ['【机构名称】', '贵机构对外品牌名 / 知识来源方名称', '与 C 端首页展示的「知识由 XX 提供」一致'],
+          ['【首月折扣价】', '首月优惠价，如 ¥9.9', 'AI 问书机构后台 → 系统配置 → AI 会员价格'],
+          ['【月度价】', '月度价，如 ¥19.9', '同上'],
+          ['【服务号全称】', '已认证服务号全称', '微信公众平台'],
+          ['【MchID】', '微信支付商户号', '微信支付商户平台'],
+          ['【营业执照名称】', '商户主体全称', '营业执照'],
+        ],
+        [1900, 3730, 3730]
+      ),
+      NOTE('注意：价格务必与贵机构机构后台「系统配置 → AI 会员价格」的实际设置一致（平台默认首月 ¥9.9、月度 ¥19.9）。若两者不符，微信侧可能以「价格与实际不符」再次驳回。'),
+
+      H2('A.2　产品交互图（5 张，缺一即驳回）'),
+      table(
+        ['#', '截图页面', '在 C 端的位置', '必须体现的要素'],
+        [
+          ['1', '应用首页', '登录后的 AI 问答主界面', '产品名称、知识来源机构'],
+          ['2', '服务内容介绍', '任一问题的 AI 回答页', 'AI 答案 + 知识溯源 + 带「会员 / 永享」标识的媒体资源'],
+          ['3', '会员权益完整页', '我的 → 会员中心', '「免费 vs 会员」全部权益逐项对比'],
+          ['4', '价目表', '开通会员页', '连续包月与单月两档价格、自动续费标识、协议勾选项'],
+          ['5', '退订自动续费路径', '会员中心 → 取消自动续费', '退订入口 + 点击后的二次确认弹窗'],
+        ],
+        [560, 1900, 2400, 4500]
+      ),
+      new Paragraph({ spacing: { after: 100 }, children: [] }),
+      P('**示例如下**（截自 AI 问书 C 端标准界面）：'),
+      shotGrid([
+        { file: '01-chat.png', cap: '图 A-1　应用首页' },
+        { file: '02-chat-answer.png', cap: '图 A-2　服务内容介绍' },
+        { file: '04-member-center.png', cap: '图 A-3　会员权益完整页' },
+        { file: '03-member-pricing.png', cap: '图 A-4　价目表' },
+        { file: '05-unsubscribe.png', cap: '图 A-5　退订自动续费路径' },
+      ]),
+      NOTE('上图仅为示例（示例中的知识来源为演示机构）。请在贵机构自己的 H5 域名下截取相同的 5 个页面：需含完整手机界面、保留顶部标题栏，不要裁切；截图中不得出现「测试 / 演示 / 未上线」等字样。'),
+
+      H2('A.3　提交前自查'),
+      BULLET('5 张交互图齐全，且均截自**贵机构自己的** H5 域名。'),
+      BULLET('申请理由中的价格，与机构后台「系统配置 → AI 会员价格」的实际设置一致。'),
+      BULLET('服务号主体、商户号主体、营业执照主体三者一致。'),
+      BULLET('「退订自动续费路径」这张最容易漏，务必包含点击后的二次确认弹窗。'),
+      BULLET('被驳回时在原申请上「重新提交」，逐条对应驳回原因补充，不要新建申请。'),
     ],
   }],
 });

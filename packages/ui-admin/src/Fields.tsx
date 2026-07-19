@@ -42,8 +42,9 @@ export function TextInput({
   disabled?: boolean;
 }) {
   const controlled = value !== undefined ? { value, onChange: (e: { target: { value: string } }) => onChange?.(e) } : { defaultValue };
+  // 0717 #4：禁用态外层同步挂 .disabled(灰底+cursor:not-allowed),供实时分享消费者只读表单使用
   return (
-    <div className="inp2" style={style}>
+    <div className={'inp2' + (disabled ? ' disabled' : '')} style={style}>
       {textarea ? (
         <textarea placeholder={placeholder} disabled={disabled} {...(controlled as object)} />
       ) : (

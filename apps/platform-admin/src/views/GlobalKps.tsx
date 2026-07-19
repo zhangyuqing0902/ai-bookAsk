@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, EmptyState, exportWorkbook } from '@aba/ui-admin';
-import { KPS, ORGS, orgOptionLabel, orgOptionValue } from '@aba/mock';
+import { KPS, ORGS, KP_SOURCE_LABEL, orgOptionLabel, orgOptionValue } from '@aba/mock';
 import { KP_STAT } from '../data/kpStatus';
 import { buildGlobalKpsSpec } from '../exports/globalKps';
 
@@ -21,7 +21,7 @@ export function GlobalKps() {
   const orgName = (id: string) => ORGS.find((o) => o.id === id)?.name ?? id;
   const orgNames = [...new Set(KPS.map((k) => orgName(k.orgId)))];
 
-  // 0716 #1.1（二批）：已删除（物理删除）的 KP 不在平台列表展示，仅数据库留存
+  // 0717 #1.5：已删除（逻辑删除）的 KP 不在三端界面展示，数据库保留数据
   const rows = KPS.filter(
     (k) =>
       k.status !== 'deleted' &&
@@ -55,8 +55,9 @@ export function GlobalKps() {
         <div className="kp-grid">
           {rows.map((k, i) => {
             const s = KP_STAT[k.status] ?? { t: k.status, cls: 'tag-line' };
+            // 0717 #2.3：路由改带 KP 真实 id,详情按同一份 @aba/mock 数据渲染,列表与详情一致
             return (
-              <div className="kp-card" key={k.orgId + k.name} style={{ cursor: 'pointer' }} onClick={() => nav('/global-kps/' + (i + 1))} title={`查看「${k.name}」详情`}>
+              <div className="kp-card" key={k.orgId + k.name} style={{ cursor: 'pointer' }} onClick={() => nav('/global-kps/' + k.id)} title={`查看「${k.name}」详情`}>
                 <div className={'kp-cover ' + COVERS[i % COVERS.length]}>
                   <div className="ct">{k.name}</div>
                 </div>
@@ -70,9 +71,11 @@ export function GlobalKps() {
                     机构 · {orgName(k.orgId)}
                   </div>
                   {/* 0614b：删去 书籍/系列/专家库 粒度标、免费/会员、创建时间——平台只读监管只看名称/机构/状态 */}
+                  {/* 0718 #7：平台卡片补齐来源标签（自建 / 分享导入·实时 / 分享导入·快照），与机构后台同源同规、统一灰色；
+                      0718 #3：去掉「永享」标（平台监管视角不再展示权益标），标签规则与颜色与机构后台完全一致 */}
                   <div className="kp-tags">
+                    <span className="kp-tag-src">{KP_SOURCE_LABEL[k.shareMode ?? 'own']}</span>
                     <span className={'kp-tag-st ' + s.cls}>{s.t}</span>
-                    {k.hasForever && <span className="kp-tag-src">永享</span>}
                   </div>
                 </div>
               </div>

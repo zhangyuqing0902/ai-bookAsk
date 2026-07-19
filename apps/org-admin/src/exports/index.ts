@@ -9,7 +9,7 @@ import { orgDaily, orgSnapshot, rangeMetrics } from '../../../../packages/mock/s
 import { MY_ORG_SUBS, currentSubCard } from '../../../../packages/mock/src/data/subscriptions.ts';
 import { USERS } from '../data/cusers.ts';
 import { BATCHES, batchCodes } from '../data/codes.ts';
-import { RANGE, RETENTION, TOPKP, ACTIVE_SNAPSHOT } from '../data/dataBoard.ts';
+import { RANGE, retentionFor, TOPKP } from '../data/dataBoard.ts';
 import { FEEDBACKS } from '../data/feedback.ts';
 import { buildDashboardSpec } from './dashboard.ts';
 import { buildCUsersSpec } from './cusers.ts';
@@ -59,8 +59,9 @@ export const TEMPLATE_SPECS: Array<{ page: string; build: () => ExportSpec }> = 
         periodDays: 7,
         d: RANGE['7 日'],
         retentionRange: '最新可统计',
-        retention: RETENTION['最新可统计'],
-        active: ACTIVE_SNAPSHOT,
+        retention: retentionFor('最新可统计', null),
+        // 0717 二批 #8.2：活跃概览随区间联动,模板样张按 7 日区间取值
+        active: { dau: RANGE['7 日'].dau, wau: RANGE['7 日'].wau, mau: RANGE['7 日'].mau },
         topkp: TOPKP,
       }),
   },

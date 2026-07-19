@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast, FileTypeIcon, type FileKind } from '@aba/ui';
-import { canPhysicallyDeleteKp } from '@aba/mock';
+import { canDeleteKp, KP_SOURCE_LABEL } from '@aba/mock';
 import { Search, TextInput } from './Fields';
 import { Dropdown } from './Dropdown';
 import { DataGrid, type Col } from './DataGrid';
@@ -111,8 +111,9 @@ const SHARES: Share[] = [
 type Confirm = { title: string; desc: ReactNode; danger?: boolean; confirmText?: string; onOk: () => void };
 
 // 0716 #1.1：头部状态标签配色（kpStatus → 标签文案 / 样式）。归档已并入删除，三态 + 已删除（软删）。
+// 0717 #2.4：两后台状态命名统一为「草稿 / 已发布 / 已下架」（原「未发/未发布」统一改「草稿」）。
 const KP_STATUS_TAG: Record<'draft' | 'published' | 'unlisted' | 'deleted', { label: string; cls: string }> = {
-  draft: { label: '未发布', cls: 'tag-line' },
+  draft: { label: '草稿', cls: 'tag-line' },
   published: { label: '已发布', cls: 'tag-jade' },
   unlisted: { label: '已下架', cls: 'tag-amber' },
   deleted: { label: '已删除', cls: 'tag-terra' },
@@ -125,19 +126,23 @@ const KP_STATUS_TAG: Record<'draft' | 'published' | 'unlisted' | 'deleted', { la
 //   domainSuffix 由 wrapper 用 @aba/mock 的 tenantDomainSuffix(hostname) 按当前环境算好传入（本地 -aba.localhost）。
 // 0716 #1.1：kpStatus / onKpStatusChange / purchasedUsers 为可选——机构端接 kpLifecycle store 走真状态
 //   （下架↔重新发布、删除后置灰返回列表）；未传时保持旧行为（纯 toast），平台端未接线不受影响。
-export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domainSuffix = '-aba.一级域名.cn', importMode = 'own', shareOrgName = 'YY 教育', kpStatus, onKpStatusChange, purchasedUsers, bookUsers, kpRelations }: {
+export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domainSuffix = '-aba.一级域名.cn', importMode = 'own', consumerReadonly = true, shareOrgName = 'YY 教育', kpName = '心血管分册 · 第4版', kpStatus, onKpStatusChange, purchasedUsers, bookUsers, kpRelations }: {
   listBase?: string;
   orgPrefix?: string;
   domainSuffix?: string;
   importMode?: 'own' | 'realtime' | 'snapshot';
+  /** 0718 #7：平台超管查看「分享导入·实时」的 KP 时传 false——不套用接收方只读（banner/禁编辑/隐藏 Tab），保留发布/下架/删除等监管操作，仅展示来源标签 */
+  consumerReadonly?: boolean;
   /** 0716 二批 #5.1：实时同步导入时的来源（分享）机构名，banner 动态展示 */
   shareOrgName?: string;
+  /** 0717 #2.3：KP 名称由列表数据传入,保证列表与详情一致 */
+  kpName?: string;
   kpStatus?: 'draft' | 'published' | 'unlisted' | 'deleted';
   onKpStatusChange?: (next: 'published' | 'unlisted' | 'deleted') => void;
   purchasedUsers?: number; // 删除确认提示影响 N 位已购永享用户
   bookUsers?: number; // 删除影响的纸书扫码解锁用户数（与永享差异化处理）
-  // 0716 #1.1：KP 的业务关系计数——全为 0 才允许物理删除，否则软删除（下线内容、保留审计）。
-  // 默认按有关系处理（{orders:1}），保持既有软删语义，平台端未接线不受影响。
+  // 0717 #1.5：KP 的业务关系计数——只影响删除弹窗是否展示影响声明（删除一律逻辑删除）。
+  // 默认按有关系处理（{orders:1}），平台端未接线不受影响。
   kpRelations?: { orders?: number; grants?: number; shares?: number; imports?: number };
 }) {
   const nav = useNavigate();
@@ -150,13 +155,14 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
       ? rawStatus
       : 'published';
   const statusTag = KP_STATUS_TAG[lifecycle] ?? KP_STATUS_TAG.published;
-  // 0716 #1.1：按业务关系判定删除方式——无任何关系→物理删除，否则→软删除（默认给非 0 保持软删语义）
-  const deleteVerdict = canPhysicallyDeleteKp(kpRelations ?? { orders: 1 });
+  // 0717 #1.5：删除一律为逻辑删除（软删）;relations 仅决定弹窗是否展示对 C 端用户的影响声明
+  const deleteVerdict = canDeleteKp(kpRelations ?? { orders: 1 });
   // 复制该 KP 的 C 端前台访问地址：随当前环境自动生成、随机构域名前缀变化
   const frontUrl = `https://${orgPrefix}${domainSuffix}/kp/${KP_CODE}`;
   // 分享权限（对齐 @aba/mock sharePolicy）：实时同步导入的 KP 内容随源机构更新、只读，
   // 二维码 / 分享两 Tab 不可见，下架 / 删除等源机构侧操作也隐藏；独立快照与自建 KP 全功能。
-  const isRealtime = importMode === 'realtime';
+  // 0718 #7：consumerReadonly=false（平台超管）时仅展示来源标签，不套用接收方只读。
+  const isRealtime = importMode === 'realtime' && consumerReadonly;
   const visibleTabs = isRealtime ? TABS.filter((t) => t.id !== 'qr' && t.id !== 'share') : TABS;
   // 0716 二批 #5.3：实时同步只读＝操作级——数据可读可查，仅操作按钮置灰、点击提示无权限
   const deny = () => toast('无权限操作');
@@ -166,6 +172,24 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
   };
   const [tab, setTab] = useState<TabId>('base');
   const [price, setPrice] = useState(0);
+  // 0717 #5：基础权益切换点击即生效 → 增加二次确认,确认后才生效并 toast
+  const switchTier = (next: 0 | 1) => {
+    if (price === next) return;
+    const nm = next === 0 ? '免费' : '会员';
+    setConfirm({
+      title: '切换基础权益',
+      desc: (
+        <>
+          确认将本 KP 基础权益由「{price === 0 ? '免费' : '会员'}」切换为「{nm}」？确认后<b>立即生效</b>：
+          {next === 1
+            ? '仅会员可查看图 / 音 / 视媒体资源，文字内容不受会员身份限制；「永享」内容仍单独计价。'
+            : '平台所有用户均可查看全部非永享内容；「永享」内容仍单独计价。'}
+        </>
+      ),
+      confirmText: '确认切换',
+      onOk: () => { setPrice(next); toast(`基础权益已切换为「${nm}」· 立即生效`); },
+    });
+  };
   const [cover, setCover] = useState(true);
   const [crop, setCrop] = useState(false);
   const [cropPos, setCropPos] = useState({ x: 0, y: 0 });
@@ -426,20 +450,40 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
           <Icon id="i-chevL" />
           返回
         </span>
-        <span className="kpd-name">心血管分册 · 第4版</span>
-        {/* 来源标签：实时同步 / 独立快照导入的 KP 显示「共享导入」，避免与「实时同步 · 只读」矛盾 */}
-        <span className={'tag-s ' + (importMode === 'own' ? 'tag-indigo' : 'tag-line')}>{importMode === 'own' ? '自建' : '共享导入'}</span>
+        <span className="kpd-name">{kpName}</span>
+        {/* 0718 #7：来源标签三态统一（自建 / 分享导入·实时 / 分享导入·快照），两后台一致、统一灰色；
+            旧「自建靛蓝 / 共享灰」二分法废弃（0717 二批 #2 口径被本条取代） */}
+        <span className="tag-s tag-line">{KP_SOURCE_LABEL[importMode]}</span>
         {/* 6.15:状态紧跟来源标签直接显示,不要「当前状态」文案；0714 #18 随 kpStatus 渲染 */}
         <span className={'tag-s ' + statusTag.cls}>{statusTag.label}</span>
-        {isRealtime ? (
-          <span className="tag-s tag-line">实时同步 · 只读</span>
-        ) : (
+        {/* 0717 二批 #4：实时同步导入的详情头不再挂只读附加标(顶部 banner 已说明),仅隐藏状态操作按钮 */}
+        {!isRealtime && (
           <span className="kpd-status">
-            {/* 0716 #1.1：已发布→「下架」；已下架→「重新发布」；已删除不再提供状态操作 */}
+            {/* 0717 #2.1/#2.2：草稿→「发布」；已发布→「下架」；已下架→「重新发布」；已删除不再提供状态操作 */}
+            {lifecycle === 'draft' && (
+              <button className="btn btn-primary btn-sm" onClick={() => setConfirm({
+                title: '发布知识 KP',
+                desc: '发布后前台立即可见：支持检索、购买、扫码与链接访问。发布需至少一份已向量化完成的知识内容。',
+                confirmText: '确认发布',
+                onOk: () => { onKpStatusChange?.('published'); toast('已发布'); },
+              })}>发布</button>
+            )}
             {lifecycle === 'published' && (
               <button className="btn btn-ghost btn-sm" onClick={() => setConfirm({
                 title: '下架知识 KP',
-                desc: '下架后停止检索、新购买、新扫码与普通链接访问；已购买或已获纸书权益的用户继续保留访问，可随时重新发布。',
+                // 0717 #1.8：向运营明示下架对前台的影响——所有入口一律显「已下架」并拦截,权益保留、可逆
+                desc: (
+                  <>
+                    <ul style={{ margin: '0 0 12px', paddingLeft: 18, fontSize: 13, lineHeight: 1.9, color: 'var(--ink-2)' }}>
+                      <li>下架后停止检索、新购买、新扫码与链接访问</li>
+                      <li>用户端<b>「我的纸书」「我的永享」</b>将显示<b>「已下架」</b>，点击提示联系客服，<b>暂不可进入会话 / 预览</b></li>
+                      <li>已购权益<b>不会清除</b>，重新发布后自动恢复访问</li>
+                    </ul>
+                    <div style={{ background: 'rgba(240,165,0,.10)', borderLeft: '3px solid var(--amber)', borderRadius: 8, padding: '9px 12px', fontSize: 12.5, lineHeight: 1.7, color: 'var(--ink-2)' }}>
+                      下架适用于「临时禁止用户访问、处理完问题再上架」的运营场景，可随时重新发布。
+                    </div>
+                  </>
+                ),
                 confirmText: '确认下架',
                 onOk: () => { onKpStatusChange?.('unlisted'); toast('已下架'); },
               })}>下架</button>
@@ -452,12 +496,12 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
                 onOk: () => { onKpStatusChange?.('published'); toast('已重新发布'); },
               })}>重新发布</button>
             )}
-            {/* 0716 #1.1（二批）：无论有无业务关系均为物理删除，删除后两后台列表不再展示（仅数据库留存）；
+            {/* 0717 #1.5：删除一律为逻辑删除（软删）——删除后三端界面均不再展示、数据库保留全部数据；
                 有业务关系时弹窗额外展示对 C 端的影响声明（前台统一标「已失效」）。 */}
             {lifecycle !== 'deleted' && (!deleteVerdict.hasRelations ? (
               <button className="btn btn-ghost btn-sm" style={{ color: 'var(--terra)', borderColor: 'var(--terra-soft)' }} onClick={() => setConfirm({
                 title: '删除知识 KP',
-                desc: <>彻底删除该 KP？本 KP 无任何订单 / 权益 / 分享关系，将清除其全部文件、向量、二维码与分享，删除后不可恢复。</>,
+                desc: <>确认删除该 KP？本 KP 无任何订单 / 权益 / 分享关系。删除后三端界面均不再展示（逻辑删除，数据库保留数据），前台访问统一提示「已失效」。</>,
                 danger: true,
                 confirmText: '确认删除',
                 onOk: () => { onKpStatusChange?.('deleted'); toast('已删除'); nav(listBase); },
@@ -470,12 +514,12 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
                     {/* 删除影响声明——结构化无序列表(与「权益模型说明」同款范式) */}
                     <ul style={{ margin: '0 0 12px', paddingLeft: 18, fontSize: 13, lineHeight: 1.9, color: 'var(--ink-2)' }}>
                       <li>该 KP 已存在<b>订单 / 永享 / 纸书 / 分享 / 导入</b>关系</li>
-                      <li>删除后立即下线内容、后台不再展示，<b>仅保留数据库记录与 C 端历史凭证</b></li>
-                      <li>此操作<b>删除后不可恢复</b>，请确认已知悉对下列用户的影响</li>
+                      <li>删除为<b>逻辑删除</b>：三端界面均不再展示，<b>数据库保留全部数据</b>与 C 端历史凭证</li>
+                      <li>界面无恢复入口，请确认已知悉对下列用户的影响</li>
                     </ul>
                     {/* 警示引用块:淡红底 + 左珊瑚边,统计两类受影响用户；前台各入口统一标「已失效」 */}
                     <div style={{ background: 'rgba(229,83,59,.08)', borderLeft: '3px solid var(--terra)', borderRadius: 8, padding: '9px 12px', fontSize: 12.5, lineHeight: 1.7, color: 'var(--terra)' }}>
-                      <b>本 KP 有 {purchasedUsers ?? 'N'} 位已购永享用户、{bookUsers ?? 'N'} 位纸书扫码解锁用户</b>：删除后<b>「我的永享」「我的纸书」</b>条目统一标记<b>「已失效」</b>、内容不可访问，点击提示联系客服；<b>历史 AI 会话</b>中引用本 KP 的内容同标「已失效」，订单记录仍保留可查。
+                      <b>本 KP 有 {purchasedUsers ?? 'N'} 位已购永享用户、{bookUsers ?? 'N'} 位纸书扫码解锁用户</b>：删除后<b>「我的永享」「我的纸书」</b>条目统一标记<b>「已失效」</b>、内容不可访问，点击提示联系客服；<b>新会话 / 扫码进入</b>提示「已失效」并引导至本机构其他 KP；<b>历史 AI 会话</b>中引用本 KP 的内容同标「已失效」，订单记录仍保留可查。
                     </div>
                   </>
                 ),
@@ -512,7 +556,7 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
               {cover ? (
                 <>
                   <div className="cover9">
-                    <div className="ct">心血管分册 · 第4版</div>
+                    <div className="ct">{kpName}</div>
                   </div>
                   <div className={'ops' + (isRealtime ? ' ops-deny' : '')}>
                     <span onClick={isRealtime ? deny : () => pickFile(ACCEPT.cover, () => setCrop(true))}>重新上传</span>
@@ -535,24 +579,25 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
             </div>
           </div>
           <div className="fm-card" style={{ flex: 1, margin: 0 }}>
+            {/* 0717 #4：实时同步(消费者视角)——表单全部禁用置灰(无光标、hover 显 not-allowed)、单选/下拉不可操作,仅「复制链接」可用 */}
             <div className="fm-row">
               <div className="lab">KP 名称<span className="req">*</span></div>
-              <div className="ctl"><TextInput defaultValue="心血管分册 · 第4版" /></div>
+              <div className="ctl"><TextInput defaultValue={kpName} disabled={isRealtime} /></div>
             </div>
             <div className="fm-row">
               <div className="lab">简介</div>
-              <div className="ctl"><TextInput placeholder="心血管疾病诊疗知识库,覆盖诊断、用药、术后管理…" /></div>
+              <div className="ctl"><TextInput placeholder="心血管疾病诊疗知识库,覆盖诊断、用药、术后管理…" disabled={isRealtime} /></div>
             </div>
             <div className="fm-row">
               <div className="lab">纸书购买链接</div>
               {/* 6.2:说明文案放进输入框做 placeholder 提示 */}
-              <div className="ctl"><TextInput placeholder="填写后,用户查看内容溯源时可跳转该链接" /></div>
+              <div className="ctl"><TextInput placeholder="填写后,用户查看内容溯源时可跳转该链接" disabled={isRealtime} /></div>
             </div>
             <div className="fm-row">
               {/* 0613-2:关联 Agent 为必填（KP 必须挂载一个 Agent 才能对外提问） */}
               <div className="lab">关联 Agent<span className="req">*</span></div>
               {/* 0610:下拉宽度收敛为与表单其他选择控件一致(200px),不再填满整行 */}
-              <div className="ctl"><Dropdown label="李医生" options={['李医生', '王老师', '机构 Agent']} style={{ width: 200 }} /></div>
+              <div className="ctl"><Dropdown label="李医生" options={['李医生', '王老师', '机构 Agent']} style={{ width: 200 }} disabled={isRealtime} /></div>
             </div>
             {/* 前台访问地址:只读 + 复制,链接随当前环境自动生成(本地端口 / 线上域名),携带机构 + KP */}
             <div className="fm-row">
@@ -618,14 +663,15 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
 
       {tab === 'price' && (
         <div className="fm-card">
-          {/* 0716 二批 #5.3：实时同步——权益数据正常可读，仅切换操作被拦截提示无权限 */}
+          {/* 0716 二批 #5.3：实时同步——权益数据正常可读；0717 #4 单选整体置灰(not-allowed) */}
           <div className="fh">基础权益标签 <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 13 }}>免费 / 会员 二选一互斥</span></div>
           <div className="radio-list" style={{ padding: '6px 0 16px' }}>
-            <div className={'radio-opt' + (price === 0 ? ' on' : '')} onClick={isRealtime ? deny : () => setPrice(0)}>
+            {/* 0717 #5：切换点击即生效 → 先弹二次确认,避免误操作 */}
+            <div className={'radio-opt' + (price === 0 ? ' on' : '') + (isRealtime ? ' off' : '')} onClick={isRealtime ? deny : () => switchTier(0)}>
               <div className="rd" />
               <div><div className="rt">免费</div><div className="rs">平台上所有用户（无论免费或会员）均可查看此知识 KP 的全部非永享内容，包括文字、图片、音频、视频；仅「永享」标记内容需单独购买。</div></div>
             </div>
-            <div className={'radio-opt' + (price === 1 ? ' on' : '')} onClick={isRealtime ? deny : () => setPrice(1)}>
+            <div className={'radio-opt' + (price === 1 ? ' on' : '') + (isRealtime ? ' off' : '')} onClick={isRealtime ? deny : () => switchTier(1)}>
               <div className="rd" />
               {/* 6.10/0614:文案详化，消除歧义 */}
               <div><div className="rt">会员</div><div className="rs">仅会员可查看此知识 KP 的图 / 音 / 视媒体资源；文字内容不受会员身份限制（免费 / 会员均可浏览）；「永享」标记内容仍需单独计价购买。</div></div>
@@ -640,8 +686,9 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
               <li><b>永享</b>：图 / 音 / 视可单独标价买断，无论 KP 免费还是会员都需单独付费</li>
               <li>即使 KP 设为会员，其中标了永享价的图 / 音 / 视也<b>必须永享付费才能看</b>，会员身份不例外</li>
               <li>免费/会员 与 永享 是<b>两套相互独立</b>的权益模型，互不覆盖、各自计费</li>
-              {/* 0716 二批 #8：永享购后处理规则常驻（买断契约） */}
-              <li><b>永享为一次性买断</b>：调价不影响已购用户（仅新购按新价，不补差不重复扣费）；转非永享 / 停售后已购权益保留；仅删除 KP 时已购条目标「已失效」</li>
+              {/* 0717 终版：永享购后处理规则常驻（下架拦截可恢复 / 删除为逻辑删除） */}
+              <li><b>永享为一次性买断</b>：调价不影响已购用户（仅新购按新价，不补差不重复扣费）；转非永享 / 停售后已购权益保留</li>
+              <li><b>下架 KP</b>：已购永享标「已下架」暂不可访问（权益保留，重新上架自动恢复）；<b>删除 KP（逻辑删除）</b>：标「已失效」，数据库保留购买与权益数据</li>
             </ul>
           </div>
         </div>

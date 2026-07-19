@@ -1,5 +1,13 @@
 import type { KnowledgeProduct } from '../types';
 
+// 0718 #7：KP 来源标签三态统一（两后台列表/详情一致）——
+// own＝自建；realtime＝分享导入·实时（只读）；snapshot＝分享导入·快照（可编辑）。标签统一灰色，仅状态标签随状态变色。
+export const KP_SOURCE_LABEL: Record<'own' | 'realtime' | 'snapshot', string> = {
+  own: '自建',
+  realtime: '分享导入·实时',
+  snapshot: '分享导入·快照',
+};
+
 export const KPS: KnowledgeProduct[] = [
   {
     id: 'kp_cardio',
@@ -23,6 +31,8 @@ export const KPS: KnowledgeProduct[] = [
     hasForever: true,
     foreverPrice: 99,
     status: 'published',
+    // 0718 #7：演示「分享导入·实时」来源标（外机构实时同步导入、只读）
+    shareMode: 'realtime',
     createdAt: '2026-03-20',
   },
   {
@@ -70,6 +80,8 @@ export const KPS: KnowledgeProduct[] = [
     hasForever: true,
     foreverPrice: 79,
     status: 'published',
+    // 0718 #7：演示「分享导入·快照」来源标（经独立快照导入、可编辑）
+    shareMode: 'snapshot',
     createdAt: '2026-03-15',
   },
   // 0617：用于「我的纸书」未解锁(后扫引导)演示——机构的其他医学 KP，用户扫过但未首扫绑定
@@ -110,6 +122,19 @@ export const KPS: KnowledgeProduct[] = [
     status: 'unlisted',
     createdAt: '2026-04-02',
   },
+  // 0717 #1.1：已下架且已解锁的演示 KP——「我的纸书」双标（已下架＋已解锁）、点击拦截
+  {
+    id: 'kp_icu_manual',
+    orgId: 'org_med',
+    name: '危重症监护实践手册',
+    granularity: 'book',
+    description: 'ICU 常见危象识别与处置流程，含 30+ 床旁操作视频。',
+    baseTag: 'member',
+    hasForever: true,
+    foreverPrice: 39,
+    status: 'unlisted',
+    createdAt: '2026-03-08',
+  },
   {
     id: 'kp_ultrasound_old',
     orgId: 'org_med',
@@ -122,14 +147,14 @@ export const KPS: KnowledgeProduct[] = [
     status: 'deleted',
     createdAt: '2025-11-20',
   },
-  // 0714 #5：无任何业务关系（无订单 / 赠送 / 分享 / 导入）的演示 KP——用于演示「物理删除」流。
-  // 与只能软删除的 KP 区分：canPhysicallyDeleteKp 全 0 → allowed: true / action: 'delete'（可彻底删除）。
+  // 0717 #1.5：全平台删除统一为逻辑删除（软删）——数据库保留数据、三端界面不可见。
+  // 本条演示「无任何业务关系（无订单 / 赠送 / 分享 / 导入）」的删除弹窗简化分支。
   {
     id: 'kp_demo_deletable',
     orgId: 'org_med',
     name: '（演示）新建未上架分册',
     granularity: 'book',
-    description: '刚创建、尚未上架，无任何订单 / 赠送 / 分享 / 导入关系，可被物理删除。',
+    description: '刚创建、尚未上架，无任何订单 / 赠送 / 分享 / 导入关系。',
     baseTag: 'free',
     hasForever: false,
     status: 'draft',

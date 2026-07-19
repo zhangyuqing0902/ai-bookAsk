@@ -49,15 +49,15 @@ test('上级机构不能选自身或后代', () => {
   assert.equal(r.parentEligibility('p', 'p', orgs).allowed, false);
   assert.equal(r.parentEligibility('g', 'p', orgs).allowed, false);
 });
-// 0716 二批 #1.1：无论有无业务关系均为物理删除；hasRelations 仅决定确认弹窗是否展示影响声明
-test('有业务关系的 KP 也是物理删除（带影响声明）', () => {
-  const v = r.canPhysicallyDeleteKp({ orders: 1 });
-  assert.equal(v.action, 'delete');
+// 0717 #1.5：全平台删除统一为逻辑删除（软删）；hasRelations 仅决定确认弹窗是否展示影响声明
+test('有业务关系的 KP 删除＝逻辑删除（带影响声明）', () => {
+  const v = r.canDeleteKp({ orders: 1 });
+  assert.equal(v.action, 'soft-delete');
   assert.equal(v.hasRelations, true);
 });
-test('无关系 KP 物理删除（无影响声明）', () => {
-  const v = r.canPhysicallyDeleteKp({});
-  assert.equal(v.action, 'delete');
+test('无关系 KP 删除同为逻辑删除（无影响声明）', () => {
+  const v = r.canDeleteKp({});
+  assert.equal(v.action, 'soft-delete');
   assert.equal(v.hasRelations, false);
 });
 test('实时分享不占 KP/存储但消费接收方 Token', () => assert.deepEqual({ ...r.sharePolicy('realtime') }, {
@@ -101,15 +101,21 @@ test('统一 XLSX 导出含标题、时间、深色表头、冻结与换行', ()
   const exporter = fs.readFileSync(new URL('../packages/ui-admin/src/exportCsv.ts', import.meta.url), 'utf8');
   for (const token of ['exportWorkbook', 'FF3730A3', "state: 'frozen'", 'wrapText', 'exportedAt']) assert.ok(exporter.includes(token), `缺少 ${token}`);
 });
-test('PRD 与功能清单均包含关键 0716 变更（0714 旧标记已降级）', () => {
+test('PRD 与功能清单均包含各自批次变更（版本号从生成器实读，不写死；旧标记已降级）', () => {
   const prd = fs.readFileSync(new URL('../docs/prd-build/build-prd.js', import.meta.url), 'utf8');
   const feature = fs.readFileSync(new URL('../docs/feature-list-build/gen.py', import.meta.url), 'utf8');
-  for (const token of ['0716周四', 'v1.7', '注册时间', '注册后第', '退款/售后', '纸书扫码解锁', '物理删除', '导出上限', '已失效', '无权限操作']) assert.ok(prd.includes(token), `PRD 缺少 ${token}`);
-  for (const token of ['0716周四', '按注册时间', '注册后第', '退款/售后', '纸书扫码解锁', '占用量', '物理删除', '导出上限', '已失效', '无权限操作']) assert.ok(feature.includes(token), `功能清单缺少 ${token}`);
-  // 旧批次标记必须已降级（生成器里不再产生 0714/0711/0715 标记）
-  assert.ok(!prd.includes('0714周二') && !prd.includes('0711周六'), 'PRD 残留旧批次标记');
-  assert.ok(!feature.includes('0714周二') && !feature.includes('0711周六') && !feature.includes('0715周三'), '功能清单残留旧批次标记');
-  // v1.5/v1.4 及更早批次的实质内容仍应作为常规规则保留（抽查）
+  const prdVer = (prd.match(/版本 (v[\d.]+)　/) || [])[1];
+  assert.ok(prdVer, 'PRD 封面未能解析出版本号');
+  for (const token of ['0717周五', prdVer, '逻辑删除', 'KP 状态 × 前台影响矩阵', '跳转规则①', '知识 KP 二维码', '已下架，若有问题请联系客服', '已失效，若有问题请联系客服', '重新上架自动恢复', '草稿 / 已发布 / 已下架', 'not-allowed', '二次确认', '吸顶']) assert.ok(prd.includes(token), `PRD 缺少 ${token}`);
+  const featVer = (feature.match(/版本：(v[\d.]+) ·/) || [])[1];
+  assert.ok(featVer, '功能清单未能解析出版本号');
+  for (const token of ['0718周六', featVer, '逻辑删除', 'KP 状态 × 前台影响矩阵', '跳转规则①', '知识 KP 二维码', '已下架，若有问题请联系客服', '已失效，若有问题请联系客服', '重新上架自动恢复', '按注册时间', '注册后第', '纸书扫码解锁', '无权限操作']) assert.ok(feature.includes(token), `功能清单缺少 ${token}`);
+  // 「物理删除」只允许以「不出现『物理删除』」的否定句式存在（口径声明），不得作为规则本身
+  const featPhysical = feature.split('物理删除').length - 1;
+  assert.ok(featPhysical <= 1 && feature.includes('不出现「物理删除'), '功能清单仍把「物理删除」当规则描述');
+  // 旧批次标记必须已降级（生成器里不再产生 0714/0715/0716 标记；PRD 摘要章按批次保留历史标记，仅清单校验）
+  assert.ok(!feature.includes('0714周二') && !feature.includes('0715周三') && !feature.includes('0716周四') && !feature.includes('0717周五'), '功能清单残留旧批次标记');
+  // 早批次的实质内容仍应作为常规规则保留（抽查）
   for (const token of ['数据导出.xlsx', '取消关联，转为独立机构', '已失效']) assert.ok(feature.includes(token), `功能清单丢失既有规则 ${token}`);
 });
 
@@ -257,13 +263,16 @@ test('0715/#1 KPI 环比对比时间独占第二行（不被截断）', () => {
 test('0715/#10 留存率三段口径重构（数据结构 + 视图 + 导出）', () => {
   const data = read('../apps/org-admin/src/data/dataBoard.ts');
   // 新结构：每节点独立 rate/sample/cutoff/status；批次含 nodes/updatedAt
-  for (const t of ['RetentionNode', 'nodes:', 'updatedAt', "status: '可统计'", '待成熟']) {
+  // 0718 #6：写死的 RETENTION 三档改为按真实日期联动推算（retentionForDay / retentionForPreset / retentionFor）
+  for (const t of ['RetentionNode', 'retentionForDay', 'retentionForPreset', 'retentionFor', 'updatedAt', "status: '可统计'", '待成熟']) {
     assert.ok(data.includes(t), `dataBoard 缺 ${t}`);
   }
   assert.ok(!data.includes("'7 日': BATCH_LATEST"), '兼容键 7 日 应已移除');
+  assert.ok(!data.includes('BATCH_LATEST'), '写死的批次假数据应已移除');
   const view = read('../apps/org-admin/src/views/DataBoard.tsx');
   // 0716 #15：「注册批次」更名「注册时间」
-  for (const t of ['用户留存', '按注册时间', '注册时间', '尚未到统计时间', '数据更新至']) {
+  // 0717 二批 #8.3：「数据更新至」脚注已删除,不再断言
+  for (const t of ['用户留存', '按注册时间', '注册时间', '尚未到统计时间']) {
     assert.ok(view.includes(t), `DataBoard 视图缺 ${t}`);
   }
   assert.ok(!view.includes('留存率除外'), '区间分析应已删「留存率除外」例外说明');
@@ -321,9 +330,220 @@ test('0716/#7#8#8.1 权限 Prompt 嵌套子项 + KP 与 Agent 同行重排', () 
   assert.ok(src.includes('perm-agent-col') && !src.includes("gridColumn: '1 / -1'"), 'KP 应与 Agent 人设同行、不再独占整行');
 });
 
+// ==================== 0717 批 ====================
+test('0717/#1.1 我的纸书：下架一律拦截 + 已下架/已解锁双标', () => {
+  const src = read('../apps/mobile-h5/src/screens/MyBooks.tsx');
+  assert.ok(src.includes('if (b.offShelf) {'), '下架未做一律拦截');
+  assert.ok(!src.includes('b.offShelf && !b.unlocked'), '仍保留「已解锁放行」旧逻辑');
+  // 0718 #1(v2)：双标同显——已解锁在封面右上(bk-tag-corner)，已下架/已失效在名称后(bk-st)
+  assert.ok(src.includes('bk-tag-corner') && src.includes('bk-st'), '缺已下架/已失效+已解锁双标同显');
+});
+test('0717/#1.4 我的永享：下架同样拦截并标「已下架」', () => {
+  const src = read('../apps/mobile-h5/src/screens/Yongxiang.tsx');
+  for (const t of ["=== 'unlisted'", 'yx-off', '该内容已下架，若有问题请联系客服']) assert.ok(src.includes(t), `缺 ${t}`);
+});
+test('0717/#1.3/#1.6 KP 前台入口判活 + 跳转规则①', () => {
+  const gate = read('../apps/mobile-h5/src/screens/KpGate.tsx');
+  for (const t of ['已下架，若有问题请联系客服', '已失效，若有问题请联系客服', "status === 'published'", '3000', "role === 'guest'", '本机构暂无可进入的知识 KP']) assert.ok(gate.includes(t), `KpGate 缺 ${t}`);
+  const app = read('../apps/mobile-h5/src/App.tsx');
+  assert.ok(app.includes('/kp/:kpId'), '路由未注册 /kp/:kpId');
+  const manifest = read('../packages/ui/src/manifest/data.ts');
+  assert.ok(manifest.includes('/kp/:kpId'), '原型清单未登记 /kp/:kpId');
+  const books = read('../apps/mobile-h5/src/screens/MyBooks.tsx');
+  assert.ok(books.includes('已识别知识 KP 二维码') && books.includes('/kp/'), '扫一扫未接判活入口（且用词须为「知识 KP 二维码」）');
+});
+test('0717/#1.5 删除弹窗为逻辑删除口径（不再「彻底删除/不可恢复」）', () => {
+  const src = read('../packages/ui-admin/src/KpDetailView.tssx'.replace('.tssx', '.tsx'));
+  assert.ok(src.includes('逻辑删除'), '缺逻辑删除口径');
+  assert.ok(!src.includes('彻底删除') && !src.includes('物理删除'), '弹窗仍有物理删除语义文案');
+  assert.ok(src.includes('重新发布后自动恢复'), '下架弹窗未明示权益恢复');
+});
+test('0717/#2 状态命名统一「草稿/已发布/已下架」+ 按钮修订', () => {
+  const view = read('../packages/ui-admin/src/KpDetailView.tsx');
+  assert.ok(view.includes("draft: { label: '草稿'"), '详情 draft 标签未统一为草稿');
+  assert.ok(view.includes("lifecycle === 'draft'") && view.includes('发布知识 KP'), '草稿缺「发布」按钮');
+  const list = read('../apps/org-admin/src/views/KpList.tsx');
+  assert.ok(list.includes("'草稿', '已发布', '已下架'"), '机构列表筛选未统一命名');
+  assert.ok(!list.includes("'未发'"), '机构列表残留「未发」');
+  const plat = read('../apps/platform-admin/src/data/kpStatus.ts');
+  assert.ok(plat.includes('草稿'), '平台状态映射缺「草稿」');
+});
+test('0717/#2.3 机构列表与详情同源 + 实时分享双视角演示数据', () => {
+  const data = read('../apps/org-admin/src/data/kps.ts');
+  for (const t of ["'draft'", "'published'", "'unlisted'", "'sharer'", "'consumer'"]) assert.ok(data.includes(t), `机构 KP 数据缺 ${t}`);
+  const list = read('../apps/org-admin/src/views/KpList.tsx');
+  assert.ok(list.includes('ORG_KPS'), '列表未接同源数据');
+  const detail = read('../apps/org-admin/src/views/KpDetail.tsx');
+  assert.ok(detail.includes('ORG_KPS') && detail.includes('kpName={entry.name}'), '详情未接同源数据');
+  const gkd = read('../apps/platform-admin/src/views/GlobalKpDetail.tsx');
+  assert.ok(gkd.includes('KPS.find') && gkd.includes('kpName={kp.name}'), '平台详情未与列表同源');
+});
+test('0717/#4 实时分享消费者只读：表单禁用置灰 + 仅复制链接可操作', () => {
+  const view = read('../packages/ui-admin/src/KpDetailView.tsx');
+  assert.ok((view.match(/disabled=\{isRealtime\}/g) ?? []).length >= 4, '基础信息输入框/下拉未按 isRealtime 禁用');
+  assert.ok(view.includes("(isRealtime ? ' off' : '')"), '定价单选未置灰');
+  const css = read('../packages/tokens/src/design/proto-admin.css');
+  for (const t of ['.inp2.disabled input', '.sel.sel-disabled', '.radio-list .radio-opt.off']) assert.ok(css.includes(t), `缺禁用样式 ${t}`);
+  const fields = read('../packages/ui-admin/src/Fields.tsx');
+  assert.ok(fields.includes("disabled ? ' disabled'"), 'TextInput 未挂 .disabled 外层样式');
+});
+test('0717/#5 基础权益切换二次确认后才生效', () => {
+  const view = read('../packages/ui-admin/src/KpDetailView.tsx');
+  assert.ok(view.includes('switchTier') && view.includes('确认切换'), '缺切换二次确认');
+  assert.ok(view.includes('switchTier(0)') && view.includes('switchTier(1)'), '单选未走确认流');
+});
+test('0717/#6 权限子项去掉紫色背景块', () => {
+  const css = read('../packages/tokens/src/design/proto-admin.css');
+  const i = css.indexOf('.perm-item.perm-item-child{');
+  const block = css.slice(i, css.indexOf('}', i) + 1);
+  assert.ok(i >= 0 && !block.includes('indigo-soft') && !block.includes('background'), '子权限行仍有背景块');
+});
+test('0717/#7 调价须知标题与文案同一行（「：」衔接）', () => {
+  const src = read('../apps/org-admin/src/views/SysConfig.tsx');
+  assert.ok(src.includes('调价须知：'), '调价须知未合并同行');
+});
+test('0718/#5 留存筛选改分段控件 + 自定义注册日 chip 回显', () => {
+  const board = read('../apps/org-admin/src/views/DataBoard.tsx');
+  // 0718 #5：白色下拉废弃，改「区间分析」同款 seg 分段控件（预设三档 + 自定义弹单日日历）
+  assert.ok(board.includes('RETENTION_PRESETS') && board.includes('seg seg-range'), '留存筛选未改分段控件');
+  assert.ok(!board.includes('<Dropdown'), '留存筛选仍在用白色下拉 Dropdown');
+  // 自定义选定后以 dr-applied chip 回显日期、可 ✕ 回到「最新可统计」（同 RangePicker 自定义回显）
+  assert.ok(board.includes('dr-applied') && board.includes('fmtD(retDay)') && board.includes('resetRetDay'), '自定义注册日未以 chip 回显');
+  // 0718 #2：日期回显 chip 在分段控件左侧（与 RangePicker 回显位置一致）
+  const head = board.slice(board.indexOf('dash-section-head'), board.indexOf('retCalOpen &&'));
+  assert.ok(head.indexOf('dr-applied') < head.indexOf('seg seg-range'), '回显 chip 未移到分段控件左侧');
+});
+test('0718/#6b 留存样本口径：单注册日批次三节点同一样本、多天批次保留差异', () => {
+  const data = read('../apps/org-admin/src/data/dataBoard.ts');
+  const dayFn = data.slice(data.indexOf('export function retentionForDay'), data.indexOf('export function retentionForPreset'));
+  assert.ok(!dayFn.includes('1 - i *'), '单注册日批次不应按节点衰减样本（同一批人、分母相同）');
+  const presetFn = data.slice(data.indexOf('export function retentionForPreset'), data.indexOf('export function retentionFor('));
+  assert.ok(presetFn.includes('1 - i *'), '多天批次应保留节点样本差异（成熟截止日不同、对应不同人群）');
+});
+test('0718/#3 看板 Tab 切换防跳动（内容区历史最大高度）', () => {
+  const board = read('../apps/org-admin/src/views/DataBoard.tsx');
+  assert.ok(board.includes('tabBodyRef') && board.includes('tabMinH') && board.includes('minHeight: tabMinH'), 'Tab 内容区未接历史最大 min-height');
+});
+test('0718/#4 来源分布环比文案统一（去 pp / 去「扫码占比」前缀）', () => {
+  const board = read('../apps/org-admin/src/views/DataBoard.tsx');
+  assert.ok(!board.includes('}pp'), '来源分布环比仍带 pp 字样');
+  assert.ok(!board.includes('扫码占比 较上一周期'), '来源分布环比仍带「扫码占比」前缀');
+});
+test('0717 二批/#6#8 看板重排：留存一行三卡 + 活跃入 Tab 随区间 + 撤吸顶 + 去脚注', () => {
+  const board = read('../apps/org-admin/src/views/DataBoard.tsx');
+  // 留存回归一行三卡（卡片式）,活跃概览入用户分析 Tab 并随区间联动环比
+  for (const t of ['RetentionCard', 'ret-card', '日活（DAU）', 'deltaPct={d.dauDelta}', 'newTrend', 'saomaCnt']) assert.ok(board.includes(t), `DataBoard 缺 ${t}`);
+  // 吸顶交互与「数据更新至」脚注已撤销
+  for (const t of ['board-sticky', 'IntersectionObserver', 'seg-panel', 'board-toprow', '数据更新至', 'ACTIVE_SNAPSHOT']) assert.ok(!board.includes(t), `DataBoard 残留 ${t}`);
+  const css = read('../packages/tokens/src/design/admin-app.css');
+  for (const t of ['.ret-card', '.ret-head', '.ret-rate']) assert.ok(css.includes(t), `CSS 缺 ${t}`);
+  assert.ok(!css.includes('.board-sticky') && !css.includes('.board-toprow'), 'CSS 残留吸顶/合并面板样式');
+  // 区间分析条回归轻量：无底色边框容器
+  const i = css.indexOf('.board-rangebar {');
+  const block = css.slice(i, css.indexOf('}', i) + 1);
+  assert.ok(!/background|border/.test(block), '区间分析条仍有底框样式');
+  // 数据层：活跃三指标随区间 + 新增用户迷你趋势 + 来源人数/占比环比
+  const data = read('../apps/org-admin/src/data/dataBoard.ts');
+  for (const t of ['dau: string', 'dauDelta', 'newTrend', 'saomaCnt', 'directCnt', 'saomaDelta']) assert.ok(data.includes(t), `dataBoard 缺 ${t}`);
+});
+test('0718/#7 来源标签三态统一（自建/分享导入·实时/快照，两后台灰色）', () => {
+  const view = read('../packages/ui-admin/src/KpDetailView.tsx');
+  assert.ok(!view.includes('共享导入') && !view.includes('实时同步 · 只读'), '详情头残留旧标签');
+  assert.ok(view.includes('KP_SOURCE_LABEL[importMode]'), '详情头来源标签未走 KP_SOURCE_LABEL 三态映射');
+  assert.ok(!view.includes("importMode === 'own' ? '自建' : '共享'"), '详情头残留「自建/共享」二分法');
+  // 平台超管查看实时导入 KP 不套用接收方只读（consumerReadonly=false 保留监管操作）
+  assert.ok(view.includes('consumerReadonly'), 'KpDetailView 缺 consumerReadonly 开关');
+  const gdetail = read('../apps/platform-admin/src/views/GlobalKpDetail.tsx');
+  assert.ok(gdetail.includes('consumerReadonly={false}') && gdetail.includes("importMode={kp.shareMode ?? 'own'}"), '平台详情未传来源/监管开关');
+  const list = read('../apps/org-admin/src/views/KpList.tsx');
+  assert.ok(!list.includes('接收方</span>'), '列表残留「实时同步·接收方」标');
+  assert.ok(list.includes('实时分享 · 分享方'), '分享方标不应删除');
+  assert.ok(list.includes('分享导入·实时') && list.includes('分享导入·快照'), '机构列表来源筛选未三分');
+  const glist = read('../apps/platform-admin/src/views/GlobalKps.tsx');
+  assert.ok(glist.includes("KP_SOURCE_LABEL[k.shareMode ?? 'own']"), '平台列表缺来源标签');
+  const mock = read('../packages/mock/src/data/kps.ts');
+  assert.ok(mock.includes('KP_SOURCE_LABEL') && mock.includes("realtime: '分享导入·实时'"), 'mock 缺 KP_SOURCE_LABEL 映射');
+});
+test('0717 二批/#3 我的纸书提示去 KP 名 + 0718 标签系统', () => {
+  const src = read('../apps/mobile-h5/src/screens/MyBooks.tsx');
+  for (const t of ['该内容已下架，若有问题请联系客服', '该内容已失效，若有问题请联系客服', 'bk-tag-corner', 'bk-tag-unlock', 'bk-st']) assert.ok(src.includes(t), `缺 ${t}`);
+  assert.ok(!src.includes('当前「'), '提示仍带 KP 名');
+  // 0718 #2(v3)：下架/失效整卡降透明度(bk-dim)、标签移到「扫码时间」后、封面右上角只留「已解锁」
+  assert.ok(src.includes('bk-dim'), '下架/失效整卡未降透明度');
+  assert.ok(!src.includes('bk-name-row') && !src.includes('bk-tags'), '标签不应挂在名称后或封面右上角');
+  const css = read('../packages/tokens/src/design/mobile-app.css');
+  for (const t of ['.yx-card.bk-dim', '.bk-tag-corner', '.bk-tag-unlock', '.bk-st']) assert.ok(css.includes(t), `CSS 缺 ${t}`);
+  assert.ok(!css.includes('.bk-tag-off') && !css.includes('.bk-tag-dead') && !css.includes('.bk-cover.dim'), '残留旧的下架/失效样式');
+});
+test('0718/#1 系统配置会员价格按购买方式分组（首月/次月起/单月）', () => {
+  const src = read('../apps/org-admin/src/views/SysConfig.tsx');
+  for (const t of ['首月价格（首月特惠）', '次月起价格', '单月价格']) assert.ok(src.includes(t), `SysConfig 缺 ${t}`);
+  assert.ok(!src.includes('首月折扣价') && !src.includes('月度价'), '残留含义不清的旧价格档位');
+});
+test('0718/#4 会员价格视觉清洗：两枚子面板 + 续费语义标 + 续费规则静态化', () => {
+  const src = read('../apps/org-admin/src/views/SysConfig.tsx');
+  for (const t of ['price-groups', 'price-panel', '自动续费', '一次性购买 · 不自动续费']) assert.ok(src.includes(t), `SysConfig 缺 ${t}`);
+  assert.ok(!src.includes('fm-sub'), '残留旧的分组小节标题');
+  assert.ok(!/inp2 disabled">支持随时退订/.test(src), '续费规则不应再用禁用输入框');
+  // 0718 #5/#6：续费规则 + 调价须知合并为同一灰色说明块（纯文字，无「暂不可编辑」小标），保存按钮单独一行
+  assert.ok(src.includes('price-note'), '续费规则与调价须知未合并为灰色说明块');
+  assert.ok(!src.includes('暂不可编辑'), '「暂不可编辑」小标未去掉');
+  const css = read('../packages/tokens/src/design/admin-app.css');
+  for (const t of ['.price-groups', '.price-panel-t', '.price-panel-tag', '.price-note']) assert.ok(css.includes(t), `CSS 缺 ${t}`);
+  assert.ok(!css.includes('.price-rule-tag'), 'CSS 残留 price-rule-tag');
+});
+test('0718/#3 系统配置：调价须知去加粗 + 价格保存/回答策略二次确认', () => {
+  const src = read('../apps/org-admin/src/views/SysConfig.tsx');
+  assert.ok(src.includes('ConfirmDialog'), '未接 ConfirmDialog 二次确认弹窗');
+  for (const t of ['确认保存', '确认切换', '已切换回答策略']) assert.ok(src.includes(t), `SysConfig 缺 ${t}`);
+  assert.ok(!src.includes('<b style={{ color: \'var(--ink)\' }}>调价须知'), '「调价须知：」仍加粗');
+  assert.ok(src.includes('if (i === strategy) return'), '点当前已选策略不应触发确认弹窗');
+});
+test('0718/#3 平台全域 KP 去永享标 + 状态色两后台统一', () => {
+  const glist = read('../apps/platform-admin/src/views/GlobalKps.tsx');
+  assert.ok(!glist.includes('hasForever &&'), '平台 KP 卡片仍显示永享标');
+  const css = read('../packages/tokens/src/design/proto-admin.css');
+  const i = css.indexOf('.kp-tag-st.tag-jade{');
+  const block = css.slice(i, css.indexOf('}', i) + 1);
+  assert.ok(block.includes('var(--jade-soft)') && block.includes('var(--jade)'), '列表「已发布」未与详情统一为玉绿');
+  assert.ok(css.includes('.kp-tag-st.tag-amber{'), '列表「已下架」缺琥珀色定义');
+  const agents = read('../apps/platform-admin/src/views/GlobalAgents.tsx');
+  assert.ok(agents.includes("a.type === '机构' ? 'tag-indigo' : 'tag-line'"), '平台 Agent「机构」类型标应改用 tag-indigo 保持原观感');
+});
+test('0717 二批/#5 禁用置灰统一为「前台访问地址」标准（实线,两后台共用）', () => {
+  const css = read('../packages/tokens/src/design/proto-admin.css');
+  const i = css.indexOf('.inp2.disabled{');
+  const block = css.slice(i, css.indexOf('}', i) + 1);
+  assert.ok(block.includes('var(--paper)') && block.includes('var(--line-2)') && !block.includes('dashed'), '禁用输入未统一为前台访问地址样式');
+  const j = css.indexOf('.sel.sel-disabled{');
+  const selBlock = css.slice(j, css.indexOf('}', j) + 1);
+  assert.ok(selBlock.includes('var(--paper)') && !selBlock.includes('dashed'), '禁用下拉未统一');
+});
+test('0718/#8 会员开通页重构（先权益再套餐后协议 + 协议可点 + 续费语义 pill）', () => {
+  const src = read('../apps/mobile-h5/src/screens/Member.tsx');
+  // 套餐卡新结构：续费语义 pill + 权益速览 + 选中对勾；按钮/协议随方式联动（价格语义不变）
+  for (const t of ['连续包月', '单月会员', '自动续费 · 可随时取消', '不自动续费', '到期自动失效不扣款', '¥9.9 开通连续包月', '¥19.9 购买单月会员', '《自动续费协议》', '《会员服务协议》', 'mb-perks', 'mb-plan', 'mb-plan-renew', 'mb-check', '请先阅读并同意相关协议']) assert.ok(src.includes(t), `Member 缺 ${t}`);
+  assert.ok(!src.includes('按月自动续费'), '残留歧义文案「按月自动续费」');
+  assert.ok(!src.includes('plan-corner'), '残留旧角标 plan-corner');
+  // 0718 #4：按钮下方补充说明文案删除
+  assert.ok(!src.includes('grace-note') && !src.includes('缓冲使用期'), '按钮下方说明文案未删除');
+  const css = read('../packages/tokens/src/design/mobile-app.css');
+  for (const t of ['.mb-perks', '.mb-plan.sel', '.mb-plan-renew', '.mb-check', '.bx.off']) assert.ok(css.includes(t), `CSS 缺 ${t}`);
+});
+test('0717 二批/#1 矩阵：二维码扫码规则与新会话完全相同（文档）', () => {
+  const feature = fs.readFileSync(new URL('../docs/feature-list-build/gen.py', import.meta.url), 'utf8');
+  assert.ok(feature.includes('规则与「新 AI 会话（前台地址进入）」完全相同'), '功能清单未写明扫码同新会话规则');
+  const prd = fs.readFileSync(new URL('../docs/prd-build/build-prd.js', import.meta.url), 'utf8');
+  assert.ok(prd.includes('规则同新会话：提示「已下架，若有问题请联系客服」3 秒 → 跳转规则①'), 'PRD 矩阵二维码行未同步');
+});
+test('0717 mock：已下架+已解锁演示 KP 存在（kp_icu_manual）', () => {
+  const kps = read('../packages/mock/src/data/kps.ts');
+  assert.ok(kps.includes('kp_icu_manual') && /kp_icu_manual[\s\S]{0,300}unlisted/.test(kps), '缺 kp_icu_manual(unlisted) 演示数据');
+});
+
 let passed = 0;
 for (const [name, fn] of tests) {
   try { fn(); passed += 1; console.log(`✓ ${name}`); }
   catch (error) { console.error(`✗ ${name}`); throw error; }
 }
-console.log(`\n${passed}/${tests.length} 条对抗性测试通过（V1.4 基线 + 0714 批）`);
+console.log(`\n${passed}/${tests.length} 条对抗性测试通过（V1.4 基线 + 0714~0718 批）`);

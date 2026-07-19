@@ -1356,10 +1356,50 @@ body,
 .refund-policy-note li+li{margin-top:2px}
 
 /* —— 0714 #18 KP 下架/失效态 —— */
-/* 我的纸书:已下架 KP 的灰底小标(封面右上,替换「已解锁」位置的语义,中性灰不抢戏) */
-.bk-offshelf{position:absolute;top:6px;right:6px;font-size:9px;font-weight:700;color:#fff;background:rgba(23,26,33,.45);padding:2px 7px;border-radius:7px;z-index:2;letter-spacing:.02em}
+/* 0718 #2(v3)：我的纸书下架/失效呈现——
+   ① 已下架/已失效整卡（封面+名称+时间+标签）统一降透明度(.yx-card.bk-dim)，「已解锁」标同步变淡；
+   ② 已下架/已失效标移到「扫码时间」后面(.bk-st 中性灰小胶囊)，不再用红/琥珀色、不占封面；
+   ③ 「已解锁」保留在封面右上(.bk-tag-corner)；双标依旧可同显 */
+.yx-card.bk-dim{opacity:.55;}
+.bk-tag-corner{position:absolute;top:8px;right:8px;z-index:2;}
+.bk-tag{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:700;letter-spacing:.02em;line-height:1;padding:4px 8px;border-radius:999px;white-space:nowrap;}
+.bk-tag svg{width:10px;height:10px;display:block;}
+.bk-tag-unlock{color:var(--jade);background:rgba(255,255,255,.94);box-shadow:inset 0 0 0 1px rgba(21,176,128,.35),0 2px 8px -2px rgba(23,26,33,.18);}
+.bk-date{display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.bk-st{flex:none;font-size:9px;font-weight:600;color:var(--ink-3);background:rgba(23,26,33,.055);border-radius:999px;padding:2.5px 7px;line-height:1;white-space:nowrap;}
+/* 0717 二批 #9:开通会员双模式——连续包月卡左上「首月特惠」角标(骑缝在卡片边框上) */
+.plan{position:relative}
+.plan-corner{position:absolute;top:-9px;left:14px;font-size:10px;font-weight:700;color:#fff;background:var(--grad);padding:2px 9px;border-radius:8px;letter-spacing:.03em;box-shadow:0 2px 8px -2px rgba(240,90,60,.5)}
 /* 我的永享:已删除内容——封面置灰 + 右上「已失效」标(terra-soft 底 terra 字)。
    标挂在卡片层而非封面内,避免被封面的 grayscale 一起置灰;卡片补 relative 作定位锚点 */
 .yx-card{position:relative}
 .yx-cover.dead{filter:grayscale(1);opacity:.6}
 .yx-dead{position:absolute;top:6px;right:6px;font-size:9px;font-weight:700;color:var(--terra);background:var(--terra-soft);padding:2px 7px;border-radius:7px;z-index:2;letter-spacing:.02em}
+/* 0717 #1.4:我的永享「已下架」标(琥珀,区别于已失效的珊瑚红) */
+.yx-off{position:absolute;top:6px;right:6px;font-size:9px;font-weight:700;color:var(--amber,#B7791F);background:var(--amber-soft,#FDF3E3);padding:2px 7px;border-radius:7px;z-index:2;letter-spacing:.02em}
+
+/* ============ 0718 #8：开通会员页重构（先权益、再套餐、后协议） ============ */
+/* ① 权益速览 chip：标题下三枚玻璃感 pill */
+.mb-perks{display:flex;justify-content:center;gap:8px;margin:16px 18px 0;flex-wrap:wrap;}
+.mb-perk{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--indigo-ink);background:rgba(255,255,255,.78);border:1px solid rgba(75,87,232,.14);border-radius:999px;padding:6px 11px;}
+.mb-perk svg{width:13px;height:13px;display:block;}
+/* ② 套餐卡：卡名 + 续费语义 pill + 一行说明 + 右侧大价签；选中＝对勾圆点(琥珀填充) + 琥珀描边淡底 */
+.mb-plans{display:flex;flex-direction:column;gap:12px;margin:16px 22px 0;}
+.mb-plan{position:relative;display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:16px 14px;cursor:pointer;transition:border-color .16s,box-shadow .18s,background .16s;}
+.mb-plan.sel{border-color:var(--amber);background:linear-gradient(110deg,#fff,var(--amber-soft));box-shadow:0 12px 30px -16px color-mix(in srgb,var(--amber) 55%,transparent);}
+.mb-plan-badge{position:absolute;top:-9px;left:16px;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,#FF9879,#F2563B);padding:2px 9px;border-radius:8px;letter-spacing:.03em;box-shadow:0 2px 8px -2px rgba(240,90,60,.5);}
+.mb-check{flex:none;width:21px;height:21px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;color:#fff;transition:.15s;}
+.mb-check svg{width:11px;height:11px;display:block;}
+.mb-plan.sel .mb-check{background:var(--amber);border-color:var(--amber);}
+.mb-plan-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+.mb-plan-t{font-size:15px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.mb-plan-renew{font-size:10px;font-weight:700;line-height:1;color:var(--amber-ink);background:var(--amber-soft);border-radius:6px;padding:3px 7px;white-space:nowrap;}
+.mb-plan-renew.gray{color:var(--ink-2);background:var(--surface-warm);}
+.mb-plan-d{font-size:11.5px;color:var(--ink-2);line-height:1.55;}
+.mb-plan-price{flex:none;text-align:right;font-family:var(--mono);}
+.mb-plan-now{font-size:22px;font-weight:600;color:var(--amber-ink);letter-spacing:-.01em;}
+.mb-plan-old{font-size:10.5px;color:var(--ink-3);margin-top:2px;}
+/* ③ 协议勾选可点：未勾选态空心灰框 + 按钮降透明度引导先同意 */
+.member .agree{cursor:pointer;user-select:none;}
+.member .agree .bx.off{background:var(--surface);border:1.5px solid var(--line);}
+.btn-amber.btn-dim{opacity:.55;}

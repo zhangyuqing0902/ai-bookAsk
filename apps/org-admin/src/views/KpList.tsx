@@ -2,49 +2,30 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, Modal, TextInput, EmptyState, Pager } from '@aba/ui-admin';
-import { useKpLifecycle, type KpLifecycleStatus } from '../stores/kpLifecycle';
-
-interface Kp {
-  name: string;
-  cover: string;
-  source: '自建' | '共享';
-  /** 共享来源的导入方式：realtime = 实时同步（只读），snapshot = 独立快照（可编辑）；自建为 undefined */
-  shareMode?: 'realtime' | 'snapshot';
-  status: string;
-  statusCls: string;
-  agent: string;
-  files: string;
-  asks: string;
-}
-const KPS: Kp[] = [
-  { name: '心血管分册', cover: '', source: '自建', status: '已发', statusCls: 'tag-jade', agent: '李医生', files: '12', asks: '1.2k' },
-  { name: '儿科学', cover: 'c2', source: '自建', status: '未发', statusCls: 'tag-line', agent: '王老师', files: '8', asks: '340' },
-  { name: '内科精要', cover: 'c3', source: '共享', shareMode: 'realtime', status: '已发', statusCls: 'tag-jade', agent: '—', files: '20', asks: '5k' },
-  { name: '外科学-快照', cover: 'c4', source: '共享', shareMode: 'snapshot', status: '已发', statusCls: 'tag-jade', agent: '赵', files: '6', asks: '88' },
-];
+import { KP_SOURCE_LABEL } from '@aba/mock';
+import { useKpLifecycle } from '../stores/kpLifecycle';
+import { ORG_KPS, ORG_KP_STATUS_META, type OrgKp } from '../data/kps';
 
 // 机构后台 · 知识产品 KP 列表（搜索 + 状态/来源筛选 + 空态 + 新建/导入弹窗）
+// 0717 #2.3：列表与详情同源（../data/kps.ts），每个状态各留一条演示数据 + 实时分享双视角。
+// 0717 #2.4：状态命名两后台统一为「草稿 / 已发布 / 已下架」。
+// 0718 #7：来源标签三态统一（自建 / 分享导入·实时 / 分享导入·快照，统一灰色），两后台列表/详情一致。
 // 0614：机构 KP / 存储配额（demo，与平台用量看板一致）；超限时阻断并提示联系平台扩容
 const KP_USED = 30, KP_LIMIT = 50;
 const STORE_USED = 62, STORE_LIMIT = 100;
 
-// 0716 #1.1：KP 详情下架 / 删除写入 kpLifecycle store 后，列表状态标签叠加覆盖值
-const STATUS_META: Record<KpLifecycleStatus, { label: string; cls: string }> = {
-  published: { label: '已发', cls: 'tag-jade' },
-  unlisted: { label: '已下架', cls: 'tag-amber' },
-  deleted: { label: '已删除', cls: 'tag-terra' },
-};
+// 来源标签 = shareMode 映射（自建 / 分享导入·实时 / 分享导入·快照）
+const sourceLabel = (kp: OrgKp) => KP_SOURCE_LABEL[kp.shareMode ?? 'own'];
 
 export function KpList() {
   const nav = useNavigate();
   const overrides = useKpLifecycle((s) => s.overrides);
-  // 详情路由 id = 内联 KPS 序号（与 KpDetail 读 store 的 key 一致）
-  const kpIdOf = (kp: Kp) => String(KPS.indexOf(kp) + 1);
-  const effectiveStatus = (kp: Kp) => {
-    // 0716 #1.1：兼容旧持久化 'archived'→'deleted'，未知覆盖值回落卡片原始状态，避免列表崩溃空白。
-    const ov = overrides[kpIdOf(kp)] as string | undefined;
+  const effectiveStatus = (kp: OrgKp) => {
+    // 0716 #1.1：详情下架/发布/删除写入 kpLifecycle store 后，列表状态标签叠加覆盖值；
+    // 兼容旧持久化 'archived'→'deleted'，未知覆盖值回落数据源原始状态，避免列表崩溃空白。
+    const ov = overrides[kp.id] as string | undefined;
     const norm = ov === 'archived' ? 'deleted' : ov;
-    return (norm && STATUS_META[norm as KpLifecycleStatus]) || { label: kp.status, cls: kp.statusCls };
+    return ORG_KP_STATUS_META[(norm as keyof typeof ORG_KP_STATUS_META) ?? kp.status] ?? ORG_KP_STATUS_META[kp.status];
   };
   const [create, setCreate] = useState(false);
   const [imp, setImp] = useState(false);
@@ -62,9 +43,10 @@ export function KpList() {
   };
 
   // 0714 #18：状态筛选按叠加覆盖后的「有效状态」匹配；
-  // 0716 #1.1（二批）：已删除（物理删除）的 KP 不在后台列表展示，仅数据库留存。
-  const list = KPS.filter(
-    (kp) => effectiveStatus(kp).label !== '已删除' && (!q || kp.name.includes(q)) && (status === '全部' || effectiveStatus(kp).label === status) && (source === '全部' || kp.source === source),
+  // 0717 #1.5：已删除（逻辑删除）的 KP 不在三端界面展示，数据库保留数据。
+  // 0718 #7：来源筛选按三态标签匹配（自建 / 分享导入·实时 / 分享导入·快照）
+  const list = ORG_KPS.filter(
+    (kp) => effectiveStatus(kp).label !== '已删除' && (!q || kp.name.includes(q)) && (status === '全部' || effectiveStatus(kp).label === status) && (source === '全部' || sourceLabel(kp) === source),
   );
   // 4.2:每页 10 条,即使 ≤10 条也始终显示分页器(KP 列表特例),真实 slice 翻页
   const PAGE_SIZE = 10;
@@ -98,8 +80,8 @@ export function KpList() {
       </div>
       <div className="filter">
         <Search placeholder="搜索 KP 名称" minWidth={220} value={q} onChange={setQ} />
-        <Dropdown label="状态" options={['全部', '未发', '已发', '已下架']} onSelect={setStatus} />
-        <Dropdown label="来源" options={['全部', '自建', '共享']} onSelect={setSource} />
+        <Dropdown label="状态" options={['全部', '草稿', '已发布', '已下架']} onSelect={setStatus} />
+        <Dropdown label="来源" options={['全部', '自建', '分享导入·实时', '分享导入·快照']} onSelect={setSource} />
       </div>
 
       {list.length === 0 ? (
@@ -114,8 +96,8 @@ export function KpList() {
             // 0716 #1.1（二批）：已删除 KP 已在列表源头过滤，不再出现；已下架显琥珀标、可进详情重新发布
             <div
               className="kp-card"
-              key={kp.name}
-              onClick={() => nav('/kps/' + kpIdOf(kp) + (kp.shareMode ? `?share=${kp.shareMode}` : ''))}
+              key={kp.id}
+              onClick={() => nav('/kps/' + kp.id + (kp.shareMode ? `?share=${kp.shareMode}` : ''))}
             >
               <div className={'kp-cover ' + kp.cover}>
                 <div className="ct">{kp.name}</div>
@@ -124,10 +106,12 @@ export function KpList() {
                 <div className="kp-info-top">
                   <span className="kp-name">{kp.name}</span>
                 </div>
-                {/* 4.1:来源(自建/共享)=统一灰色小标签;发布状态=彩色标签;左右并排 */}
+                {/* 4.1:来源(自建/分享导入·实时/分享导入·快照)=统一灰色小标签;发布状态=彩色标签;左右并排 */}
+                {/* 0718 #7：来源标签三态统一、分享方角色标同步改灰——仅状态标签随状态变色 */}
                 <div className="kp-tags">
-                  <span className="kp-tag-src">{kp.source}</span>
+                  <span className="kp-tag-src">{sourceLabel(kp)}</span>
                   <span className={'kp-tag-st ' + st.cls}>{st.label}</span>
+                  {kp.shareRole === 'sharer' && <span className="kp-tag-src">实时分享 · 分享方</span>}
                 </div>
                 <div className="kp-agent">
                   <span className="av" />

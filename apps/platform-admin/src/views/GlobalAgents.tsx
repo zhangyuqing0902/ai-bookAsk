@@ -66,7 +66,8 @@ export function GlobalAgents() {
                   机构 · {a.org}
                 </div>
                 <div className="kp-tags">
-                  <span className={'kp-tag-st ' + (a.type === '机构' ? 'tag-jade' : 'tag-line')}>{a.type}</span>
+                  {/* 0718 #3：KP 状态色与详情统一后，Agent「机构」类型标改用 tag-indigo 保持原靛蓝观感（不再占用状态绿） */}
+                  <span className={'kp-tag-st ' + (a.type === '机构' ? 'tag-indigo' : 'tag-line')}>{a.type}</span>
                 </div>
                 <div className="kp-stat">
                   <span>关联 KP {a.kp} 个</span>

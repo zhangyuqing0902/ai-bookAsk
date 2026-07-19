@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { LineChart, RangePicker, Dropdown, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE, Calendar, fmtD } from '@aba/ui-admin';
+import { LineChart, RangePicker, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE, Calendar, fmtD } from '@aba/ui-admin';
 import { comparisonPeriodLabel, metricHelp } from '@aba/mock';
-import { RANGE, RETENTION, TOPKP, ACTIVE_SNAPSHOT, type Bar, type KW, type RetentionNode } from '../data/dataBoard';
+import { RANGE, retentionFor, TOPKP, type Bar, type KW, type RetentionNode } from '../data/dataBoard';
 import { buildDataBoardSpec } from '../exports/dataBoard';
 
 // 0614 指标体系重划：去掉「总览」Tab（职责交主控台），数据看板专做分主题深钻。
@@ -14,6 +14,9 @@ const TABS = ['用户分析', '提问分析', '营收分析', '热门 KP'];
 
 // 榜单数值统一中文万进制（fmtCn，0614b）
 const fmtK = (n: number) => fmtCn(Math.round(n));
+
+// 0717 美化：来源分布 SVG 环形图圆周（r=46，viewBox 120×120）
+const DONUT_C = 2 * Math.PI * 46;
 
 // deltaPct：较上一周期百分比。传入即按主控台 Delta 同款渲染（方向箭头 + 百分比 + 对比时间窗）；
 // 正=上升绿↑、负=下降红↓（down 时箭头 rotate 180°）。未传 deltaPct 才回落到静态「上一周期」占位。
@@ -35,13 +38,22 @@ function Kpi({ lab, val, unit, suf, deltaPct, info, periodDays }: { lab: string;
       </div>
       {deltaPct !== undefined ? (
         <div className={'delta ' + (up ? 'up' : 'down')}>
-          <span style={up ? undefined : { display: 'inline-flex', transform: 'rotate(180deg)' }}>
-            <Icon id="i-up" w={11} h={11} />
+          <span className="delta-pill">
+            <span className="delta-arrow" style={up ? undefined : { display: 'inline-flex', transform: 'rotate(180deg)' }}>
+              <Icon id="i-up" w={10} h={10} />
+            </span>
+            {Math.abs(deltaPct).toFixed(1)}%
           </span>
-          {Math.abs(deltaPct).toFixed(1)}% 较上一周期{periodDays && <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>}
+          <span className="delta-txt">较上一周期</span>
+          {periodDays && <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>}
         </div>
       ) : (
-        periodDays && <div className="delta">上一周期 <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span></div>
+        periodDays && (
+          <div className="delta">
+            <span className="delta-txt">上一周期</span>
+            <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
+          </div>
+        )
       )}
     </div>
   );
@@ -63,43 +75,38 @@ function Bars({ data }: { data: Bar[] }) {
   );
 }
 
-// 留存指标卡：一节点一卡（D+1 / D+7 / D+30），等宽排列。
-// 可统计 → 留存率大数字 + 样本 + 注册截止日 + 绿色「已可统计」；
-// 待成熟 → 不显示 0%/空进度条，改中性灰状态文案（尚未到统计时间 + 预计可统计日期），
-//         状态用文字表达、中性灰、不用红色，避免误读为留存 0%。
-// 关键口径常驻卡面，问号 InfoDot 仅补充完整公式。
+// 0717 二批 #8.1：留存回归一行三张等宽指标卡（卡片式、与平台 KPI/图表卡同风格）。
+// 标题行左＝节点名 + 口径问号，右＝状态标（已可统计=玉绿 / 待成熟=中性灰）；
+// 卡身留存率大数字；底部单行灰字「样本 N 人 · 统计至 {日期}注册用户」。
+// 待成熟不显示 0%/空进度条，改中性灰「尚未到统计时间」+ 预计可统计日期，避免误读为留存 0%。
 function RetentionCard({ n }: { n: RetentionNode }) {
   const mature = n.status === '可统计' && !!n.rate;
   const formula = `第 ${n.days} 天留存率 = 该注册时间的用户中、注册后第 ${n.days} 天仍发生登录或提问的用户数 ÷ 该批用户总数。按注册时间统计，不受「区间分析」时间筛选影响。`;
   return (
-    <div className="chart-card" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
-      <div className="chart-title" style={{ display: 'inline-flex', alignItems: 'center', marginBottom: 14 }}>
-        {n.label}
-        <InfoDot text={formula} />
+    <div className={'chart-card ret-card' + (mature ? '' : ' ret-pending')} style={{ margin: 0 }}>
+      <div className="ret-head">
+        <span className="chart-title" style={{ display: 'inline-flex', alignItems: 'center', margin: 0 }}>
+          {n.label}
+          <InfoDot text={formula} />
+        </span>
+        {mature ? (
+          <span className="tag-s tag-jade">已可统计</span>
+        ) : (
+          <span className="tag-s" style={{ background: 'var(--line)', color: 'var(--ink-3)' }}>待成熟</span>
+        )}
       </div>
       {mature ? (
         <>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 32, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.1 }}>{n.rate}</div>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 10, lineHeight: 1.7, flex: 1 }}>
-            样本 {n.sample} 人
-            <br />
-            {n.cutoff}
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <span className="tag-s tag-jade">已可统计</span>
-          </div>
+          <div className="ret-rate mono">{n.rate}</div>
+          {/* 0717 美化：留存率下加一条同比例渐变细条,扫一眼即知高低 */}
+          <div className="ret-track"><span style={{ width: n.rate ?? '0%' }} /></div>
+          {/* 0718：截止文案白话化（数据层生成），不再套「样本 N 人 · 统计至 …」模板 */}
+          <div className="ret-meta">{n.cutoff}</div>
         </>
       ) : (
         <>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink-3)', lineHeight: 1.3 }}>尚未到统计时间</div>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 10, lineHeight: 1.7, flex: 1 }}>
-            该批用户最早于 {n.readyDate} 产生 {n.days} 日留存
-            <br />
-            {n.cutoff}
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <span className="tag-s" style={{ background: 'var(--line)', color: 'var(--ink-3)' }}>待成熟</span>
-          </div>
+          <div className="ret-rate-muted">尚未到统计时间</div>
+          <div className="ret-meta">{n.cutoff}</div>
         </>
       )}
     </div>
@@ -131,7 +138,11 @@ function KwCloud({ data, mult }: { data: KW[]; mult: number }) {
 // 机构后台 · 数据看板（4 主题 Tab；非实时指标随时间区间联动）
 export function DataBoard() {
   const nav = useNavigate();
-  const [tab, setTab] = useState(0);
+  // 0718 #3：Tab 支持 ?tab=N 直达（便于演示与验收）
+  const [tab, setTab] = useState(() => {
+    const t = Number(new URLSearchParams(window.location.search).get('tab'));
+    return t >= 0 && t < TABS.length ? t : 0;
+  });
   const [rangeLabel, setRangeLabel] = useState('7 日');
   // 0716 #15：留存按「注册时间」筛选（口径即注册日），与区间分析是两套口径：切区间不动留存，切注册时间只动留存段
   const [retentionBatch, setRetentionBatch] = useState('最新可统计');
@@ -139,53 +150,66 @@ export function DataBoard() {
   const [retDay, setRetDay] = useState<Date | null>(null);
   const [retCalOpen, setRetCalOpen] = useState(false);
   const d = RANGE[rangeLabel] ?? RANGE['7 日'];
-  const retention = RETENTION[retentionBatch] ?? RETENTION['最新可统计'];
+  // 0718 #6：留存按真实日期联动推算——自定义注册日驱动节点状态/样本/截止文案，不再是写死的假数据
+  const retention = retentionFor(retentionBatch, retDay);
   const periodDays = rangeLabel === '今日' ? 1 : rangeLabel === '30 日' ? 30 : 7;
-  const RETENTION_BATCHES = ['最新可统计', '近 7 个注册日', '近 30 个注册日', '自定义日期'];
+  // 0718 #5：留存筛选改「区间分析」同款分段控件——预设三档 + 自定义（弹单日日历）
+  const RETENTION_PRESETS = ['最新可统计', '近 7 个注册日', '近 30 个注册日'];
   const retLabel = retentionBatch === '自定义日期' && retDay ? fmtD(retDay) : retentionBatch;
-  const onRetSelect = (v: string) => {
-    if (v === '自定义日期') { setRetCalOpen(true); }
-    else { setRetentionBatch(v); setRetDay(null); setRetCalOpen(false); }
-  };
   const pickRetDay = (day: Date) => { setRetDay(day); setRetentionBatch('自定义日期'); setRetCalOpen(false); };
+  const resetRetDay = () => { setRetDay(null); setRetentionBatch('最新可统计'); setRetCalOpen(false); };
+
+  // 0718 #3：Tab 切换防跳动——内容区记住历史最大高度，切回较矮 Tab 不再整体回缩
+  const tabBodyRef = useRef<HTMLDivElement>(null);
+  const [tabMinH, setTabMinH] = useState(0);
+  useEffect(() => {
+    const h = tabBodyRef.current?.offsetHeight ?? 0;
+    if (h > tabMinH) setTabMinH(h);
+  }, [tab, rangeLabel, tabMinH]);
 
   return (
-    <>
+    <div className="dboard">
       <div className="page-head">
         <div>
           <div className="pt">数据看板</div>
         </div>
         <div className="pa">
           {/* 0716 #14：区间选择器从页头移入「区间分析」区块就近（见下方 range-bar），页头只留导出 */}
-          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDataBoardSpec({ rangeLabel, periodDays, d, retentionRange: retLabel, retention, active: ACTIVE_SNAPSHOT, topkp: TOPKP })); toast('正在导出'); }}>
+          {/* 0717 二批 #8.2：活跃概览随区间联动,导出按当前所选区间取值 */}
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDataBoardSpec({ rangeLabel, periodDays, d, retentionRange: retLabel, retention, active: { dau: d.dau, wau: d.wau, mau: d.mau }, topkp: TOPKP })); toast('正在导出'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
         </div>
       </div>
-      {/* 0716 二批 #12：布局重构——① 实时活跃概览 ② 用户留存 为页级常驻两行（不再归属用户分析 Tab）；
-          ③ 统一区间选择器条位于四个主题 Tab 之上；④ 四个主题 Tab 全部内容随区间联动。 */}
-      <div className="dash-section-title" style={{ marginTop: 4 }}>
-        实时活跃概览
-        <span className="dash-realtime-tag">实时</span>
-        <span className="dash-section-sub">· 固定窗口去重活跃用户，不随下方时间筛选变化</span>
-      </div>
-      <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-        <Kpi lab="DAU（日活跃用户）" val={ACTIVE_SNAPSHOT.dau} suf="人" info="当日去重活跃用户。固定窗口快照：自然日 0:00 至当前，不随时间区间变化。" />
-        <Kpi lab="WAU（周活跃用户）" val={ACTIVE_SNAPSHOT.wau} suf="人" info="近 7 个自然日去重活跃用户。固定窗口快照（近 7 天滚动），不随时间区间变化。" />
-        <Kpi lab="MAU（月活跃用户）" val={ACTIVE_SNAPSHOT.mau} suf="人" info="近 30 个自然日去重活跃用户。固定窗口快照（近 30 天滚动），不随时间区间变化。" />
-      </div>
-
-      {/* 用户留存：按注册时间（口径即注册日），页级常驻；0716 二批 #11 口径问号紧跟标题 */}
-      <div className="dash-section-head" style={{ marginTop: 22 }}>
+      {/* 0717 二批 #8.1：用户留存页级常驻,一行三张等宽指标卡（按注册时间,独立于下方区间筛选） */}
+      <div className="dash-section-head" style={{ marginTop: 4 }}>
         <div className="dash-section-title" style={{ margin: 0, display: 'inline-flex', alignItems: 'center' }}>
           用户留存
-          <InfoDot text="留存按用户的注册时间统计——比如今天注册的用户，要等满 30 天才会有 30 日留存。因此它的时间口径独立于下方区间筛选，两者互不影响。「自定义日期」为某一个具体的注册日。" />
+          <InfoDot text="留存按用户的注册时间统计——比如今天注册的用户，要等满 30 天才会有 30 日留存。因此它的时间口径独立于下方区间筛选，两者互不影响。「自定义日期」为某一个具体的注册日。观察注册用户在第 1 / 7 / 30 天是否仍然活跃。" />
           <span className="tag-s tag-indigo" style={{ marginLeft: 4 }}>按注册时间</span>
-          <span className="dash-section-sub" style={{ marginLeft: 8 }}>· 观察注册用户在第 1 / 7 / 30 天是否仍然活跃，不受下方区间筛选影响</span>
         </div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, position: 'relative' }}>
-          <Dropdown label={`注册时间：${retLabel}`} options={RETENTION_BATCHES} onSelect={onRetSelect} style={{ minWidth: 200 }} />
+          {/* 0718 #5：留存筛选改「区间分析」同款灰底分段控件（原白色下拉视觉突兀）；
+              自定义选定注册日后以 dr-applied chip 回显日期（0718 #2：chip 移到控件左侧，与 RangePicker 自定义回显位置一致），✕ 回到「最新可统计」 */}
+          {retentionBatch === '自定义日期' && retDay && (
+            <span className="dr-applied">
+              {fmtD(retDay)}
+              <i title="重选注册日" onClick={resetRetDay}>
+                ✕
+              </i>
+            </span>
+          )}
+          <div className="seg seg-range">
+            {RETENTION_PRESETS.map((b) => (
+              <b key={b} className={retentionBatch === b ? 'on' : undefined} onClick={() => { setRetentionBatch(b); setRetDay(null); setRetCalOpen(false); }}>
+                {b}
+              </b>
+            ))}
+            <b className={retCalOpen || (retentionBatch === '自定义日期' && retDay) ? 'on' : undefined} onClick={() => setRetCalOpen((o) => !o)}>
+              自定义
+            </b>
+          </div>
           {/* 0716 二批 #11：单日日历面板——视觉复用区间选择器的 calpop 样式，仅选具体某一天 */}
           {retCalOpen && (
             <div className="dr-pop calpop show" style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 40 }}>
@@ -198,16 +222,14 @@ export function DataBoard() {
           )}
         </div>
       </div>
+      {/* 0717 二批 #8.3：留存段更新时间脚注已删除,不再显示 */}
       <div className="grid2" style={{ marginTop: 4, gridTemplateColumns: '1fr 1fr 1fr' }}>
         {retention.nodes.map((n) => (
           <RetentionCard key={n.days} n={n} />
         ))}
       </div>
-      <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 12, lineHeight: 1.7 }}>
-        数据更新至 {retention.updatedAt} · 活跃口径：注册后第 N 天发生登录或提问行为
-      </div>
 
-      {/* ③ 统一区间选择器条：驱动下方全部主题 Tab 的区间指标 */}
+      {/* 区间选择器条（0717 二批 #6/#8.4：撤销吸顶,回归轻量样式——左标题右筛选,无底框） */}
       <div className="board-rangebar">
         <div className="dash-section-title" style={{ margin: 0 }}>
           区间分析
@@ -216,7 +238,7 @@ export function DataBoard() {
         <RangePicker presets={['今日', '7 日', '30 日']} defaultActive={1} onChange={(r) => setRangeLabel(r.label)} />
       </div>
 
-      {/* ④ 四个主题 Tab */}
+      {/* 四个主题 Tab */}
       <div className="tabbar">
         {TABS.map((t, i) => (
           <div key={t} className={'tab' + (tab === i ? ' on' : '')} onClick={() => setTab(i)}>
@@ -225,32 +247,93 @@ export function DataBoard() {
         ))}
       </div>
 
-      {/* Tab 1 · 用户分析 —— 区间部分（新增用户 + 来源/地区/性别分布） */}
+      {/* 0718 #3：Tab 内容区统一容器——min-height 取历史最大实测高度，切 Tab 不再上下跳动 */}
+      <div ref={tabBodyRef} style={tabMinH ? { minHeight: tabMinH } : undefined}>
+      {/* Tab 1 · 用户分析 —— 0717 二批 #8.2/#8.4 三行布局：
+          ① 日活｜周活｜月活（一行三卡,区间联动+环比） ② 新增用户(值+环比+迷你折线)+来源分布 ③ 地区+性别 */}
       {tab === 0 && (
         <>
-          <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
-            <Kpi lab="新增用户" val={d.newUsers} suf="人" deltaPct={d.newUsersDelta} periodDays={periodDays} info="所选区间内首次注册的用户数，按用户 ID 精确去重。" />
+          <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+            <Kpi lab="日活（DAU）" val={d.dau} suf="人" deltaPct={d.dauDelta} periodDays={periodDays} info="所选区间内的日均去重活跃用户（区间联动，0717 二批口径修订），与上一等长周期环比。" />
+            <Kpi lab="周活（WAU）" val={d.wau} suf="人" deltaPct={d.wauDelta} periodDays={periodDays} info="所选区间对应近 7 日窗口的去重活跃用户（区间联动），与上一等长周期环比。" />
+            <Kpi lab="月活（MAU）" val={d.mau} suf="人" deltaPct={d.mauDelta} periodDays={periodDays} info="所选区间对应近 30 日窗口的去重活跃用户（区间联动），与上一等长周期环比。" />
           </div>
-          {/* 分布三图随顶部时间筛选联动 */}
-          <div className="grid2" style={{ marginTop: 16, gridTemplateColumns: '1fr 1fr 1fr' }}>
-            <div className="chart-card" style={{ margin: 0 }}>
-              <CardTitle t="来源分布" info="C 端用户进入渠道占比(扫码进入 / 直接访问)。" periodDays={periodDays} />
-              <div className="donut-wrap">
-                <div style={{ width: 96, height: 96, borderRadius: '50%', flex: 'none', background: `conic-gradient(var(--indigo) 0 ${d.saoma}%,var(--amber) ${d.saoma}% 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 500 }}>100%</div>
-                </div>
-                <div style={{ fontSize: 13, lineHeight: 2.1 }}>
-                  <div>
-                    <span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: 'var(--indigo)', marginRight: 8 }} />
-                    扫码进入 · {d.saoma}%
+          <div className="grid2" style={{ marginTop: 16, gridTemplateColumns: '1fr 1fr' }}>
+            <div className="chart-card" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+              <CardTitle t="新增用户" info="所选区间内首次注册的用户数，按用户 ID 精确去重。" periodDays={periodDays} />
+              {/* 0717 二批 #8.4：左=大数字+环比+对比窗口,右=随区间联动的迷你趋势折线 */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 18 }}>
+                <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 34, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.1 }}>
+                    {d.newUsers}
+                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-3)', marginLeft: 6 }}>人</span>
                   </div>
-                  <div>
-                    <span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: 'var(--amber)', marginRight: 8 }} />
-                    直接访问 · {100 - d.saoma}%
+                  <div className={'delta ' + ((d.newUsersDelta ?? 0) >= 0 ? 'up' : 'down')}>
+                    <span className="delta-pill">
+                      <span className="delta-arrow" style={(d.newUsersDelta ?? 0) >= 0 ? undefined : { display: 'inline-flex', transform: 'rotate(180deg)' }}>
+                        <Icon id="i-up" w={10} h={10} />
+                      </span>
+                      {Math.abs(d.newUsersDelta ?? 0).toFixed(1)}%
+                    </span>
+                    <span className="delta-txt">较上一周期</span>
+                    <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <LineChart cfg={{ x: d.newTrend.x, area: true, series: [{ name: '新增用户', color: '#4B57E8', values: d.newTrend.v }] }} />
+                </div>
+              </div>
+            </div>
+            <div className="chart-card" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+              <CardTitle t="来源分布" info="C 端用户进入渠道占比(扫码进入 / 直接访问)，图例含人数；占比环比为百分点变化。" periodDays={periodDays} />
+              <div className="donut-wrap" style={{ flex: 1 }}>
+                {/* 0717 美化：SVG 圆头分段环形图（替代 conic-gradient 直角拼接），中心直接显示主渠道占比 */}
+                <div className="db-donut">
+                  <svg viewBox="0 0 120 120">
+                    <defs>
+                      <linearGradient id="db-donut-grad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stopColor="#3D6FF5" />
+                        <stop offset="1" stopColor="#8B6CF6" />
+                      </linearGradient>
+                    </defs>
+                    <circle cx="60" cy="60" r="46" fill="none" stroke="#EEF0F6" strokeWidth="15" />
+                    <circle cx="60" cy="60" r="46" fill="none" stroke="var(--amber)" strokeWidth="15" strokeDasharray={`${DONUT_C} ${DONUT_C}`} transform="rotate(-90 60 60)" />
+                    <circle cx="60" cy="60" r="46" fill="none" stroke="url(#db-donut-grad)" strokeWidth="15" strokeLinecap="round" strokeDasharray={`${(d.saoma / 100) * DONUT_C} ${DONUT_C}`} transform="rotate(-90 60 60)" />
+                  </svg>
+                  <div className="db-donut-c">
+                    <b>{d.saoma}%</b>
+                    <span>扫码进入</span>
+                  </div>
+                </div>
+                <div className="db-src-legend">
+                  <div className="db-src-row">
+                    <i style={{ background: 'linear-gradient(120deg,#3D6FF5,#8B6CF6)' }} />
+                    <span className="nm">扫码进入</span>
+                    <b>{d.saoma}%</b>
+                    <span className="cnt">{d.saomaCnt} 人</span>
+                  </div>
+                  <div className="db-src-row">
+                    <i style={{ background: 'var(--amber)' }} />
+                    <span className="nm">直接访问</span>
+                    <b>{100 - d.saoma}%</b>
+                    <span className="cnt">{d.directCnt} 人</span>
+                  </div>
+                  {/* 0717 二批 #7：同期对比(占比环比,百分点)；0718 #4：文案与其他指标统一——去「pp」字样与「扫码占比」前缀 */}
+                  <div className={'delta ' + (d.saomaDelta >= 0 ? 'up' : 'down')} style={{ marginTop: 2 }}>
+                    <span className="delta-pill">
+                      <span className="delta-arrow" style={d.saomaDelta >= 0 ? undefined : { display: 'inline-flex', transform: 'rotate(180deg)' }}>
+                        <Icon id="i-up" w={10} h={10} />
+                      </span>
+                      {Math.abs(d.saomaDelta).toFixed(1)}%
+                    </span>
+                    <span className="delta-txt">较上一周期</span>
+                    <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+          <div className="grid2" style={{ marginTop: 16, gridTemplateColumns: '1fr 1fr' }}>
             <div className="chart-card" style={{ margin: 0 }}>
               <CardTitle t="地区分布" info="C 端用户按地区（省 / 市）分组占比。" periodDays={periodDays} />
               <Bars data={d.region} />
@@ -373,7 +456,8 @@ export function DataBoard() {
           ))}
         </div>
       )}
+      </div>
       <div className="unit-note">{UNIT_NOTE}</div>
-    </>
+    </div>
   );
 }
