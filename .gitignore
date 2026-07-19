@@ -20,3 +20,7 @@ apps/*/src/**/*.js
 
 # Python 虚拟环境（生成 feature-list.xlsx 的 openpyxl 环境，勿提交）
 .venv/
+
+# 改动清单配图的派生档（由 docs/gen-change-list-xlsx.py 自动生成，不入库）
+docs/change-list-assets/thumbs/
+docs/change-list-assets/large/
