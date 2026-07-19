@@ -1,39 +1,51 @@
 # -*- coding: utf-8 -*-
 """生成《AI 问书 · 研发同步改动清单》xlsx（开会用，带页面截图）。
 
-写作口径：**讲业务不讲字段**——「为什么改」一栏要让不懂技术的人也能听懂，
-说清楚「原来用户/运营遇到了什么问题」，而不是「新增了什么枚举值」。
-技术细节（字段、接口、枚举）统一收进最后的「技术附录」页，不混在正文里。
+组织方式：**按功能模块**，不按端拆——「KP 下架」这一件事在机构后台和读者端分别是什么表现，
+写在同一个功能点里，跨端的产品逻辑一次讲透。
 
-配图：docs/change-list-assets/*.png，由 docs/change-list-build/shoot-changes.cjs 打线上截取。
+正文内容在 docs/change-list-build/content.py（改文案只动那个文件）。
+配图由 docs/change-list-build/shoot-changes.cjs 打线上截取。
 跑法：<venv>/bin/python docs/gen-change-list-xlsx.py
 """
+import math
 import os
+import sys
+
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.drawing.image import Image as XLImage
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "AI问书-研发同步改动清单.xlsx")
 SHOTS = os.path.join(HERE, "change-list-assets")
+sys.path.insert(0, os.path.join(HERE, "change-list-build"))
+from content import ITEMS  # noqa: E402
 
 HEAD_FILL = PatternFill("solid", fgColor="4B57E8")
 HEAD_FONT = Font(bold=True, color="FFFFFF", size=11)
-SEC_FILL = PatternFill("solid", fgColor="EEF0FF")
-WARN_FILL = PatternFill("solid", fgColor="FFF4E8")
+MOD_FILL = PatternFill("solid", fgColor="EEF0FF")
+WARN_FILL = PatternFill("solid", fgColor="FFF7ED")
 THIN = Side(style="thin", color="DDDDDD")
 BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 WRAP = Alignment(wrap_text=True, vertical="top")
 CTR = Alignment(horizontal="center", vertical="center")
-RED = Font(color="DC2626", size=10)
+CTR_WRAP = Alignment(horizontal="center", vertical="center", wrap_text=True)
 BOLD = Font(bold=True, size=10)
 BODY = Font(size=10)
+RED = Font(color="DC2626", size=10)
+
+DESC_COL_CHARS = 36   # 改动说明列一行大约放得下多少个汉字（按列宽 72 估）
+IMG_H = 150           # 行内配图高度 px
+
 
 def ensure_tiers():
-    """从原图派生两档压缩图（缺失才生成）。
+    """从原图派生两档压缩图（缺失或过期才重生成）。
 
     xlsx 嵌图保留的是原始文件字节、与显示尺寸无关：直接嵌 2x 原图会让文件涨到 18MB，
-    压过之后 4.6MB。thumbs 供行内缩略、large 供「页面大图」页放大看。
+    压过之后 4~5MB。thumbs 供行内缩略、large 供「页面大图」页放大看。
     """
     import glob
     try:
@@ -51,11 +63,9 @@ def ensure_tiers():
             im = Image.open(src).copy()
             im.thumbnail((cap, cap), Image.LANCZOS)
             im.convert("P", palette=Image.ADAPTIVE, colors=256).save(dst, optimize=True)
-            print(f"   压缩 {sub}/{os.path.basename(src)}")
 
 
 ensure_tiers()
-
 wb = openpyxl.Workbook()
 
 
@@ -70,15 +80,10 @@ def head(ws, header, widths):
 
 
 def put_shot(ws, row, col_letter, fname, px_h, tier="thumbs"):
-    """把截图缩放后贴进单元格。tier: thumbs=行内小图 / large=大图页。
-
-    注意：xlsx 嵌图保留的是原始文件字节、与显示尺寸无关，直接嵌 2x 原图会让文件涨到 18MB。
-    故预先压好两档（thumbs 长边 900px / large 长边 1600px），行内用小图、大图页用中图。
-    """
     p = os.path.join(SHOTS, tier, fname)
     if not os.path.exists(p):
         p = os.path.join(SHOTS, fname)
-    if not fname or not os.path.exists(p):
+    if not os.path.exists(p):
         return False
     img = XLImage(p)
     ratio = img.width / img.height
@@ -89,32 +94,30 @@ def put_shot(ws, row, col_letter, fname, px_h, tier="thumbs"):
     return True
 
 
-def detail_sheet(title, rows, shot_h, shot_col_w, row_h):
-    """rows: (页面, 改动点, 原先, 之后, 为什么改, 截图文件名)"""
-    ws = wb.create_sheet(title)
-    head(ws, ["页面", "改动了什么", "原先", "之后", "为什么改（业务视角）", "页面截图"],
-         [16, 24, 34, 40, 46, shot_col_w])
-    r = 2
-    for page, what, before, after, why, shot in rows:
-        if what == "":                      # 分节标题行
-            ws.cell(row=r, column=1, value=page)
-            for c in range(1, 7):
-                ws.cell(row=r, column=c).fill = SEC_FILL
-                ws.cell(row=r, column=c).font = BOLD
-                ws.cell(row=r, column=c).border = BORDER
-            ws.row_dimensions[r].height = 20
-            r += 1
+def est_lines(text, per_line):
+    """估算换行后占几行，用来定行高。**标记不占宽度，先剥掉再算。"""
+    plain = text.replace("**", "")
+    return sum(max(1, math.ceil(len(seg) / per_line)) for seg in plain.split("\n"))
+
+
+def rich(text, size=10):
+    """把 `**加粗**` 标记转成 Excel 富文本。
+
+    Excel 单元格不认 Markdown，直接写 ** 会原样显示成星号。正文用 ** 标重点很方便，
+    所以在写入时统一转成真正的加粗片段。无 ** 时原样返回字符串（省开销）。
+    """
+    if "**" not in text:
+        return text
+    parts = text.split("**")
+    blocks = []
+    for i, seg in enumerate(parts):
+        if not seg:
             continue
-        for c, v in enumerate([page, what, before, after, why], start=1):
-            cell = ws.cell(row=r, column=c, value=v)
-            cell.border, cell.alignment, cell.font = BORDER, WRAP, BODY
-        ws.cell(row=r, column=6).border = BORDER
-        if why.startswith("⚠"):
-            ws.cell(row=r, column=5).font = RED
-        put_shot(ws, r, "F", shot, shot_h)
-        ws.row_dimensions[r].height = row_h
-        r += 1
-    return ws
+        if i % 2:                                   # 奇数段＝被 ** 包住的部分
+            blocks.append(TextBlock(InlineFont(b=True, sz=size), seg))
+        else:
+            blocks.append(TextBlock(InlineFont(sz=size), seg))
+    return CellRichText(*blocks)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -129,22 +132,30 @@ for c in (1, 2):
     ws.cell(row=1, column=c).border = BORDER
     ws.cell(row=1, column=c).alignment = CTR
 
+mods = []
+for m, *_ in ITEMS:
+    if m not in mods:
+        mods.append(m)
+
 OVER = [
-    ("这份清单是干什么的",
-     "研发同学手上的 GitHub 代码停在 6 月 17 日。之后我根据大家在开发和测试中反馈的问题，"
-     "陆续改了七批。这份清单把这七批改动一次性说清楚：改了哪些页面、原来什么样、现在什么样、为什么要改。"),
+    ("这份清单干什么用",
+     "告诉研发和测试同学：这个项目现在有哪些功能被改了、改成什么样了。"
+     "研发手上的 GitHub 代码停在 6 月 17 日，之后我根据大家在开发测试中反馈的问题陆续改了七批。"),
     ("怎么读",
-     "先看「规则变了」这一页——那 8 条是产品结论和你们手上 PRD 相反的，最容易做返工，"
-     "务必优先对齐。然后按端看三张明细页，每条改动都配了对应页面的截图，可以直接对着看。"
-     "字段、接口这类技术细节统一放在最后的「技术附录」页。"),
+     "主体是「改动说明」这一页，按功能模块组织。一个功能点用一段话讲完它现在的完整产品逻辑，"
+     "① ② ③ 逐条列出各端分别是什么表现，后面配对应页面的截图。"
+     "带 ⚠️ 的是**和你们手上 PRD 结论相反**的地方，最容易做返工，请重点看。"),
+    ("模块划分", " / ".join(mods)),
     ("涉及范围", "移动端 H5（读者用）、机构后台（出版社运营用）、平台超管（我们自己用）三端都有改动。"),
-    ("配套文档", "产品 PRD 已升到 v1.10、功能清单 v2.7、品牌色影响清单 95 条，都已同步到飞书线上，改动处标了红色。"),
+    ("配套文档",
+     "产品 PRD 已升到 v1.10、功能清单 v2.7、品牌色影响清单 95 条，都已同步到飞书线上，改动处标了红色。"),
     ("", ""),
-    ("⚠ 拉代码提醒",
+    ("⚠️ 拉代码提醒",
      "这次改动跨了多个代码包。只拉页面目录会出现样式全丢、功能报错——请整个仓库一起同步。"),
-    ("⚠ 端口变了", "移动端本地开发端口从 5173 改成 5170（5173 被其他项目占着）。联调文档和自动化脚本要一起改。"),
+    ("⚠️ 端口变了",
+     "移动端本地开发端口从 5173 改成 5170（5173 被其他项目占着）。联调文档和自动化脚本要一起改。"),
     ("", ""),
-    ("这七批分别是什么", ""),
+    ("七个批次分别做了什么", ""),
     ("0712", "父子机构关系理顺、指标口径分类、知识产品前台地址改成真实域名"),
     ("0714", "导出体系规范化、命名统一「机构」、订阅删除加护栏"),
     ("0715", "数据看板留存率按注册批次重做、权限联动、订单双筛选"),
@@ -156,261 +167,49 @@ OVER = [
 r = 2
 for k, v in OVER:
     ws.cell(row=r, column=1, value=k).border = BORDER
-    ws.cell(row=r, column=2, value=v).border = BORDER
+    ws.cell(row=r, column=2, value=rich(v)).border = BORDER
     ws.cell(row=r, column=1).alignment = WRAP
     ws.cell(row=r, column=2).alignment = WRAP
-    ws.cell(row=r, column=1).font = Font(bold=True, size=10, color="DC2626") if k.startswith("⚠") else BOLD
+    ws.cell(row=r, column=1).font = RED if k.startswith("⚠️") else BOLD
     ws.cell(row=r, column=2).font = BODY
+    ws.row_dimensions[r].height = max(16, est_lines(v, 60) * 14)
     r += 1
 ws.column_dimensions["A"].width = 22
-ws.column_dimensions["B"].width = 110
+ws.column_dimensions["B"].width = 112
 ws.freeze_panes = "A2"
 
 # ══════════════════════════════════════════════════════════════════
-# 规则变了（最重要）
+# 改动说明（主体，按模块分组）
 # ══════════════════════════════════════════════════════════════════
-ws = wb.create_sheet("规则变了")
-head(ws, ["#", "这件事", "你们手上 PRD 写的", "现在定的", "为什么要改（业务视角）", "页面截图"],
-     [4, 20, 34, 40, 52, 26])
-RULES = [
-    ("1", "删除知识产品",
-     "删除后内容、文件、二维码、分享全部清掉，找不回来",
-     "删除只是从界面上拿掉，数据库里全部保留。用户那边显示「已失效」",
-     "读者买了内容，运营手一抖删了，读者来投诉——客服要能查到这个人买过什么、什么时候买的、该退多少钱。"
-     "原来那种真删法，客服什么都查不到，只能干瞪眼。",
-     "org-kpdetail.png"),
-    ("2", "下架知识产品",
-     "下架只是不卖了，已经买过的读者照常能看",
-     "下架期间所有人都看不了，包括已经买断的。但权益不清除，重新上架自动恢复",
-     "⚠ 这条是反的，请重点看。下架的真实场景是「这本书内容有问题，先撤下来改」。"
-     "如果买过的人还能看，等于有问题的内容还在对外服务，该担的责任一点没少。"
-     "读者的钱不会白花——权益留着，重新上架就能看。",
-     "h5-books.png"),
-    ("3", "订单什么时候生成",
-     "点了下单就生成订单，有「待支付」状态",
-     "支付成功才生成订单。中途关掉页面不留任何记录",
-     "「待支付」的订单里九成九是垃圾数据——用户点开看看就走了。这些垃圾单占着订单号，"
-     "运营看订单列表要一条条跳过，还得专门写个定时任务去清理。干脆不生成。",
-     "h5-orders.png"),
-    ("4", "知识产品状态怎么叫",
-     "机构后台叫「未发/已发」，平台后台叫「草稿/已发布/已下架」",
-     "两个后台统一叫 草稿 / 已发布 / 已下架",
-     "同一个东西两边两套叫法。运营在群里说「这本还没发」，技术要先问一句「你说的是草稿还是未发布」，"
-     "沟通成本全花在对齐名词上了。",
-     "org-kps.png"),
-    ("5", "停用一个父机构",
-     "文案暗示会连它下面的分社一起停",
-     "只停它自己，下面的分社照常用。要停分社得一家家单独确认",
-     "父子机构对应的是出版集团和它的分社。分社是独立经营主体、有自己的账和自己的读者，"
-     "不能因为集团那边欠费就把分社的服务掐了——那是把别人的生意也停了。",
-     "plat-orgs.png"),
-    ("6", "删除订阅订单",
-     "必须同时满足四个条件才让删（没过期、三项用量都是 0、没有加油包）",
-     "只有「已过期」的不能删。已经在用的也能删，但会弹红色警告写清楚后果",
-     "⚠ 这条放宽了，回归要重点测。真实场景是商务把订阅建错了要撤销——原来条件卡太死，"
-     "建错了就永远删不掉，只能挂在那儿看着。另外要说清楚：**删除不等于退款**，退费走线下。",
-     "plat-orgdetail.png"),
-    ("7", "微信回调怎么填",
-     "字段叫「回调域名」，说明写「不要带 http:// 和路径」",
-     "改叫「回调地址」，要求带完整协议和路径，和微信后台配的一模一样",
-     "微信那边实际校验的是完整网址。按原来的说明填，机构怎么填都对不上，"
-     "每次新机构入驻都要卡在这一步返工。",
-     "plat-orgdetail.png"),
-    ("8", "会员开通的协议勾选",
-     "打开页面协议就是勾好的，用户直接点开通",
-     "默认不勾选，用户得自己勾了才能开通",
-     "连续包月这一档带《自动续费协议》。自动续费默认帮用户勾上，国内合规口径基本都不认，"
-     "属于给自己埋雷。而且登录页一直是默认不勾的，两边标准不一致本身也说不过去。",
-     "h5-member.png"),
-]
+ws = wb.create_sheet("改动说明")
+head(ws, ["模块", "功能点", "改动说明", "影响端", "配图 1", "配图 2", "配图 3"],
+     [14, 22, 72, 14, 30, 30, 30])
 r = 2
-for num, what, before, after, why, shot in RULES:
-    for c, v in enumerate([num, what, before, after, why], start=1):
+last_mod = None
+for mod, feat, desc, ends, shots in ITEMS:
+    if mod != last_mod:                                  # 模块分隔条
+        ws.cell(row=r, column=1, value=f"■ {mod}")
+        for c in range(1, 8):
+            ws.cell(row=r, column=c).fill = MOD_FILL
+            ws.cell(row=r, column=c).font = Font(bold=True, size=11, color="3942C9")
+            ws.cell(row=r, column=c).border = BORDER
+        ws.row_dimensions[r].height = 22
+        r += 1
+        last_mod = mod
+    for c, v in enumerate([mod, feat, rich(desc), ends], start=1):
         cell = ws.cell(row=r, column=c, value=v)
         cell.border, cell.alignment, cell.font = BORDER, WRAP, BODY
-    ws.cell(row=r, column=6).border = BORDER
-    if why.startswith("⚠"):
-        ws.cell(row=r, column=5).font = RED
-        for c in range(1, 7):
+    ws.cell(row=r, column=2).font = BOLD
+    ws.cell(row=r, column=4).alignment = CTR_WRAP
+    for c in (5, 6, 7):
+        ws.cell(row=r, column=c).border = BORDER
+    if "⚠️" in desc:                                     # 含反转结论的整行淡橙
+        for c in range(1, 8):
             ws.cell(row=r, column=c).fill = WARN_FILL
-    put_shot(ws, r, "F", shot, 150)
-    ws.row_dimensions[r].height = 122
+    for i, s in enumerate(shots[:3]):
+        put_shot(ws, r, chr(69 + i), s, IMG_H)
+    ws.row_dimensions[r].height = max(est_lines(desc, DESC_COL_CHARS) * 14.5, IMG_H * 0.78)
     r += 1
-
-# ══════════════════════════════════════════════════════════════════
-# 三端明细
-# ══════════════════════════════════════════════════════════════════
-detail_sheet("移动端H5", [
-    ("读者扫码进来这条路", "", "", "", "", ""),
-    ("知识产品入口页（新增）", "新增一个统一的「判活」中转页",
-     "扫码或点前台链接直接进会话，不检查这本书还在不在",
-     "先过一道检查：正常就进会话；已下架提示「已下架，请联系客服」；已删除或链接错了提示「已失效」。"
-     "停 3 秒后自动带用户去这家机构最新的一本书",
-     "读者扫到一本已经撤下的书，原来会直接进会话然后发现什么都问不出来，"
-     "以为是产品坏了。现在明确告诉他发生了什么，并且不让他空着手走——直接给一本能看的。",
-     "h5-kpgate-off.png"),
-    ("知识产品入口页", "链接失效的提示",
-     "无",
-     "已删除、草稿、链接不存在，都统一提示「已失效」",
-     "草稿是运营还没发布的东西，不能让外面的人通过链接猜到「这家机构在准备什么书」。"
-     "所以草稿和「不存在」用同一句话打发掉。",
-     "h5-kpgate-dead.png"),
-    ("我的纸书", "已下架/已失效的书会被拦住",
-     "所有书都能点进去",
-     "点了弹提示、不进会话；卡片整体变淡；已解锁的书会同时挂「已解锁」和「已下架」两个标",
-     "读者手里的书突然看不了，最怕的是「点了没反应」。现在明确告诉他状态，"
-     "并且保留「已解锁」的标——让他知道钱没白花，只是暂时看不了。",
-     "h5-books.png"),
-    ("我的永享", "同上，买断的内容也会被拦",
-     "点开就能看",
-     "关联的书下架或删除时拦住，封面置灰，副标题写明「已下架」/「已失效」",
-     "和「我的纸书」一套逻辑，保持读者心智一致。",
-     "h5-yongxiang.png"),
-    ("开通会员", "两档从「首月特惠/月度」改成「连续包月/单月」",
-     "两档叫「首月特惠 ¥9.9」和「月度 ¥19.9」，会不会自动续费藏在小字里",
-     "改叫「连续包月」和「单月会员」，卡片名字旁边直接挂「自动续费·可随时取消」/「一次性购买·不自动续费」",
-     "价格一分没变，变的是把「这次付完还扣不扣钱」写在最显眼的地方。"
-     "原来客服咨询量最集中的就是这个问题——用户分不清自己买的是一个月还是一直扣。",
-     "h5-member.png"),
-    ("开通会员", "协议改成默认不勾选",
-     "协议是装饰性的，永远显示勾上，点了也没反应",
-     "真的能点。默认不勾，不勾点开通会被拦住并提示",
-     "见「规则变了」第 8 条：自动续费默认代勾有合规风险。",
-     "h5-member.png"),
-    ("我的订单", "加了一行状态筛选",
-     "只有一行类型标签（全部/会员/永享/兑换码）",
-     "类型标签之外再加一行状态（全部/已支付/退款售后）。兑换码那个标签下不显示状态行",
-     "读者来找订单，八成是为了「我那笔退款到哪了」。原来只能按类型翻，"
-     "退款单混在几十条里找不着。兑换码本来就只有已核销一种状态，多显示一行是噪音。",
-     "h5-orders.png"),
-    ("我的订单 / 订单详情", "退款记录逐笔展示",
-     "看不到退款信息",
-     "卡片上逐笔列出退款（金额、状态、申请时间），详情页有独立的「退款记录」卡片",
-     "一笔订单可能退好几次（部分退款）。原来读者只能看到一个总状态，"
-     "退了两笔退成功一笔的情况完全说不清，只能打客服。",
-     "h5-orders.png"),
-    ("兑换码", "兑换失败会说清楚原因",
-     "输了就提示兑换成功，没有失败的情况",
-     "分三种失败：还没到生效时间（告诉他哪天开始）、已过期、发码机构停用了",
-     "机构做活动会提前把码印在书上、指定某天才能用。读者早了一天来兑，"
-     "原来直接提示成功（其实没成功），或者什么都不说。现在告诉他哪天来。",
-     "h5-redeem.png"),
-], shot_h=170, shot_col_w=15, row_h=138)
-
-detail_sheet("机构后台", [
-    ("出版社运营每天用的", "", "", "", "", ""),
-    ("知识产品列表", "状态和来源标签重做",
-     "状态只有「未发/已发」；来源只分「自建/共享」；点任何一张卡进去都显示同一本书",
-     "状态三态（草稿/已发布/已下架）；来源三态（自建/分享导入·实时/分享导入·快照）；"
-     "点哪本进去就是哪本",
-     "「点进去全是同一本」这个是实打实的 bug，评审时被指出来过。"
-     "来源分三种是因为机构之间互相分享有两种玩法，配额怎么算完全不同，混在一起运营算不清账。",
-     "org-kps.png"),
-    ("知识产品详情", "状态操作按钮跟着状态变",
-     "固定两个按钮「下架」「删除」，点了只弹提示、状态不变",
-     "草稿只显示「发布」，已发布只显示「下架」，已下架只显示「重新发布」，点了真的改状态",
-     "原来点了没反应，运营以为没生效会反复点。而且一个草稿本来就没上架过，"
-     "旁边摆个「下架」按钮只会让人困惑。",
-     "org-kpdetail.png"),
-    ("知识产品详情", "删除前把影响说清楚",
-     "一句话「删除后不可恢复」",
-     "分两种：没人买过的简单确认；有人买过的列清楚「有 N 位读者买了永享、M 位扫码解锁」，"
-     "并说明他们那边会看到什么",
-     "运营删一本书之前，得知道这一刀下去影响多少读者。"
-     "原来那句「不可恢复」既吓人又没信息量，运营不敢删也不知道能不能删。",
-     "org-kpdetail.png"),
-    ("数据看板", "留存率按「注册批次」重做",
-     "三个写死的百分比，跟着上面的时间筛选一起变",
-     "按注册批次算：D+1 / D+7 / D+30 三张卡，每张写清楚「统计 X 月 X 日注册的 N 人，第几天有没有回来」。"
-     "还没到统计时间的显示「尚未到统计时间」+ 预计哪天能看",
-     "⚠ 留存必须是「哪天注册的这批人、过几天还回不回来」。原来跟着观察区间变，"
-     "算出来的数字没有业务含义，拿去汇报是会出事的。"
-     "另外「还没到时间」显示 0% 会被误读成「一个人都没回来」，现在明说还没到。",
-     "org-board.png"),
-    ("数据看板", "日活/周活/月活改成跟区间联动",
-     "固定窗口的快照，切时间筛选它不动，提示里还专门写「不随区间变化」",
-     "跟着时间筛选联动，并且给出和上一周期的对比",
-     "运营切了时间范围，上面三个数字纹丝不动，每次都要问一遍「是不是坏了」。",
-     "org-board.png"),
-    ("系统配置", "会员价格改成按购买方式分组",
-     "两个输入框：首月折扣价、月度价",
-     "分两组三个价格：连续包月（首月价 + 次月起价）、单月（单月价），每个都写清楚什么时候扣",
-     "前台已经改成两种买法了，后台还是老的两个框，运营填的时候对不上——"
-     "「月度价」到底是次月续费的价还是单月买断的价，没人说得清。",
-     "org-sys.png"),
-    ("订单管理", "三个时间筛选真的能用了",
-     "三个时间选择器摆在那儿，选了没任何反应",
-     "真的按下单/支付/兑换时间过滤",
-     "摆着不能用的控件比没有更糟——运营以为筛过了，拿着没筛的数据去对账。",
-     "org-orders.png"),
-    ("兑换码", "批次加「可兑换时间」",
-     "只有权益时长，没有兑换时间窗",
-     "生成批次时必填可兑换时间段，列表能看能排序",
-     "「权益能用多久」和「这批码什么时候能兑」是两回事。"
-     "机构做活动要控制「只能在活动期内兑」，原来做不到。",
-     "org-codes.png"),
-    ("导出（所有列表页）", "导出从「假的」变成真的",
-     "六个导出按钮点了只弹一句提示，什么都不下载",
-     "真的导出 Excel，文件名统一规范，单次最多一万条、超了会拦住并提示缩小筛选",
-     "评审的时候这几个按钮被当成做好了。另外一万条这个上限是防止运营一次导全量把服务拖垮。",
-     "org-orders.png"),
-], shot_h=170, shot_col_w=40, row_h=140)
-
-detail_sheet("平台超管", [
-    ("我们自己运营用的", "", "", "", "", ""),
-    ("机构管理", "机构数据只留一份",
-     "列表一份数据、详情页另写死一份，两边对不上；点任何机构进去都显示同一家",
-     "统一一份数据，点哪家就是哪家",
-     "又一个「点进去全是同一家」的问题。而且两份数据对不上，"
-     "谁也说不清哪份是准的。",
-     "plat-orgs.png"),
-    ("机构管理", "父机构/子机构标签自动算",
-     "没有这个概念，只有一个上级机构字段",
-     "有下级的自动显示「父机构」标；关系变了标签跟着变",
-     "运营要一眼看出哪家是集团、哪家是分社。这个标签是从关系里自动推出来的，"
-     "不用人工维护，也就不会出现「标了父机构其实下面没有分社」这种脏数据。",
-     "plat-orgs.png"),
-    ("机构详情", "上级机构按三种情况给三种界面",
-     "统一一个下拉框，选了也没用",
-     "分社可以改挂或解绑；集团那栏直接禁用（已经是父机构不能再挂上级）；普通机构可以挂",
-     "防止出现「集团 → 分社 → 子分社」三层结构。业务上只支持两层，"
-     "三层一出现，配额怎么算、账怎么归属全乱套。",
-     "plat-orgdetail.png"),
-    ("机构详情", "额度改成步进器",
-     "三个空白输入框随便填",
-     "三张卡片配步进器，还标了「占用量」和「消耗量」两种类型",
-     "原来能填进去负数和字母。另外要让商务明白：知识产品数和存储是「占着的」、"
-     "删了能还回来；Token 是「烧掉的」、烧了就没了。这两种额度算法完全不同。",
-     "plat-orgdetail.png"),
-    ("机构详情", "用量看板拆成两段",
-     "四张静态卡片，没有时间筛选",
-     "上半段「当前存量」不随时间变，下半段「区间运营分析」跟着时间筛选走",
-     "有些数字天生就是「此刻多少」（比如现在占了多少存储），有些是「这段时间发生了多少」。"
-     "混在一张表里，运营切时间发现一半动一半不动，以为坏了。",
-     "plat-orgdetail.png"),
-    ("全域知识产品", "已删除的不再显示",
-     "全部显示",
-     "删掉的从列表里过滤掉，筛选项里也没有「已删除」这一档",
-     "删除后数据虽然留着，但那是给客服查账用的，不该出现在日常运营视图里。",
-     "plat-globalkps.png"),
-    ("全域知识产品", "标签规则和机构后台对齐",
-     "状态标 + 有永享时挂个「永享」标",
-     "来源标 + 状态标，去掉「永享」标",
-     "平台是监管视角，只关心这本书是什么状态、哪来的，不关心它卖什么权益。"
-     "而且两个后台标签不一样，看惯了一边再看另一边容易看错。",
-     "plat-globalkps.png"),
-    ("角色权限", "「Prompt 编辑」收成子项",
-     "三个权限项平铺，没有从属关系",
-     "「Prompt 编辑」缩进挂在「Agent 人设」下面，只有「Agent 人设 = 可操作」时才出现",
-     "没有保存权限却能编辑 Prompt 是个无意义的组合——编辑完存不了。"
-     "用层级把这个约束表达出来，管理员配权限时不会配出自相矛盾的组合。",
-     "plat-roles.png"),
-    ("全域用户", "导出超一万条会拦住",
-     "没有导出",
-     "不加筛选导全量（一万两千多条）会弹窗拦住，提示缩小范围",
-     "一次导全量会把服务拖垮，也没人真的会看一万两千行。引导先筛选。",
-     "plat-users.png"),
-], shot_h=170, shot_col_w=40, row_h=140)
 
 # ══════════════════════════════════════════════════════════════════
 # 测试要注意
@@ -433,10 +232,11 @@ TEST = [
 ]
 r = 2
 for num, k, v in TEST:
-    for c, val in enumerate([num, k, v], start=1):
+    for c, val in enumerate([num, k, rich(v)], start=1):
         cell = ws.cell(row=r, column=c, value=val)
         cell.border, cell.alignment, cell.font = BORDER, WRAP, BODY
     ws.cell(row=r, column=2).font = BOLD
+    ws.row_dimensions[r].height = max(16, est_lines(v, 48) * 14)
     r += 1
 
 # ══════════════════════════════════════════════════════════════════
@@ -470,22 +270,24 @@ TODO = [
 ]
 r = 2
 for cat, item, desc, owner in TODO:
-    for c, v in enumerate([cat, item, desc, owner], start=1):
+    for c, v in enumerate([cat, item, rich(desc), owner], start=1):
         cell = ws.cell(row=r, column=c, value=v)
         cell.border, cell.alignment, cell.font = BORDER, WRAP, BODY
     ws.cell(row=r, column=2).font = BOLD
+    ws.row_dimensions[r].height = max(16, est_lines(desc, 40) * 14)
     r += 1
 
 # ══════════════════════════════════════════════════════════════════
-# 技术附录（字段/接口，给研发看）
+# 技术附录
 # ══════════════════════════════════════════════════════════════════
 ws = wb.create_sheet("技术附录")
 head(ws, ["类别", "内容", "原先", "之后", "后端要做什么"], [16, 26, 30, 40, 40])
 TECH = [
     ("说明", "本页是给研发看的技术细节", "", "",
-     "前面几页讲业务，这页讲字段和接口。开会可以跳过，研发同学单独看。"),
+     "前面几页讲产品逻辑，这页讲字段和接口。开会可以跳过，研发同学单独看。"),
     ("状态枚举", "知识产品状态", "draft / published / archived",
-     "draft / published / unlisted / deleted", "枚举扩容；原 archived 的历史数据要迁成 deleted；不要实现物理删除"),
+     "draft / published / unlisted / deleted",
+     "枚举扩容；原 archived 的历史数据要迁成 deleted；不要实现物理删除"),
     ("新增字段", "知识产品 · 分享方式", "无", "realtime（实时同步）/ snapshot（独立快照），可空表示自建",
      "新增列。决定能不能编辑、配额怎么扣、二维码和分享页是否可见"),
     ("新增字段", "机构 · 域名前缀", "无", "字符串，全平台唯一", "新增列 + 唯一约束"),
@@ -499,37 +301,36 @@ TECH = [
     ("新增字段", "C 端用户 · 注册时间", "无", "datetime", "新增列，两个后台列表要能按它排序"),
     ("新增字段", "兑换码批次 · 可兑换时间", "无", "起止两个时间字段", "新增两列。注意这和「权益有效期」是两个概念"),
     ("新增字段", "订单 · 退款记录", "无", "数组，一单可多笔", "新增关联表，每笔含退款单号、金额、状态、申请时间"),
-    ("接口要求", "按 ID 查知识产品", "查不到就 404",
-     "已删除的也要能查到并返回 deleted 状态", "软删的不能返 404，否则前台区分不出「已失效」和「链接错了」"),
+    ("接口要求", "按 ID 查知识产品", "查不到就 404", "已删除的也要能查到并返回 deleted 状态",
+     "软删的不能返 404，否则前台区分不出「已失效」和「链接错了」"),
     ("接口要求", "取机构最新已发布的知识产品", "无此接口", "按机构 ID 取最新一本已发布的", "前台判活页跳转要用"),
     ("接口要求", "兑换码失败要分类型", "只返回成功/失败",
      "要能区分：未到生效时间（带具体时间）/ 已过期 / 机构已停用", "前台按类型给不同提示"),
-    ("接口要求", "会员商品要分两种", "一个价格字段",
-     "连续包月（签约代扣）和单月（一次性）是两种商品", "不能用一个价格字段表达"),
+    ("接口要求", "会员商品要分两种", "一个价格字段", "连续包月（签约代扣）和单月（一次性）是两种商品",
+     "不能用一个价格字段表达"),
     ("业务规则", "退款和权益的关系", "未定义",
-     "只有「全额退款」且「该订单是这个权益的唯一来源」才收回权益，其余一律保留",
-     "部分退款不收回权益"),
+     "只有「全额退款」且「该订单是这个权益的唯一来源」才收回权益，其余一律保留", "部分退款不收回权益"),
     ("业务规则", "分享的两种模式怎么算配额", "未定义",
      "实时同步：只烧接收方 Token，不占接收方配额，只读，撤销后立即失去访问；"
      "独立快照：占接收方配额，可编辑，撤销后仍可访问", "按模式分支扣配额"),
-    ("业务规则", "登录态有效期", "固定 30 天",
-     "滑动 7 天：每次有效操作刷新，连续 7 天没动作才失效", "改成滑动过期"),
-    ("工程约束", "导出相关代码不能引入前端依赖",
-     "无此约束", "导出逻辑要能被 node 直接跑（不能 import react / 浏览器 API）",
+    ("业务规则", "登录态有效期", "固定 30 天", "滑动 7 天：每次有效操作刷新，连续 7 天没动作才失效", "改成滑动过期"),
+    ("工程约束", "导出相关代码不能引入前端依赖", "无此约束",
+     "导出逻辑要能被 node 直接跑（不能 import react / 浏览器 API）",
      "破坏这个约束会让导出模板生成脚本直接挂掉"),
 ]
 r = 2
 for row in TECH:
     for c, v in enumerate(row, start=1):
-        cell = ws.cell(row=r, column=c, value=v)
+        cell = ws.cell(row=r, column=c, value=rich(v))
         cell.border, cell.alignment, cell.font = BORDER, WRAP, BODY
     if row[0] == "说明":
         for c in range(1, 6):
-            ws.cell(row=r, column=c).fill = SEC_FILL
+            ws.cell(row=r, column=c).fill = MOD_FILL
+    ws.row_dimensions[r].height = max(16, est_lines(row[3], 20) * 14)
     r += 1
 
 # ══════════════════════════════════════════════════════════════════
-# 页面大图（开会放大看）
+# 页面大图
 # ══════════════════════════════════════════════════════════════════
 ws = wb.create_sheet("页面大图")
 ws.append(["页面", "截图（可放大看细节）"])
@@ -540,8 +341,8 @@ for c in (1, 2):
     ws.cell(row=1, column=c).alignment = CTR
 GALLERY = [
     ("移动端 · 开通会员（双模式 + 协议默认不勾）", "h5-member.png", 620),
-    ("移动端 · 知识产品入口页（已下架）", "h5-kpgate-off.png", 620),
-    ("移动端 · 知识产品入口页（已失效）", "h5-kpgate-dead.png", 620),
+    ("移动端 · 扫码判活页（已下架）", "h5-kpgate-off.png", 620),
+    ("移动端 · 扫码判活页（已失效）", "h5-kpgate-dead.png", 620),
     ("移动端 · 我的纸书（双标 + 整卡变淡）", "h5-books.png", 620),
     ("移动端 · 我的永享", "h5-yongxiang.png", 620),
     ("移动端 · 我的订单（双维度筛选 + 退款条）", "h5-orders.png", 620),
@@ -571,5 +372,7 @@ for label, fname, h in GALLERY:
 ws.freeze_panes = "A2"
 
 wb.save(OUT)
+n_items = len(ITEMS)
+n_mods = len(mods)
 print(f"✅ 已生成 {OUT}")
-print("   sheets:", wb.sheetnames)
+print(f"   {n_mods} 个模块 / {n_items} 个功能点 / {len(wb.sheetnames)} 个 sheet")
