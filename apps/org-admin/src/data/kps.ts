@@ -11,8 +11,6 @@ export interface OrgKp {
   source: '自建' | '共享';
   /** 共享来源的导入方式：realtime = 实时同步（只读），snapshot = 独立快照（可编辑）；自建为 undefined */
   shareMode?: 'realtime' | 'snapshot';
-  /** 实时分享角色：sharer=分享方（本机构把该 KP 实时分享给其他机构）；consumer=接收方（实时导入） */
-  shareRole?: 'sharer' | 'consumer';
   status: 'draft' | 'published' | 'unlisted';
   agent: string;
   files: string;
@@ -24,12 +22,12 @@ export interface OrgKp {
 }
 
 export const ORG_KPS: OrgKp[] = [
-  // 已发布 + 实时分享·分享方（分享 Tab 内可见分享链接记录）
-  { id: '1', name: '心血管分册 · 第4版', cover: '', source: '自建', shareRole: 'sharer', status: 'published', agent: '李医生', files: '12', asks: '1.2k', purchasedUsers: 12, bookUsers: 8, relations: { orders: 1, shares: 1 } },
+  // 已发布，本机构实时分享给其他机构（分享 Tab 内可见分享链接记录；0722：分享方列表不显示分享标识）
+  { id: '1', name: '心血管分册 · 第4版', cover: '', source: '自建', status: 'published', agent: '李医生', files: '12', asks: '1.2k', purchasedUsers: 12, bookUsers: 8, relations: { orders: 1, shares: 1 } },
   // 草稿（无任何业务关系 → 删除走简化弹窗；显示「发布」按钮）
   { id: '2', name: '儿科学', cover: 'c2', source: '自建', status: 'draft', agent: '王老师', files: '8', asks: '340', purchasedUsers: 0, bookUsers: 0, relations: {} },
   // 已发布 + 实时分享·接收方（实时同步导入,详情只读、隐藏二维码/分享 Tab）
-  { id: '3', name: '内科精要', cover: 'c3', source: '共享', shareMode: 'realtime', shareRole: 'consumer', status: 'published', agent: '—', files: '20', asks: '5k', purchasedUsers: 0, bookUsers: 0, relations: { imports: 1 } },
+  { id: '3', name: '内科精要', cover: 'c3', source: '共享', shareMode: 'realtime', status: 'published', agent: '—', files: '20', asks: '5k', purchasedUsers: 0, bookUsers: 0, relations: { imports: 1 } },
   // 已发布 + 独立快照导入（可编辑）
   { id: '4', name: '外科学-快照', cover: 'c4', source: '共享', shareMode: 'snapshot', status: 'published', agent: '赵', files: '6', asks: '88', purchasedUsers: 0, bookUsers: 0, relations: { imports: 1 } },
   // 已下架（详情显示「重新发布」按钮；前台各入口显「已下架」）

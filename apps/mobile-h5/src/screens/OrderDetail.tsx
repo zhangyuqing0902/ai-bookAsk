@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 import { MediaPreview, type PreviewItem } from '@aba/ui-mobile';
 import { ORDERS } from '../data/orders';
+
+const fmtCd = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
 // 我的订单 · 订单详情
 export function OrderDetail() {
@@ -10,6 +12,21 @@ export function OrderDetail() {
   const { id } = useParams();
   const [preview, setPreview] = useState<PreviewItem | null>(null);
   const o = ORDERS.find((x) => x.id === id);
+  // 0722：待支付倒计时（30 分钟支付有效期）；0724b：按进入页面的时间戳计算流逝，
+  // 后台标签页 / 锁屏节流时切回即校准（逐秒 +1 会在页面后台时变慢）
+  const mountTs = useRef(Date.now());
+  const [elapsed, setElapsed] = useState(0);
+  const pending = o?.status === '待支付';
+  useEffect(() => {
+    if (!pending) return;
+    const tick = () => setElapsed(Math.floor((Date.now() - mountTs.current) / 1000));
+    const t = setInterval(tick, 1000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [pending]);
 
   if (!o) {
     return (
@@ -97,6 +114,21 @@ export function OrderDetail() {
             <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 4 }}>{o.title} · {o.status}</div>
           </div>
 
+          {/* 0722：待支付——剩余支付时间 + 去支付；30 分钟未支付自动失效。0724：左右边距与 od-card 对齐（同宽） */}
+          {o.status === '待支付' && (
+            <div className="pay-pending-strip" style={{ margin: '4px 16px 0' }}>
+              <span>剩余支付时间</span>
+              <span className="cd">{fmtCd(Math.max(0, (o.payRemainSec ?? 0) - elapsed))}</span>
+              <span className="go-pay tap" onClick={() => nav('/pay/wechat')}>去支付</span>
+            </div>
+          )}
+          {/* 0722：已失效——超时关单说明；0724：同宽对齐 */}
+          {o.status === '已失效' && (
+            <div className="pay-pending-strip" style={{ margin: '4px 16px 0', background: 'var(--surface-warm)', color: 'var(--ink-3)', borderColor: 'var(--line-2)' }}>
+              <span>订单超 30 分钟未支付已自动失效，如需购买请重新下单</span>
+            </div>
+          )}
+
           <div className="od-card">
             <div className="od-h">基础信息</div>
             <div className="od-row">
@@ -119,11 +151,13 @@ export function OrderDetail() {
             </div>
             <div className="od-row">
               <span className="k">付款时间</span>
-              <span className="v">{o.payTime}</span>
+              {/* 0722：待支付 / 已失效无付款时间 */}
+              <span className="v">{o.payTime || '—'}</span>
             </div>
           </div>
 
-          {o.type === '会员' && (
+          {/* 0722：待支付 / 已失效未产生权益，不渲染会员权益卡 */}
+          {o.type === '会员' && o.memberFrom && o.memberTo && (
             <div className="od-card">
               <div className="od-h">会员权益</div>
               <div className="od-row">

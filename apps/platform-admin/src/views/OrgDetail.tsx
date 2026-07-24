@@ -22,29 +22,32 @@ const PLANS: Record<string, { kp: string; storage: string; token: string }> = {
 };
 const PLAN_CLS_D: Record<string, string> = { 体验版: 'tag-line', 基础版: 'tag-line', 专业版: 'tag-indigo', 旗舰版: 'tag-amber', 不限版: 'tag-jade', 定制版: 'tag-jade' };
 const SUB_ST_CLS: Record<string, string> = { 生效: 'ok', 未生效: 'none', 已过期: 'expired' };
-const USAGE_BY_RANGE: Record<string, { active: string; added: string; questions: string; gmv: string; payUsers: string; token: string; calls: string; response: string }> = {
-  今日: { active: '1,240 人', added: '48 人', questions: '1,180 条', gmv: '¥1.1万', payUsers: '32 人', token: '62万 token', calls: '1.8万 次', response: '1.7s' },
-  '近 7 天': { active: '5,600 人', added: '320 人', questions: '3.2万 条', gmv: '¥25.6万', payUsers: '210 人', token: '860万 token', calls: '24万 次', response: '1.8s' },
-  '30 天': { active: '1.2万 人', added: '1,280 人', questions: '12.8万 条', gmv: '¥104.7万', payUsers: '860 人', token: '3,620万 token', calls: '102万 次', response: '1.9s' },
+// 0722：商业化区间指标扩充（净GMV/付费转化/永享订单/退款），数值与机构后台数据看板营收分析同源对齐
+const USAGE_BY_RANGE: Record<string, { active: string; added: string; questions: string; gmv: string; netGmv: string; payUsers: string; payRate: string; yxOrders: string; refundAmt: string; refundRate: string; token: string; calls: string; response: string }> = {
+  今日: { active: '1,240 人', added: '48 人', questions: '1,180 条', gmv: '¥1.1万', netGmv: '¥9,860', payUsers: '32 人', payRate: '5.8%', yxOrders: '5 单', refundAmt: '¥1,240', refundRate: '1.6%', token: '62万 token', calls: '1.8万 次', response: '1.7s' },
+  '近 7 天': { active: '5,600 人', added: '320 人', questions: '3.2万 条', gmv: '¥25.6万', netGmv: '¥24.7万', payUsers: '210 人', payRate: '6.6%', yxOrders: '38 单', refundAmt: '¥8,600', refundRate: '2.1%', token: '860万 token', calls: '24万 次', response: '1.8s' },
+  '30 天': { active: '1.2万 人', added: '1,280 人', questions: '12.8万 条', gmv: '¥104.7万', netGmv: '¥101.3万', payUsers: '860 人', payRate: '6.9%', yxOrders: '152 单', refundAmt: '¥3.4万', refundRate: '2.4%', token: '3,620万 token', calls: '102万 次', response: '1.9s' },
 };
+// 0722：累计 GMV 为开通至今存量快照，随实时板块展示、不随区间筛选变化
+const CUM_GMV = '¥1,208.6万';
 
-// 用量看板卡片（顶部色条 + 标题 + 指标行分隔 + 数值强调）
-function UsageCard({ title, rows, periodDays }: { title: string; rows: [string, string, string][]; periodDays?: number }) {
+// 用量看板卡片（0724-2 精修：标题渐变图标章 + 指标 tile 栅格；hover 仅抬升放大、不变色；tone 分组主题色，仅视觉）
+function UsageCard({ title, icon, rows, periodDays, tone }: { title: string; icon: string; rows: [string, string, string][]; periodDays?: number; tone?: 'amber' | 'jade' }) {
   return (
-    <div className="usage-card">
+    <div className={'usage-card' + (tone ? ' tone-' + tone : '')}>
       <div className="uc-title">
-        <span className="uc-dot" />
+        <span className="uc-ic"><Icon id={icon} w={13} h={13} /></span>
         {title}
       </div>
-      <div className="uc-rows">
+      <div className="uc-tiles">
         {rows.map(([k, v, info]) => (
-          <div className="uc-row" key={k}>
-            <span className="uc-k">
+          <div className="uc-tile" key={k}>
+            <span className="uc-tile-k">
               {k}
               <InfoDot text={metricHelp(info, periodDays ? (periodDays === 1 ? 'today' : 'range') : 'snapshot', k.includes('率') ? 'rate' : k.includes('响应') ? 'duration' : 'count')} />
             </span>
-            {/* 0716 #13：数值与对比周期之间增加水平间距，避免过于紧凑 */}
-            <span className="uc-v mono">{v}{periodDays && <span className="period-compare" style={{ marginLeft: 10 }}>{comparisonPeriodLabel(periodDays)}</span>}</span>
+            <span className="uc-tile-v mono">{v}</span>
+            {periodDays && <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>}
           </div>
         ))}
       </div>
@@ -649,9 +652,20 @@ export function OrgDetail() {
                     <div className="lab">网页授权回调地址</div>
                     <div className="ctl"><TextInput defaultValue="ai-book-ask-mobile-h5.zhangyuqing.top" style={{ maxWidth: 380 }} /></div>
                   </div>
+                  {/* 0722：网页授权域名校验文件属公众平台（非开放平台），随公众号配置上传 */}
+                  <div className="fm-row">
+                    <div className="lab">域名校验文件</div>
+                    <div className="ctl">
+                      <div className="upbox" style={{ maxWidth: 360 }} onClick={() => pickFile(ACCEPT.txt, (n) => toast('已选择 ' + n))}>
+                        <Icon id="i-up" />
+                        <div className="nowrap">上传 MP_verify_xxx.txt（公众号后台生成）</div>
+                      </div>
+                    </div>
+                  </div>
                   <ul className="wx-lim">
                     <li>须为「已认证服务号」，订阅号不支持网页授权获取用户信息。</li>
                     <li>回调地址须与公众号后台配置完全一致，并包含协议与实际回调路径。</li>
+                    <li>校验文件需放置于网页授权域名根目录下可直接访问，否则授权域名配置不生效。</li>
                     <li>AppSecret 仅在公众号后台可见，重置后需同步更新此处。</li>
                   </ul>
                   <div style={{ marginTop: 4 }}>
@@ -712,9 +726,20 @@ export function OrgDetail() {
                       </div>
                     </div>
                   </div>
+                  {/* 0722：APIv3 请求签名需商户私钥，与证书成对上传 */}
+                  <div className="fm-row">
+                    <div className="lab">商户 API 私钥</div>
+                    <div className="ctl">
+                      <div className="upbox" style={{ maxWidth: 360 }} onClick={() => pickFile(ACCEPT.cert, (n) => toast('已选择 ' + n))}>
+                        <Icon id="i-up" />
+                        <div className="nowrap">上传 apiclient_key.pem</div>
+                      </div>
+                    </div>
+                  </div>
                   <ul className="wx-lim">
                     <li>商户号须与上方公众号 AppID 完成「关联绑定」（JSAPI 支付 / 退款前置条件）。</li>
-                    <li>需上传 API 证书 apiclient_cert.pem；APIv3 密钥在商户平台「API 安全」设置。</li>
+                    <li>证书 apiclient_cert.pem 与私钥 apiclient_key.pem 成对下载、成对上传；私钥用于 APIv3 请求签名。</li>
+                    <li>APIv3 密钥在商户平台「API 安全」设置。</li>
                     <li>退款 / 自动续费依赖支付能力，未配置支付则前台无法下单。</li>
                   </ul>
                   <div style={{ marginTop: 4 }}>
@@ -727,56 +752,73 @@ export function OrgDetail() {
         </div>
       )}
 
-      {/* —— 用量看板（配额进度重点 + 2×2） —— */}
+      {/* —— 用量看板（配额进度重点 + 2×2；0724 美化：usage-board 作用域 + tile 栅格） —— */}
       {tab === 3 && (
-        <>
+        <div className="usage-board">
           <div className="dash-section-title">实时订阅与资源占用 <span className="dash-realtime-tag">实时</span><span className="dash-section-sub">· 不随时间筛选变化</span></div>
           <CurrentSubCard data={currentSubCard(subs)} showOwner={false} />
           {/* 0614：阈值预警短信演示（达 70/80/90/95% 给机构联系人发短信） */}
           <div className="quota-alert">
             <Icon id="i-warn" w={15} h={15} />
             <span>
-              Token 本订阅周期消耗已达 <b>88%</b>，已向机构联系人（张三 · 13800138888）发送 <b>70% / 80%</b> 预警；KP 数与存储展示当前真实占用，Token 展示本周期不可回收消耗。
+              Token 本订阅周期消耗已达 <b>88%</b>，已向机构联系人（张三 · 13800138888）发送 <b>70% / 80%</b> 预警；Token 展示本周期不可回收消耗。
             </span>
           </div>
+          {/* 0724：「内容存量」板块删除（不再统计）；用户与营收存量独占整行 */}
           <div className="grid2" style={{ marginTop: 16 }}>
-            {/* 0714 #10：卡片标题去「（实时快照）」——分区标题已有「实时」标 */}
-            <UsageCard
-              title="内容存量"
-              rows={[
-                ['KP 当前占用', '40 个', '机构当前实际占用 = 自建 KP + 独立快照导入；实时同步导入不占 KP 名额。跨订阅延续，删除符合释放条件后才回收。'],
-                ['已发 / 未发 / 下架', '30 / 8 / 2 个', '当前状态快照；仅已发布参与新用户检索。'],
-                ['存储当前占用', '62 GB', '机构当前全部文件的真实存储占用，跨订阅延续；删除文件后回收。'],
-              ]}
-            />
-            <UsageCard
-              title="用户存量"
-              rows={[
-                ['累计 C 端', '1.25万 人', '开通至今注册用户数，按用户 ID 精确去重，不参与环比。'],
-                ['当前会员', '860 人', '当前处于付费期或赠送 72 小时缓冲使用期的会员人数，实时快照。'],
-              ]}
-            />
+            <div style={{ gridColumn: '1 / -1' }}>
+              {/* 0722：并入累计 GMV（存量指标随实时板块），卡片更名 */}
+              <UsageCard
+                title="用户与营收存量"
+                icon="i-crown"
+                tone="amber"
+                rows={[
+                  ['累计 C 端', '1.25万 人', '开通至今注册用户总数，不参与环比。去重：按用户 ID 去重。'],
+                  ['当前会员', '860 人', '当前处于付费期或赠送 72 小时缓冲使用期的会员人数，实时快照。去重：按用户 ID 去重。'],
+                  ['累计 GMV', CUM_GMV, '开通至今已支付订单总金额（含已退款部分），累计存量、不随时间筛选变化。'],
+                ]}
+              />
+            </div>
           </div>
           <div className="dash-section-head" style={{ marginTop: 24 }}>
             <div className="dash-section-title" style={{ margin: 0 }}>区间运营分析 <span className="dash-section-sub">· {usageRange} · 指标随筛选联动</span></div>
             <RangePicker presets={['今日', '近 7 天', '30 天']} defaultActive={1} onChange={(r) => setUsageRange(r.label)} />
           </div>
+          {/* 0722：商业化与 LLM 拆卡——商业化 7 项横跨整行，活跃 / LLM 两张等高卡并排 */}
           <div className="grid2" style={{ marginTop: 16 }}>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <UsageCard
+                title="商业化"
+                icon="i-chart"
+                tone="amber"
+                periodDays={usagePeriodDays}
+                rows={[
+                  ['区间 GMV', usage.gmv, `所选${usageRange}内已支付会员与永享订单金额；待支付、已失效订单不计入。`],
+                  ['净 GMV（扣退款）', usage.netGmv, `所选${usageRange}内区间 GMV 减去同区间成功退款金额。`],
+                  ['付费用户', usage.payUsers, `所选${usageRange}内产生有效支付的用户数。去重：按用户 ID 去重，跨天重复只计 1 人。`],
+                  ['付费转化率', usage.payRate, `所选${usageRange}内付费用户 ÷ 同区间活跃用户。去重：分子分母均按用户 ID 去重。`],
+                  ['永享订单', usage.yxOrders, `所选${usageRange}内已支付的单本永享订单数。`],
+                  ['退款金额', usage.refundAmt, `所选${usageRange}内退款成功的金额，含部分退款。`],
+                  ['退款率', usage.refundRate, `所选${usageRange}内退款成功金额 ÷ 同区间区间 GMV。`],
+                ]}
+              />
+            </div>
             <UsageCard
               title="活跃与内容使用"
+              icon="i-user"
+              tone="jade"
               periodDays={usagePeriodDays}
               rows={[
-                ['活跃用户', usage.active, `所选${usageRange}内登录或提问的用户，按用户 ID 精确去重。`],
-                ['新增 C 端', usage.added, `所选${usageRange}内首次注册的用户数。`],
-                ['区间提问', usage.questions, `所选${usageRange}内新增提问条数，包含追问。`],
+                ['活跃用户', usage.active, `所选${usageRange}内登录或提问的用户数。去重：按用户 ID 去重，跨天重复只计 1 人。`],
+                ['新增 C 端', usage.added, `所选${usageRange}内首次注册的用户数。去重：按用户 ID 去重。`],
+                ['区间提问', usage.questions, `所选${usageRange}内新增提问条数，包含追问。去重：按条累计，不去重。`],
               ]}
             />
             <UsageCard
-              title="商业化与 LLM 消耗"
+              title="LLM 消耗"
+              icon="i-chip"
               periodDays={usagePeriodDays}
               rows={[
-                ['区间 GMV', usage.gmv, `所选${usageRange}内已支付会员与永享订单金额。`],
-                ['付费用户', usage.payUsers, `所选${usageRange}内产生有效支付的用户，按用户 ID 精确去重。`],
                 ['Token 消耗量', usage.token, `所选${usageRange}内平台默认 LLM 输入与输出 token 消耗；属于不可回收消耗量。`],
                 ['调用次数', usage.calls, `所选${usageRange}内模型请求次数。`],
                 ['平均响应', usage.response, `所选${usageRange}内从请求到首字返回的平均耗时。`],
@@ -784,7 +826,7 @@ export function OrgDetail() {
             />
           </div>
           <div className="unit-note">{UNIT_NOTE}</div>
-        </>
+        </div>
       )}
 
       {/* —— 品牌外观（0613-2：canvas 真实智能取色） —— */}

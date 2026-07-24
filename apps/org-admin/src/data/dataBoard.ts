@@ -7,12 +7,16 @@ export type KW = { w: string; s: number };
 
 // 0714：各 KPI 补环比字段 xxxDelta:number（较上一周期百分比，正=上升绿↑ / 负=下降红↓），
 // 与主控台 Delta 同款渲染；率类指标（退款率/反馈率）给负值更贴近真实（负面指标下降是好事）。
+// 0724：活跃概览（DAU/WAU/MAU）定稿为固定滚动窗口实时快照，不随区间筛选联动（推翻 0717 二批联动口径）。
+// DAU=今日截至当前时刻（环比昨日同时段）；WAU/MAU=近 7/30 日滚动窗口（环比上一个等长窗口）。
+export const ACTIVE_SNAPSHOT = {
+  dau: '1,240', dauDelta: 2.4,
+  wau: '5,600', wauDelta: 2.2,
+  mau: '1.2万', mauDelta: 3.4,
+};
+
 export interface RangeData {
   // —— 用户域 ——
-  // 0717 二批 #8.2：活跃概览（日活/周活/月活）随区间联动（区间内日均去重口径）并环比——原固定窗口快照弃用
-  dau: string; dauDelta: number;
-  wau: string; wauDelta: number;
-  mau: string; mauDelta: number;
   newUsers: string; newUsersDelta: number;
   // 0717 二批 #8.4：新增用户迷你趋势折线（随区间联动）
   newTrend: { x: string[]; v: number[] };
@@ -34,6 +38,8 @@ export interface RangeData {
   // —— 营收域 ——
   gmv: string; payUsers: string; payRate: string; arppu: string; renew: string;
   gmvDelta: number; payUsersDelta: number; payRateDelta: number; arppuDelta: number; renewDelta: number;
+  // 0722：回流会员（过期后重新开通；不算新增、不算续费）
+  reflow: string; reflowDelta: number;
   limit: string; // 受限内容触发率（漏斗入口）
   memberFunnel: Bar[];
   yxFunnel: Bar[];
@@ -46,7 +52,6 @@ export interface RangeData {
 
 export const RANGE: Record<string, RangeData> = {
   '今日': {
-    dau: '1,240', dauDelta: 2.4, wau: '5,600', wauDelta: 1.8, mau: '1.2万', mauDelta: 3.0,
     newUsers: '48', newUsersDelta: 4.0,
     newTrend: { x: ['00时', '04时', '08时', '12时', '16时', '20时', '现在'], v: [3, 2, 7, 11, 9, 10, 6] },
     saoma: 70, saomaCnt: '34', directCnt: '14', saomaDelta: 1.2,
@@ -62,6 +67,7 @@ export const RANGE: Record<string, RangeData> = {
     kwMult: 8,
     gmv: '¥1.1万', payUsers: '32', payRate: '5.8%', arppu: '¥98.4', renew: '36%',
     gmvDelta: 5.2, payUsersDelta: 4.1, payRateDelta: 0.9, arppuDelta: 1.2, renewDelta: 2.0,
+    reflow: '5', reflowDelta: 3.2,
     limit: '11%',
     memberFunnel: [{ nm: '看到会员页', pct: 100, color: I, pv: '100%' }, { nm: '点击购买', pct: 26, color: I, pv: '26%' }, { nm: '完成支付', pct: 15, color: J, pv: '15%' }],
     yxFunnel: [{ nm: '触发永享墙', pct: 100, color: A, pv: '100%' }, { nm: '完成购买', pct: 14, color: A, pv: '14%' }],
@@ -70,7 +76,6 @@ export const RANGE: Record<string, RangeData> = {
     kpFactor: 0.04,
   },
   '7 日': {
-    dau: '1,205', dauDelta: 3.1, wau: '5,600', wauDelta: 2.2, mau: '1.2万', mauDelta: 3.4,
     newUsers: '320', newUsersDelta: 6.0,
     newTrend: { x: ['07-09', '07-10', '07-11', '07-12', '07-13', '07-14', '07-15'], v: [38, 42, 45, 50, 44, 48, 53] },
     saoma: 68, saomaCnt: '216', directCnt: '104', saomaDelta: 2.1,
@@ -86,6 +91,7 @@ export const RANGE: Record<string, RangeData> = {
     kwMult: 60,
     gmv: '¥25.6万', payUsers: '210', payRate: '6.6%', arppu: '¥99.6', renew: '38%',
     gmvDelta: 7.8, payUsersDelta: 6.6, payRateDelta: 1.3, arppuDelta: 1.8, renewDelta: 3.0,
+    reflow: '38', reflowDelta: 4.5,
     limit: '12%',
     memberFunnel: [{ nm: '看到会员页', pct: 100, color: I, pv: '100%' }, { nm: '点击购买', pct: 28, color: I, pv: '28%' }, { nm: '完成支付', pct: 17, color: J, pv: '17%' }],
     yxFunnel: [{ nm: '触发永享墙', pct: 100, color: A, pv: '100%' }, { nm: '完成购买', pct: 15, color: A, pv: '15%' }],
@@ -94,7 +100,6 @@ export const RANGE: Record<string, RangeData> = {
     kpFactor: 0.25,
   },
   '30 日': {
-    dau: '1,150', dauDelta: 5.0, wau: '5,420', wauDelta: 4.2, mau: '1.2万', mauDelta: 6.1,
     newUsers: '1,280', newUsersDelta: 9.0,
     newTrend: { x: ['06-16', '06-21', '06-26', '07-01', '07-06', '07-11', '07-15'], v: [220, 260, 290, 310, 330, 360, 400] },
     saoma: 66, saomaCnt: '845', directCnt: '435', saomaDelta: -0.8,
@@ -110,6 +115,7 @@ export const RANGE: Record<string, RangeData> = {
     kwMult: 240,
     gmv: '¥104.7万', payUsers: '860', payRate: '6.9%', arppu: '¥100.2', renew: '41%',
     gmvDelta: 11.4, payUsersDelta: 9.1, payRateDelta: 1.7, arppuDelta: 2.2, renewDelta: 4.1,
+    reflow: '124', reflowDelta: 6.8,
     limit: '13%',
     memberFunnel: [{ nm: '看到会员页', pct: 100, color: I, pv: '100%' }, { nm: '点击购买', pct: 30, color: I, pv: '30%' }, { nm: '完成支付', pct: 19, color: J, pv: '19%' }],
     yxFunnel: [{ nm: '触发永享墙', pct: 100, color: A, pv: '100%' }, { nm: '完成购买', pct: 16, color: A, pv: '16%' }],

@@ -12,7 +12,8 @@ const YX: MediaItem[] = [
 ];
 
 // 0614：订单状态 / 退款状态配色与字段与「订单管理」列表保持一致，避免歧义
-const ORDER_CLS: Record<string, string> = { 已支付: 'ok', 已核销: 'none' };
+// 0722 订单四态配色（与订单管理一致）
+const ORDER_CLS: Record<string, string> = { 待支付: 'wait', 已支付: 'ok', 已核销: 'none', 已失效: 'none' };
 const RF_CLS: Record<string, string> = { 未退款: 'none', 退款中: 'ing', 部分退款: 'wait', 全额退款: 'fail' };
 
 // 机构后台 · C 端用户详情
@@ -51,7 +52,7 @@ export function CUserDetail() {
         );
       },
     },
-    { header: '付款时间', className: 'mono', cell: (r) => r.payTime, sortValue: (r) => r.payTime },
+    { header: '付款时间', className: 'mono', cell: (r) => (r.payTime ? r.payTime : <span className="muted">—</span>), sortValue: (r) => r.payTime },
     { header: '操作', cell: (r) => <span className="op" onClick={() => nav('/orders/' + r.id)}>详情</span> },
   ];
 

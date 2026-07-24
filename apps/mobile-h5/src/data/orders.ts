@@ -16,6 +16,8 @@ export interface Order {
   autoRenew?: boolean;
   /** 兑换码订单：兑换时间 */
   redeemTime?: string;
+  /** 待支付订单：剩余支付秒数（演示值，进入页面后倒计时） */
+  payRemainSec?: number;
   memberFrom?: string;
   memberTo?: string;
   kp?: string;
@@ -25,7 +27,10 @@ export interface Order {
 }
 
 export const ORDERS: Order[] = [
-  // 0716 #4：支付成功才落库——不再有「待支付」演示单；订单态收敛为 已支付 / 已核销 / 退款售后。
+  // 0722：订单四态（推翻 0716 #4「支付成功才落库」）——发起支付即落库为「待支付」，30 分钟支付有效期，
+  // 到期微信自动关单转「已失效」；订单态 = 待支付 / 已支付(含已核销) / 已失效 / 退款售后。
+  { id: 'OD20260722100215', type: '会员', tag: 'tag-amber', title: '月度会员', amount: '¥19.9', status: '待支付', payTime: '', orderTime: '2026-07-22 10:02:15', payMethod: '微信支付', payRemainSec: 1725 },
+  { id: 'OD20260721143050', type: '永享', tag: 'tag-indigo', title: '永久解锁', amount: '¥9.9', status: '已失效', payTime: '', orderTime: '2026-07-21 14:30:50', payMethod: '微信支付', kp: '心血管分册', media: { kind: 'image', name: '心电图示例' } },
   { id: 'OD20260530140208', type: '会员', tag: 'tag-amber', title: '月度会员', amount: '¥19.9', status: '部分退款', payTime: '2026-05-30 14:02:08', orderTime: '2026-05-30 14:01:50', payMethod: '微信支付', autoRenew: true, memberFrom: '2026-05-30', memberTo: '2026-06-30', refunds: [{ id: 'RF202606011030', amount: '¥5.00', status: '退款成功', createdAt: '2026-06-01 10:30:12' }, { id: 'RF202606021205', amount: '¥2.00', status: '退款成功', createdAt: '2026-06-02 12:05:36' }] },
   { id: 'OD20260530152133', type: '永享', tag: 'tag-indigo', title: '永久解锁', amount: '¥9.9', status: '全额退款', payTime: '2026-05-30 15:21:33', orderTime: '2026-05-30 15:21:20', payMethod: '微信支付', kp: '心血管分册', media: { kind: 'image', name: '心电图示例' }, refunds: [{ id: 'RF202606031430', amount: '¥9.90', status: '退款成功', createdAt: '2026-06-03 14:30:08' }] },
   { id: 'OD20260529091307', type: '兑换码', tag: 'tag-jade', title: '会员 3 个月', amount: '¥0', status: '已核销', payTime: '2026-05-29 09:13:07', orderTime: '2026-05-29 09:13:07', payMethod: '兑换码核销', code: 'A7K9QP', redeemTime: '2026-05-29 09:13:07', memberFrom: '2026-05-29', memberTo: '2026-08-29' },
@@ -37,5 +42,5 @@ export const ORDERS: Order[] = [
   { id: 'OD20260528200814', type: '永享', tag: 'tag-indigo', title: '永久解锁', amount: '¥9.9', status: '已支付', payTime: '2026-05-28 20:08:14', orderTime: '2026-05-28 20:07:56', payMethod: '微信支付', kp: '儿科学', media: { kind: 'image', name: '血压监测记录表' } },
 ];
 
-// 按付款时间降序（所有 tab 通用）
-export const byPayDesc = (a: Order, b: Order) => (a.payTime < b.payTime ? 1 : -1);
+// 按付款时间降序（所有 tab 通用）；0722：待支付 / 已失效无付款时间，排序键回退到下单时间
+export const byPayDesc = (a: Order, b: Order) => ((a.payTime || a.orderTime) < (b.payTime || b.orderTime) ? 1 : -1);

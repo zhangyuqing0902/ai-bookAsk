@@ -331,6 +331,10 @@
 .fchip{font-size:12.5px;font-weight:500;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
   border-radius:999px;padding:6px 15px;cursor:pointer;transition:.15s;}
 .fchip.on{background:var(--indigo-soft);border-color:rgba(75,87,232,.3);color:var(--indigo-ink);font-weight:700;}
+/* 0724：单行 chips（我的订单五档状态）——不换行、收紧内边距以适配 375 宽，兜底横向滚动不出滚动条 */
+.fchips.fchips-line{flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;}
+.fchips.fchips-line::-webkit-scrollbar{display:none;}
+.fchips.fchips-line .fchip{padding:6px 11px;white-space:nowrap;flex:none;}
 
 /* 列表空态 */
 .h5empty{text-align:center;color:var(--ink-3);font-size:13px;line-height:1.9;padding:54px 24px;}

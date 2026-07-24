@@ -101,7 +101,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             当前会员数
-            <InfoDot text={metricHelp('当前拥有有效会员权益的用户数，按用户 ID 精确去重。', 'snapshot')} />
+            <InfoDot text={metricHelp('当前拥有有效会员权益的用户数，实时快照。去重：按用户 ID 去重。', 'snapshot')} />
           </div>
           <div className="val">{n(orgSnapshot.currentMembers)}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--amber-soft)', color: 'var(--amber-ink)' }}>
@@ -111,7 +111,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             累计注册用户
-            <InfoDot text={metricHelp('本机构 C 端注册用户数，按用户 ID 精确去重。', 'snapshot')} />
+            <InfoDot text={metricHelp('本机构 C 端注册用户数。去重：按用户 ID 去重。', 'snapshot')} />
           </div>
           <div className="val">{n(orgSnapshot.totalRegistered)}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
@@ -140,7 +140,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             活跃用户
-            <InfoDot text={metricHelp('所选区间内有登录或提问行为的用户数，按用户 ID 精确去重；今日为截至当前时刻的 DAU。', periodKind)} />
+            <InfoDot text={metricHelp('所选区间内有登录或提问行为的用户数；今日为截至当前时刻的 DAU。去重：按用户 ID 去重，跨天重复只计 1 人。', periodKind)} />
           </div>
           <div className="val">{n(cur.activeUsers)}<span className="uu">人</span></div>
           <Delta c={cur.activeUsers} p={prev.activeUsers} />
@@ -151,7 +151,8 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             新增会员
-            <InfoDot text={metricHelp('所选区间内新获得有效会员权益的用户数，按用户 ID 精确去重。', periodKind)} />
+            {/* 0722：口径定稿——历史首次开通；续费、回流均不计入 */}
+            <InfoDot text={metricHelp('所选区间内历史首次开通会员的用户数；续费与回流不计入。去重：按用户 ID 去重。', periodKind)} />
           </div>
           <div className="val">{n(cur.newMembers)}<span className="uu">人</span></div>
           <Delta c={cur.newMembers} p={prev.newMembers} />
@@ -162,7 +163,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             区间 GMV
-            <InfoDot text={metricHelp('所选区间内已支付订单金额合计（会员 + 永享）。', periodKind, 'money')} />
+            <InfoDot text={metricHelp('所选区间内已支付订单金额合计（会员 + 永享）；待支付、已失效订单不计入。', periodKind, 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>

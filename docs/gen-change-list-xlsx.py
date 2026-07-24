@@ -44,6 +44,7 @@ MOD_COLORS = {
     "机构与订阅":     ("FFFCF0", "FCF2CF", "A16207"),
     "权限与角色":     ("F1FAFF", "DBF0FD", "0369A1"),
     "导出与兑换码":   ("FEF4F9", "FBE2EF", "BE185D"),
+    "登录与验证码":   ("EFFBF9", "D3F3EE", "0F766E"),
 }
 FALLBACK = ("FAFAFA", "EEEEEE", "444444")
 

@@ -10,7 +10,8 @@ import { buildGlobalOrdersSpec } from '../exports/globalOrders';
 // 0714：#3 时间筛选对齐机构侧——下单 / 支付 / 兑换三个时间区间（真过滤），删原「付款时间」单筛选；
 //       导出迁移到 exports/globalOrders.ts spec，按钮从页头下移到筛选行（对齐机构后台订单形态）。
 const TYPES = ['全部', '会员', '永享', '兑换码'];
-const ORDER_CLS: Record<string, string> = { 已支付: 'ok', 已核销: 'none' };
+// 0722 订单四态配色（与机构后台一致）：待支付=wait、已支付=ok、已核销/已失效=灰
+const ORDER_CLS: Record<string, string> = { 待支付: 'wait', 已支付: 'ok', 已核销: 'none', 已失效: 'none' };
 const RF_CLS: Record<string, string> = { 未退款: 'none', 退款中: 'ing', 部分退款: 'wait', 全额退款: 'fail' };
 
 // 时间区间筛选载荷（RangePicker onChange）：days=0 为「不限」不过滤
@@ -107,7 +108,7 @@ export function GlobalOrders() {
     },
     { header: '用户', className: 'mono', cell: (r) => revealPhone(r.user) },
     { header: '下单时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.orderTime), sortValue: (r) => r.orderTime },
-    { header: '付款时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.payTime), sortValue: (r) => r.payTime },
+    { header: '付款时间', className: 'mono', cell: (r) => (r.type === '兑换码' || !r.payTime ? <span className="muted">—</span> : r.payTime), sortValue: (r) => r.payTime },
     { header: '兑换时间', className: 'mono', cell: (r) => (r.redeemTime ? r.redeemTime : <span className="muted">—</span>), sortValue: (r) => r.redeemTime ?? '' },
     { header: '操作', cell: (r) => <div className="op-cell"><span className="op" onClick={() => nav('/orders/' + r.id)}>详情</span></div> },
   ];
@@ -123,7 +124,8 @@ export function GlobalOrders() {
         <Search placeholder="微信号 / 手机号 / 订单号" minWidth={240} value={q} onChange={setQ} />
         <Dropdown label="机构" options={['全部', ...orgNames.map(orgOptionLabel)]} onSelect={(v) => setOrg(orgOptionValue(v))} style={{ width: 190 }} />
         <Dropdown label="类型" options={TYPES} onSelect={setType} />
-        <Dropdown label="订单状态" options={['全部', '已支付', '已核销']} onSelect={setStatus} />
+        {/* 0722：订单四态筛选（与机构后台一致） */}
+        <Dropdown label="订单状态" options={['全部', '待支付', '已支付', '已核销', '已失效']} onSelect={setStatus} />
         <Dropdown label="退款状态" options={['全部', '未退款', '退款中', '部分退款', '全额退款']} onSelect={setRfStatus} />
         <div className="grow" />
         <button className="btn btn-ghost btn-sm" onClick={doExport}>

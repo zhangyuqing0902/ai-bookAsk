@@ -64,9 +64,9 @@ export function buildDashboardSpec(input: DashboardExportInput): ExportSpec {
         subtitle: `当前区间 ${currentPeriodLabel(days)} · ${comparisonPeriodLabel(days)}`,
         headers: ['数据类型', '指标或日期', '本期值', '单位', '较上一周期(环比)', '统计口径'],
         rows: [
-          ['KPI', '活跃用户', cur.activeUsers, '人', deltaText(cur.activeUsers, prev.activeUsers), '区间精确去重'],
-          ['KPI', '新增会员', cur.newMembers, '人', deltaText(cur.newMembers, prev.newMembers), '区间精确去重'],
-          ['KPI', '区间 GMV', cur.gmv, '元', deltaText(cur.gmv, prev.gmv), '区间已支付'],
+          ['KPI', '活跃用户', cur.activeUsers, '人', deltaText(cur.activeUsers, prev.activeUsers), '区间内按用户 ID 去重'],
+          ['KPI', '新增会员', cur.newMembers, '人', deltaText(cur.newMembers, prev.newMembers), '历史首次开通，按用户 ID 去重；续费/回流不计入'],
+          ['KPI', '区间 GMV', cur.gmv, '元', deltaText(cur.gmv, prev.gmv), '区间已支付（待支付/已失效不计入）'],
           ['KPI', '区间提问数', cur.questions, '条', deltaText(cur.questions, prev.questions), '含追问'],
           ...chartSlice.flatMap((d) => [
             ['趋势-DAU', d.mmdd, d.dau, '人', '—', '自然日'],

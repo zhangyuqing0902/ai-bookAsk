@@ -91,6 +91,8 @@ export const ACCEPT = {
   video: 'video/*',
   doc: '.doc,.docx,.pdf',
   cert: '.pem',
+  // 0722：微信网页授权域名校验文件（MP_verify_xxx.txt）
+  txt: '.txt',
   cover: 'image/png,image/jpeg,image/jpg',
 };
 

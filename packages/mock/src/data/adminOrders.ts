@@ -33,6 +33,10 @@ export interface AOrder {
 export const MY_ORG = 'XX 出版社';
 
 export const AORDERS: AOrder[] = [
+  // 0722：订单四态（待支付 / 已支付 / 已核销 / 已失效）。用户发起支付即落库为「待支付」，
+  // 30 分钟未支付微信自动关单（time_expire）转「已失效」；待支付 / 已失效无付款时间、不可退款、不计入营收指标。
+  { id: 'OD20260722100215', org: 'XX 出版社', type: '会员', tag: 'tag-amber', title: '月度会员', amount: 19.9, status: '待支付', payMethod: '微信支付', orderTime: '2026-07-22 10:02:15', payTime: '', user: '138****8888' },
+  { id: 'OD20260721143050', org: 'XX 出版社', type: '永享', tag: 'tag-indigo', title: '永久解锁', amount: 9.9, status: '已失效', payMethod: '微信支付', orderTime: '2026-07-21 14:30:50', payTime: '', user: 'wx_abc', kp: '心血管分册', media: { kind: 'image', name: '心电图示例' } },
   { id: 'OD20260530140208', org: 'XX 出版社', type: '会员', tag: 'tag-amber', title: '月度会员', amount: 19.9, status: '已支付', payMethod: '微信支付', orderTime: '2026-05-30 14:01:50', payTime: '2026-05-30 14:02:08', user: '138****8888', autoRenew: true, memberFrom: '2026-05-30', memberTo: '2026-06-30' },
   { id: 'OD20260530152133', org: 'XX 出版社', type: '永享', tag: 'tag-indigo', title: '永久解锁', amount: 9.9, status: '已支付', payMethod: '微信支付', orderTime: '2026-05-30 15:21:20', payTime: '2026-05-30 15:21:33', user: 'wx_abc', kp: '心血管分册', media: { kind: 'image', name: '心电图示例' } },
   { id: 'OD20260529091307', org: 'XX 出版社', type: '兑换码', tag: 'tag-jade', title: '会员 3 个月', amount: 0, status: '已核销', payMethod: '兑换码核销', orderTime: '2026-05-29 09:13:07', payTime: '2026-05-29 09:13:07', user: '139****0000', code: 'A7K9QP', redeemTime: '2026-05-29 09:13:07', memberFrom: '2026-05-29', memberTo: '2026-08-29' },
@@ -56,4 +60,5 @@ export const AORDERS: AOrder[] = [
   { id: 'OD20260526094530', org: 'YY 教育', type: '永享', tag: 'tag-indigo', title: '永久解锁', amount: 9.9, status: '已支付', payMethod: '微信支付', orderTime: '2026-05-26 09:45:12', payTime: '2026-05-26 09:45:30', user: 'wx_yy88', kp: '初中数学', media: { kind: 'image', name: '函数图像示例' } },
 ];
 
-export const byPayDesc = (a: AOrder, b: AOrder) => (a.payTime < b.payTime ? 1 : -1);
+// 0722：待支付 / 已失效无付款时间，排序键回退到下单时间
+export const byPayDesc = (a: AOrder, b: AOrder) => ((a.payTime || a.orderTime) < (b.payTime || b.orderTime) ? 1 : -1);

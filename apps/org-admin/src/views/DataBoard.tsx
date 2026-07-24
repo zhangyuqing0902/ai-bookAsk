@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE, Calendar, fmtD } from '@aba/ui-admin';
 import { comparisonPeriodLabel, metricHelp } from '@aba/mock';
-import { RANGE, retentionFor, TOPKP, type Bar, type KW, type RetentionNode } from '../data/dataBoard';
+import { ACTIVE_SNAPSHOT, RANGE, retentionFor, TOPKP, type Bar, type KW, type RetentionNode } from '../data/dataBoard';
 import { buildDataBoardSpec } from '../exports/dataBoard';
 
 // 0614 指标体系重划：去掉「总览」Tab（职责交主控台），数据看板专做分主题深钻。
@@ -20,10 +20,11 @@ const DONUT_C = 2 * Math.PI * 46;
 
 // deltaPct：较上一周期百分比。传入即按主控台 Delta 同款渲染（方向箭头 + 百分比 + 对比时间窗）；
 // 正=上升绿↑、负=下降红↓（down 时箭头 rotate 180°）。未传 deltaPct 才回落到静态「上一周期」占位。
-function Kpi({ lab, val, unit, suf, deltaPct, info, periodDays }: { lab: string; val: string; unit?: string; suf?: string; deltaPct?: number; info: string; periodDays?: number }) {
-  const infoText = periodDays
+// 0724：infoRaw = 已组好完整句子的说明（固定窗口快照类指标用），跳过 metricHelp 的区间规则拼接
+function Kpi({ lab, val, unit, suf, deltaPct, info, periodDays, infoRaw }: { lab: string; val: string; unit?: string; suf?: string; deltaPct?: number; info: string; periodDays?: number; infoRaw?: string }) {
+  const infoText = infoRaw ?? (periodDays
     ? metricHelp(info, periodDays === 1 ? 'today' : 'range', info.includes('率') || lab.includes('率') ? 'rate' : 'count')
-    : metricHelp(info, 'snapshot');
+    : metricHelp(info, 'snapshot'));
   const up = (deltaPct ?? 0) >= 0;
   return (
     <div className="kpi">
@@ -81,7 +82,7 @@ function Bars({ data }: { data: Bar[] }) {
 // 待成熟不显示 0%/空进度条，改中性灰「尚未到统计时间」+ 预计可统计日期，避免误读为留存 0%。
 function RetentionCard({ n }: { n: RetentionNode }) {
   const mature = n.status === '可统计' && !!n.rate;
-  const formula = `第 ${n.days} 天留存率 = 该注册时间的用户中、注册后第 ${n.days} 天仍发生登录或提问的用户数 ÷ 该批用户总数。按注册时间统计，不受「区间分析」时间筛选影响。`;
+  const formula = `第 ${n.days} 天留存率 = 该注册时间的用户中、注册后第 ${n.days} 天仍发生登录或提问的用户数 ÷ 该批用户总数。去重：分子分母均按用户 ID 去重（同批注册用户）。按注册时间统计，不受「区间分析」时间筛选影响。`;
   return (
     <div className={'chart-card ret-card' + (mature ? '' : ' ret-pending')} style={{ margin: 0 }}>
       <div className="ret-head">
@@ -153,8 +154,8 @@ export function DataBoard() {
   // 0718 #6：留存按真实日期联动推算——自定义注册日驱动节点状态/样本/截止文案，不再是写死的假数据
   const retention = retentionFor(retentionBatch, retDay);
   const periodDays = rangeLabel === '今日' ? 1 : rangeLabel === '30 日' ? 30 : 7;
-  // 0718 #5：留存筛选改「区间分析」同款分段控件——预设三档 + 自定义（弹单日日历）
-  const RETENTION_PRESETS = ['最新可统计', '近 7 个注册日', '近 30 个注册日'];
+  // 0718 #5：留存筛选改「区间分析」同款分段控件；0724：批次精简为 最新可统计 + 自定义（删近 7 / 近 30 个注册日）
+  const RETENTION_PRESETS = ['最新可统计'];
   const retLabel = retentionBatch === '自定义日期' && retDay ? fmtD(retDay) : retentionBatch;
   const pickRetDay = (day: Date) => { setRetDay(day); setRetentionBatch('自定义日期'); setRetCalOpen(false); };
   const resetRetDay = () => { setRetDay(null); setRetentionBatch('最新可统计'); setRetCalOpen(false); };
@@ -175,15 +176,27 @@ export function DataBoard() {
         </div>
         <div className="pa">
           {/* 0716 #14：区间选择器从页头移入「区间分析」区块就近（见下方 range-bar），页头只留导出 */}
-          {/* 0717 二批 #8.2：活跃概览随区间联动,导出按当前所选区间取值 */}
-          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDataBoardSpec({ rangeLabel, periodDays, d, retentionRange: retLabel, retention, active: { dau: d.dau, wau: d.wau, mau: d.mau }, topkp: TOPKP })); toast('正在导出'); }}>
+          {/* 0724：活跃概览改固定滚动窗口快照（ACTIVE_SNAPSHOT），不随区间联动，导出同源 */}
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDataBoardSpec({ rangeLabel, periodDays, d, retentionRange: retLabel, retention, active: { dau: ACTIVE_SNAPSHOT.dau, wau: ACTIVE_SNAPSHOT.wau, mau: ACTIVE_SNAPSHOT.mau }, topkp: TOPKP })); toast('正在导出'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
         </div>
       </div>
+      {/* 0724：活跃概览挪出「区间分析」——固定滚动窗口快照与留存同为页级常驻（两个非区间口径连在一起）。
+          原因：WAU/MAU 定义自带固定窗口，与任意区间绑定无法自洽（选 30 天时「对应的 7 日窗口」没有唯一答案）。 */}
+      <div className="dash-section-title" style={{ marginTop: 4, marginBottom: 10 }}>
+        活跃概览
+        <span className="dash-section-sub">· 实时滚动窗口快照 · 不随下方时间筛选联动</span>
+      </div>
+      <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+        <Kpi lab="日活（DAU）" val={ACTIVE_SNAPSHOT.dau} suf="人" deltaPct={ACTIVE_SNAPSHOT.dauDelta} periodDays={1} info="" infoRaw="今日 00:00 至当前时刻的活跃用户，实时滚动快照。去重：单日内按用户 ID 去重。环比对比昨日同时段。不随下方时间筛选联动。" />
+        <Kpi lab="周活（WAU）" val={ACTIVE_SNAPSHOT.wau} suf="人" deltaPct={ACTIVE_SNAPSHOT.wauDelta} periodDays={7} info="" infoRaw="截至今日的近 7 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 7 日窗口。不随下方时间筛选联动。" />
+        <Kpi lab="月活（MAU）" val={ACTIVE_SNAPSHOT.mau} suf="人" deltaPct={ACTIVE_SNAPSHOT.mauDelta} periodDays={30} info="" infoRaw="截至今日的近 30 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 30 日窗口。不随下方时间筛选联动。" />
+      </div>
+
       {/* 0717 二批 #8.1：用户留存页级常驻,一行三张等宽指标卡（按注册时间,独立于下方区间筛选） */}
-      <div className="dash-section-head" style={{ marginTop: 4 }}>
+      <div className="dash-section-head" style={{ marginTop: 22 }}>
         <div className="dash-section-title" style={{ margin: 0, display: 'inline-flex', alignItems: 'center' }}>
           用户留存
           <InfoDot text="留存按用户的注册时间统计——比如今天注册的用户，要等满 30 天才会有 30 日留存。因此它的时间口径独立于下方区间筛选，两者互不影响。「自定义日期」为某一个具体的注册日。观察注册用户在第 1 / 7 / 30 天是否仍然活跃。" />
@@ -249,18 +262,13 @@ export function DataBoard() {
 
       {/* 0718 #3：Tab 内容区统一容器——min-height 取历史最大实测高度，切 Tab 不再上下跳动 */}
       <div ref={tabBodyRef} style={tabMinH ? { minHeight: tabMinH } : undefined}>
-      {/* Tab 1 · 用户分析 —— 0717 二批 #8.2/#8.4 三行布局：
-          ① 日活｜周活｜月活（一行三卡,区间联动+环比） ② 新增用户(值+环比+迷你折线)+来源分布 ③ 地区+性别 */}
+      {/* Tab 1 · 用户分析 —— 0724：活跃概览已挪至页首（快照口径），Tab 内两行布局：
+          ① 新增用户(值+环比+迷你折线)+来源分布 ② 地区+性别 */}
       {tab === 0 && (
         <>
-          <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-            <Kpi lab="日活（DAU）" val={d.dau} suf="人" deltaPct={d.dauDelta} periodDays={periodDays} info="所选区间内的日均去重活跃用户（区间联动，0717 二批口径修订），与上一等长周期环比。" />
-            <Kpi lab="周活（WAU）" val={d.wau} suf="人" deltaPct={d.wauDelta} periodDays={periodDays} info="所选区间对应近 7 日窗口的去重活跃用户（区间联动），与上一等长周期环比。" />
-            <Kpi lab="月活（MAU）" val={d.mau} suf="人" deltaPct={d.mauDelta} periodDays={periodDays} info="所选区间对应近 30 日窗口的去重活跃用户（区间联动），与上一等长周期环比。" />
-          </div>
-          <div className="grid2" style={{ marginTop: 16, gridTemplateColumns: '1fr 1fr' }}>
+          <div className="grid2" style={{ gridTemplateColumns: '1fr 1fr' }}>
             <div className="chart-card" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
-              <CardTitle t="新增用户" info="所选区间内首次注册的用户数，按用户 ID 精确去重。" periodDays={periodDays} />
+              <CardTitle t="新增用户" info="所选区间内首次注册的用户数。去重：按用户 ID 去重。" periodDays={periodDays} />
               {/* 0717 二批 #8.4：左=大数字+环比+对比窗口,右=随区间联动的迷你趋势折线 */}
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 18 }}>
                 <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -350,8 +358,8 @@ export function DataBoard() {
       {tab === 1 && (
         <>
           <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(5,1fr)' }}>
-            <Kpi lab="总提问" val={d.totalAsk} suf="条" deltaPct={d.totalAskDelta} info="所选区间内 C 端提问条数（含追问）。" periodDays={periodDays} />
-            <Kpi lab="人均提问" val={d.perUser} suf="条/人" deltaPct={d.perUserDelta} info="所选区间总提问 ÷ 同区间活跃用户数。" periodDays={periodDays} />
+            <Kpi lab="总提问" val={d.totalAsk} suf="条" deltaPct={d.totalAskDelta} info="所选区间内 C 端提问条数（含追问）。去重：按条累计，不去重。" periodDays={periodDays} />
+            <Kpi lab="人均提问" val={d.perUser} suf="条/人" deltaPct={d.perUserDelta} info="所选区间总提问 ÷ 同区间活跃用户数。去重：分母活跃用户按用户 ID 去重（跨天只计 1 人）。" periodDays={periodDays} />
             <Kpi lab="平均会话轮次" val={d.rounds} suf="轮" deltaPct={d.roundsDelta} info="所选区间总提问 ÷ 总会话数，衡量对话深度。" periodDays={periodDays} />
             <Kpi lab="答案点赞率" val={d.likeRate} deltaPct={d.likeRateDelta} info="所选区间点赞答案数 ÷ 已完成答案数；明细见答案反馈。" periodDays={periodDays} />
             <Kpi lab="答案反馈率" val={d.fbRate} deltaPct={d.fbRateDelta} info="所选区间收到用户反馈（点踩 / 举报 / 建议）的答案数 ÷ 已完成答案数；明细见答案反馈工作台。" periodDays={periodDays} />
@@ -395,12 +403,14 @@ export function DataBoard() {
             收入与转化
             <span className="dash-section-sub">· {rangeLabel}</span>
           </div>
-          <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(5,1fr)' }}>
-            <Kpi lab="区间 GMV" val={d.gmv} deltaPct={d.gmvDelta} info="所选区间内已支付订单金额合计（会员 + 永享）。" periodDays={periodDays} />
-            <Kpi lab="付费用户" val={d.payUsers} suf="人" deltaPct={d.payUsersDelta} info="所选区间内产生有效支付的去重用户数。" periodDays={periodDays} />
-            <Kpi lab="付费转化率" val={d.payRate} deltaPct={d.payRateDelta} info="区间付费用户 ÷ 区间活跃用户。" periodDays={periodDays} />
+          {/* 0722：补「回流会员」，行改 3 列两行避免 6 卡挤一行 */}
+          <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+            <Kpi lab="区间 GMV" val={d.gmv} deltaPct={d.gmvDelta} info="所选区间内已支付订单金额合计（会员 + 永享）；待支付、已失效订单不计入。" periodDays={periodDays} />
+            <Kpi lab="付费用户" val={d.payUsers} suf="人" deltaPct={d.payUsersDelta} info="所选区间内产生有效支付的用户数。去重：按用户 ID 去重，跨天重复只计 1 人。" periodDays={periodDays} />
+            <Kpi lab="付费转化率" val={d.payRate} deltaPct={d.payRateDelta} info="区间付费用户 ÷ 区间活跃用户。去重：分子分母均按用户 ID 去重。" periodDays={periodDays} />
             <Kpi lab="ARPPU（每付费用户均收入）" val={d.arppu} deltaPct={d.arppuDelta} info="区间支付收入 ÷ 区间付费用户数。" periodDays={periodDays} />
-            <Kpi lab="续费率" val={d.renew} deltaPct={d.renewDelta} info="所选区间内到期且完成续费的会员数 ÷ 同区间到期会员数。" periodDays={periodDays} />
+            <Kpi lab="续费率" val={d.renew} deltaPct={d.renewDelta} info="所选区间内到期且完成续费的会员数 ÷ 同区间到期会员数。去重：分子分母均按会员（用户 ID）去重。" periodDays={periodDays} />
+            <Kpi lab="回流会员" val={d.reflow} suf="人" deltaPct={d.reflowDelta} info="所选区间内开通会员、且开通时会员状态为已过期的用户数；不计入新增会员与续费率。去重：按用户 ID 去重。" periodDays={periodDays} />
           </div>
           {/* 小节② 退款 */}
           <div className="dash-section-title" style={{ marginTop: 22 }}>
@@ -410,7 +420,7 @@ export function DataBoard() {
           <div className="kpi-row">
             <Kpi lab="退款金额" val={d.refundAmt} deltaPct={d.refundAmtDelta} info="所选区间内成功退款金额合计。" periodDays={periodDays} />
             <Kpi lab="退款率" val={d.refundRate} deltaPct={d.refundRateDelta} info="所选区间退款金额 ÷ 同区间 GMV。" periodDays={periodDays} />
-            <Kpi lab="退款订单数" val={d.refundOrders} suf="单" deltaPct={d.refundOrdersDelta} info="所选区间内发生成功退款（含部分退款）的去重订单数。" periodDays={periodDays} />
+            <Kpi lab="退款订单数" val={d.refundOrders} suf="单" deltaPct={d.refundOrdersDelta} info="所选区间内发生成功退款（含部分退款）的订单数。去重：按订单去重。" periodDays={periodDays} />
             <Kpi lab="净 GMV（扣退款）" val={d.netGmv} deltaPct={d.netGmvDelta} info="所选区间 GMV − 同区间成功退款金额。" periodDays={periodDays} />
           </div>
           {/* 小节③ 转化漏斗（0614：受限触发率为漏斗入口，与会员漏斗 / 永享转化同排，避免单指标孤行；

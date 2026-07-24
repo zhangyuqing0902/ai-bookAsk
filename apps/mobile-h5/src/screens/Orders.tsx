@@ -1,22 +1,39 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 import { ORDERS, byPayDesc } from '../data/orders';
 
 const TABS = ['全部', '会员', '永享', '兑换码'] as const;
-// 0716 #4：订单支付成功才落库，故无「待支付」态；状态维度只留 已支付 / 退款售后。
-const STATUS_CHIPS = ['全部', '已支付', '退款/售后'] as const;
-// 把自由文本的 o.status 归并到两类状态分组（供状态 chips 过滤）
+// 0722：订单四态——发起支付即落库为「待支付」（30 分钟有效期），到期转「已失效」；退款售后为独立分组。
+const STATUS_CHIPS = ['全部', '待支付', '已支付', '已失效', '退款/售后'] as const;
+// 把自由文本的 o.status 归并到状态分组（供状态 chips 过滤）
 const statusGroup = (s: string): string => {
+  if (s === '待支付' || s === '已失效') return s;
   if (s === '部分退款' || s === '全额退款' || s === '退款中') return '退款/售后';
-  return '已支付'; // 已支付 / 已核销 等均归「已支付」
+  return '已支付'; // 已支付 / 已核销 均归「已支付」
 };
+const fmtCd = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
 // 16 我的订单（类型 Tab + 状态 chips 双维度过滤；按付款时间降序；点击进详情）
 export function Orders() {
   const nav = useNavigate();
   const [tab, setTab] = useState(0);
   const [statusChip, setStatusChip] = useState<(typeof STATUS_CHIPS)[number]>('全部');
+  // 0722：待支付倒计时（演示值从 payRemainSec 起算）；0724b：按进入页面的时间戳计算流逝，
+  // 后台标签页 / 锁屏节流 setInterval 时切回即校准（逐秒 +1 的写法会在页面后台时变慢）
+  const mountTs = useRef(Date.now());
+  const [elapsed, setElapsed] = useState(0);
+  const hasPending = ORDERS.some((o) => o.status === '待支付');
+  useEffect(() => {
+    if (!hasPending) return;
+    const tick = () => setElapsed(Math.floor((Date.now() - mountTs.current) / 1000));
+    const t = setInterval(tick, 1000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [hasPending]);
   // 0716 #5：兑换码 tab 不做状态筛选（能显示的兑换码必为已核销），忽略 statusChip
   const isRedeemTab = tab === 3;
   const list = ORDERS.filter(
@@ -41,9 +58,9 @@ export function Orders() {
             </div>
           ))}
         </div>
-        {/* 0715 #7：订单状态 chips（第二维度）；0716 #5：兑换码 tab 隐藏状态筛选 */}
+        {/* 0715 #7：订单状态 chips（第二维度）；0716 #5：兑换码 tab 隐藏状态筛选；0724：五档单行不换行 */}
         {!isRedeemTab && (
-          <div className="fchips">
+          <div className="fchips fchips-line">
             {STATUS_CHIPS.map((s) => (
               <span key={s} className={'fchip' + (statusChip === s ? ' on' : '')} onClick={() => setStatusChip(s)}>
                 {s}
@@ -69,8 +86,17 @@ export function Orders() {
               )}
               <div className="order-meta">
                 <span>{o.status}</span>
-                <span>{o.payTime}</span>
+                {/* 0722：待支付 / 已失效无付款时间，显示下单时间 */}
+                <span>{o.payTime || o.orderTime}</span>
               </div>
+              {/* 0722：待支付条——剩余支付时间倒计时 + 去支付（30 分钟未支付自动失效） */}
+              {o.status === '待支付' && (
+                <div className="pay-pending-strip" onClick={(e) => e.stopPropagation()}>
+                  <span>剩余支付时间</span>
+                  <span className="cd">{fmtCd(Math.max(0, (o.payRemainSec ?? 0) - elapsed))}</span>
+                  <span className="go-pay tap" onClick={() => nav('/pay/wechat')}>去支付</span>
+                </div>
+              )}
               {!!o.refunds?.length && (
                 <div className="refund-strip">
                   {/* 展示全部退款记录（同一订单可多笔），不静默截断 */}

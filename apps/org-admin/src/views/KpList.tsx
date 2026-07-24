@@ -107,11 +107,10 @@ export function KpList() {
                   <span className="kp-name">{kp.name}</span>
                 </div>
                 {/* 4.1:来源(自建/分享导入·实时/分享导入·快照)=统一灰色小标签;发布状态=彩色标签;左右并排 */}
-                {/* 0718 #7：来源标签三态统一、分享方角色标同步改灰——仅状态标签随状态变色 */}
+                {/* 0722：分享标识仅接收方显示（分享导入·实时/快照），分享方不再显示角色标签 */}
                 <div className="kp-tags">
                   <span className="kp-tag-src">{sourceLabel(kp)}</span>
                   <span className={'kp-tag-st ' + st.cls}>{st.label}</span>
-                  {kp.shareRole === 'sharer' && <span className="kp-tag-src">实时分享 · 分享方</span>}
                 </div>
                 <div className="kp-agent">
                   <span className="av" />

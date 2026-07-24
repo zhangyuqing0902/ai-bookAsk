@@ -32,8 +32,9 @@ export function Dashboard() {
   const chartSlice = days <= 1 ? platformDaily.slice(-7) : cur.slice;
   const periodKind = days <= 1 ? 'today' as const : 'range' as const;
 
-  const Delta = ({ c, p }: { c: number; p: number }) => {
-    const comparison = compareMetric(c, p, 'count');
+  // 0722：支持率值指标（unit='rate' 时环比按「个百分点」展示）
+  const Delta = ({ c, p, unit = 'count' }: { c: number; p: number; unit?: 'count' | 'rate' }) => {
+    const comparison = compareMetric(c, p, unit);
     if (!comparison.comparable) return <div className="delta">{comparison.label}</div>;
     const v = comparison.value ?? 0;
     const up = v >= 0;
@@ -42,7 +43,7 @@ export function Dashboard() {
         <span style={up ? undefined : { display: 'inline-flex', transform: 'rotate(180deg)' }}>
           <Icon id="i-up" w={11} h={11} />
         </span>
-        {Math.abs(v).toFixed(1)}% 较上一周期 <span className="period-compare">{comparisonPeriodLabel(days)}</span>
+        {Math.abs(v).toFixed(1)}{unit === 'rate' ? ' 个百分点' : '%'} 较上一周期 <span className="period-compare">{comparisonPeriodLabel(days)}</span>
       </div>
     );
   };
@@ -92,7 +93,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             累计用户
-            <InfoDot text={metricHelp('全平台各机构 C 端注册用户数合计，按用户 ID 精确去重。', 'snapshot')} />
+            <InfoDot text={metricHelp('全平台各机构 C 端注册用户数合计。去重：按用户 ID 去重。', 'snapshot')} />
           </div>
           <div className="val">{n(platformSnapshot.totalUsers)}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
@@ -154,11 +155,12 @@ export function Dashboard() {
           }}
         />
       </div>
-      <div className="kpi-row">
+      {/* 0722：6 张 KPI 改 3 列两行，避免 4+2 断行不齐 */}
+      <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
         <div className="kpi">
           <div className="lab">
             活跃用户
-            <InfoDot text={metricHelp('所选区间内有登录或提问行为的用户数，按用户 ID 精确去重；今日为截至当前时刻的 DAU。', periodKind)} />
+            <InfoDot text={metricHelp('所选区间内有登录或提问行为的用户数；今日为截至当前时刻的 DAU。去重：按用户 ID 去重，跨天重复只计 1 人。', periodKind)} />
           </div>
           <div className="val">{n(cur.activeUsers)}<span className="uu">人</span></div>
           <Delta c={cur.activeUsers} p={prev.activeUsers} />
@@ -169,7 +171,8 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             新增会员
-            <InfoDot text={metricHelp('所选区间内新获得有效会员权益的用户数，按用户 ID 精确去重。', periodKind)} />
+            {/* 0722：口径定稿——历史首次开通；续费、回流均不计入 */}
+            <InfoDot text={metricHelp('所选区间内历史首次开通会员的用户数；续费与回流不计入。去重：按用户 ID 去重。', periodKind)} />
           </div>
           <div className="val">{n(cur.newMembers)}<span className="uu">人</span></div>
           <Delta c={cur.newMembers} p={prev.newMembers} />
@@ -177,10 +180,33 @@ export function Dashboard() {
             <Icon id="i-user" w={16} h={16} />
           </div>
         </div>
+        {/* 0722：平台侧补齐会员三分口径——续费率 / 回流会员（与机构后台数据看板口径一致） */}
+        <div className="kpi">
+          <div className="lab">
+            续费率
+            <InfoDot text={metricHelp('所选区间内到期且完成续费的会员数 ÷ 同区间到期会员数。去重：分子分母均按会员（用户 ID）去重。', periodKind, 'rate')} />
+          </div>
+          <div className="val">{cur.renewRate.toFixed(1)}<span className="uu">%</span></div>
+          <Delta c={cur.renewRate} p={prev.renewRate} unit="rate" />
+          <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
+            <Icon id="i-refresh" w={16} h={16} />
+          </div>
+        </div>
+        <div className="kpi">
+          <div className="lab">
+            回流会员
+            <InfoDot text={metricHelp('所选区间内开通会员、且开通时会员状态为已过期的用户数；不计入新增会员与续费率。去重：按用户 ID 去重。', periodKind)} />
+          </div>
+          <div className="val">{n(cur.reflow)}<span className="uu">人</span></div>
+          <Delta c={cur.reflow} p={prev.reflow} />
+          <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
+            <Icon id="i-user" w={16} h={16} />
+          </div>
+        </div>
         <div className="kpi">
           <div className="lab">
             区间 GMV
-            <InfoDot text={metricHelp('所选区间内全平台已支付订单金额合计。', periodKind, 'money')} />
+            <InfoDot text={metricHelp('所选区间内全平台已支付订单金额合计；待支付、已失效订单不计入。', periodKind, 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>

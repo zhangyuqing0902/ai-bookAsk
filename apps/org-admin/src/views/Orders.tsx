@@ -18,8 +18,8 @@ const inRange = (v: string | undefined, r: TimeRange) => {
 };
 
 const TYPES = ['全部', '会员', '永享', '兑换码'];
-// 订单状态配色：已支付=ok(青)、已核销=none(灰)
-const ORDER_CLS: Record<string, string> = { 已支付: 'ok', 已核销: 'none' };
+// 0722 订单四态配色：待支付=wait(橙)、已支付=ok(青)、已核销=none(灰)、已失效=none(灰)
+const ORDER_CLS: Record<string, string> = { 待支付: 'wait', 已支付: 'ok', 已核销: 'none', 已失效: 'none' };
 // 退款状态独立成列，复用 .fstat 配色：未退款=灰、退款中=处理中(靛)、部分退款=提醒(橙)、全额退款=已退出资金(珊瑚)
 const RF_CLS: Record<string, string> = { 未退款: 'none', 退款中: 'ing', 部分退款: 'wait', 全额退款: 'fail' };
 
@@ -48,7 +48,8 @@ export function Orders() {
   const [confirmRefund, setConfirmRefund] = useState(false);
 
   const refundStatusOf = (r: AOrder) => refunds[r.id]?.status ?? '未退款';
-  const refundable = (r: AOrder) => r.amount > 0 && !['退款中', '全额退款'].includes(refunds[r.id]?.status ?? '');
+  // 0722：仅「已支付」订单可退款（待支付 / 已失效未产生资金，已核销无资金）
+  const refundable = (r: AOrder) => r.status === '已支付' && r.amount > 0 && !['退款中', '全额退款'].includes(refunds[r.id]?.status ?? '');
   const remaining = refundOrder ? refundOrder.amount - (refunds[refundOrder.id]?.refundedAmount ?? 0) : 0;
 
   const rows = AORDERS.filter(
@@ -114,7 +115,7 @@ export function Orders() {
     },
     { header: '用户', className: 'mono', cell: (r) => r.user },
     { header: '下单时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.orderTime), sortValue: (r) => r.orderTime },
-    { header: '付款时间', className: 'mono', cell: (r) => (r.type === '兑换码' ? <span className="muted">—</span> : r.payTime), sortValue: (r) => r.payTime },
+    { header: '付款时间', className: 'mono', cell: (r) => (r.type === '兑换码' || !r.payTime ? <span className="muted">—</span> : r.payTime), sortValue: (r) => r.payTime },
     { header: '兑换时间', className: 'mono', cell: (r) => (r.redeemTime ? r.redeemTime : <span className="muted">—</span>), sortValue: (r) => r.redeemTime ?? '' },
     {
       header: '操作',
@@ -141,7 +142,8 @@ export function Orders() {
       <div className="orders-filter">
         <Search placeholder="搜索订单号 / 用户" minWidth={220} value={q} onChange={setQ} />
         <Dropdown label="类型" options={TYPES} onSelect={setType} />
-        <Dropdown label="订单状态" options={['全部', '已支付', '已核销']} onSelect={setStatus} />
+        {/* 0722：订单四态筛选（待支付 / 已支付 / 已核销 / 已失效），退款为独立维度 */}
+        <Dropdown label="订单状态" options={['全部', '待支付', '已支付', '已核销', '已失效']} onSelect={setStatus} />
         <Dropdown label="退款状态" options={['全部', '未退款', '退款中', '部分退款', '全额退款']} onSelect={setRfStatus} />
         <div className="grow" />
         {/* 0714：导出走 spec 纯函数（exports/orders.ts）；退款状态注入 refund store 现值 */}

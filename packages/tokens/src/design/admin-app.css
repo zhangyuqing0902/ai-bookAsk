@@ -972,6 +972,15 @@ a {
   z-index: 200;
   overflow: visible;
 }
+/* 0724：数据看板淡入动画（db-fade,fill both）让 .kpi-row/.grid2 各自成为层叠上下文，
+   卡片内 tooltip 的 z-index 只在本行内生效，向下溢出的弹层会被后绘制的下一行容器盖住。
+   修复：任一 InfoDot 悬浮时抬升整行容器层级，弹层可跨行覆盖。 */
+.kpi-row:has(.info:hover),
+.grid2:has(.info:hover),
+.dash-section-head:has(.info:hover) {
+  position: relative;
+  z-index: 300;
+}
 /* 二-17:统计规则 / 统计区间 换行,无序符号 */
 .info-list {
   margin: 0;
@@ -1575,30 +1584,7 @@ a {
   border-radius: 2px;
   background: var(--indigo);
 }
-.uc-rows {
-  padding: 0 18px 14px;
-}
-.uc-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 9px 0;
-  font-size: 13px;
-  border-top: 1px solid var(--line-2);
-}
-.uc-row:first-child {
-  border-top: none;
-}
-.uc-k {
-  color: var(--ink-2);
-  display: inline-flex;
-  align-items: center;
-}
-.uc-v {
-  color: var(--ink);
-  font-weight: 600;
-  font-size: 14px;
-}
+/* 0724：用量看板行式列表（.uc-rows/.uc-row）已改为 tile 栅格，样式见文末「用量看板美化」作用域块 */
 
 /* 0613-2：套餐平铺卡片 */
 .plan-grid {
@@ -2507,4 +2493,116 @@ a {
 }
 @keyframes db-grow-x {
   from { width: 0; }
+}
+
+/* ============================================================
+   0724 平台后台 · 机构详情「用量看板」美化
+   全部限定 .usage-board 作用域（仅 OrgDetail 用量看板 Tab），不影响共享组件
+   ============================================================ */
+/* 段标题：左侧渐变竖条锚点（与 dboard 同语言） */
+.usage-board .dash-section-title {
+  position: relative;
+  padding-left: 13px;
+  font-size: 15px;
+}
+.usage-board .dash-section-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--grad);
+}
+/* 指标卡：行式列表 → tile 栅格（上指标名 / 中大数值 / 下对比周期）；卡片 hover 轻浮 */
+.usage-board .usage-card {
+  transition: box-shadow 0.18s ease;
+}
+.usage-board .usage-card:hover {
+  box-shadow: var(--sh-md);
+}
+.usage-board .uc-title {
+  gap: 9px;
+  padding-bottom: 2px;
+  font-size: 14px;
+}
+/* 标题图标章：24px 圆角渐变底 + 白色图标（分组色同 tone） */
+.usage-board .uc-ic {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--grad);
+  box-shadow: 0 3px 8px -3px rgba(75, 87, 232, 0.5);
+}
+.usage-board .usage-card.tone-amber .uc-ic {
+  background: linear-gradient(135deg, #ff8a6b, #ff6f55);
+  box-shadow: 0 3px 8px -3px rgba(255, 111, 85, 0.55);
+}
+.usage-board .usage-card.tone-jade .uc-ic {
+  background: linear-gradient(135deg, #2fd3a0, #15b080);
+  box-shadow: 0 3px 8px -3px rgba(21, 176, 128, 0.5);
+}
+.usage-board .uc-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 12px 18px 18px;
+}
+.usage-board .uc-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: var(--surface-warm);
+  border: 1px solid transparent;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+/* 0724-2：hover 不变色，仅抬升放大突出 */
+.usage-board .uc-tile:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 22px -12px rgba(40, 46, 90, 0.3);
+}
+.usage-board .uc-tile-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.usage-board .uc-tile-v {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+/* .period-compare 全局定义带 flex-basis:100%（行内换行用），tile 竖排里需还原 */
+.usage-board .uc-tile .period-compare {
+  flex-basis: auto;
+  margin-top: 0;
+}
+/* 右缘 tile 的指标说明气泡向左展开，避免溢出页面右缘 */
+.usage-board .uc-tile:last-child .info-pop {
+  left: auto;
+  right: 0;
+}
+/* 预警条补细边；页脚单位说明居中 */
+.usage-board .quota-alert {
+  border: 1px solid rgba(255, 111, 85, 0.22);
+}
+.usage-board .unit-note {
+  text-align: center;
+  margin-top: 22px;
+}
+/* 进场浮现（与 dboard 一致） */
+@media (prefers-reduced-motion: no-preference) {
+  .usage-board .grid2 {
+    animation: db-fade 0.32s ease both;
+  }
 }

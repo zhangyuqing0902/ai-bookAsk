@@ -271,32 +271,42 @@ figs[5] = page('图 5 · 关键旅程 C：平台超管「建机构 → 配参数
     + `<div class="note"><b>说明：</b>「免费」内容对任意登录用户开放；「会员」内容仅 AI 会员可看；「永享」内容按知识产品 KP 维度买断、跨 KP 不通用。<b>会员与永享相互独立：</b>开通会员不解锁未买断的永享，购买永享也不解锁会员内容，二者互不替代。未满足条件即弹出对应付费墙引导购买。</div>`, W + 64);
 })();
 
-// ============ FIG 7：订单状态机 + 退款状态（双维度，退款状态与订单状态解耦）============
+// ============ FIG 7：订单状态机（四态，对齐微信 trade_state）+ 退款状态（独立维度，与订单状态解耦）============
 (function () {
-  const W = 1120, H = 540;
+  const W = 1120, H = 640;
   let b = '';
-  // —— 上轨：订单状态（支付生命周期）——
-  b += T(20, 40, '订单状态（支付生命周期）', { size: 13.5, weight: 800, fill: C.indigoDeep });
-  b += node(40, 110, 170, 56, '待支付', 'pending', { accent: C.ink3, tcolor: C.ink2 });
-  b += node(420, 64, 190, 56, '已支付 / 已核销', 'paid', { accent: C.jade, tcolor: C.jadeInk });
-  b += node(420, 154, 170, 56, '已取消', 'canceled', { accent: C.ink3, tcolor: C.ink2 });
-  b += node(420, 244, 170, 56, '支付失败', 'failed', { accent: C.amber, tcolor: C.amberInk });
-  b += edge([[210, 124], [330, 92], [420, 92]], { mk: 'arrJ', color: C.jade }); b += lbl(322, 80, '支付成功', { fill: C.jadeInk });
-  b += edge([[210, 138], [330, 182], [420, 182]], { mk: 'arrG', color: C.ink3 }); b += lbl(325, 170, '用户取消', { fill: C.ink3 });
-  b += edge([[210, 152], [330, 272], [420, 272]], { mk: 'arrA', color: C.amber }); b += lbl(322, 260, '支付失败', { fill: C.amberInk });
+  // —— 上轨：订单状态（支付生命周期 · 四态）——
+  b += T(20, 40, '订单状态（支付生命周期 · 四态，对齐微信 trade_state）', { size: 13.5, weight: 800, fill: C.indigoDeep });
+  b += node(40, 96, 176, 64, '用户发起支付', ['即落库创建订单'], { accent: C.ink3, tcolor: C.ink2 });
+  b += node(330, 96, 210, 64, '待支付', ['NOTPAY · 30 分钟支付有效期'], { accent: C.indigo, tcolor: C.indigoDeep });
+  b += node(700, 56, 230, 64, '已支付', ['SUCCESS · 仅此态计营收指标'], { accent: C.jade, tcolor: C.jadeInk });
+  b += node(700, 152, 230, 64, '已失效', ['CLOSED · time_expire 自动关单'], { accent: C.ink3, tcolor: C.ink2 });
+  b += edge([[216, 128], [330, 128]], { mk: 'arr' }); b += lbl(273, 116, '发起支付', { fill: C.indigoDeep });
+  b += edge([[540, 112], [630, 88], [700, 88]], { mk: 'arrJ', color: C.jade }); b += lbl(618, 74, '支付成功回调 / 查单确认', { fill: C.jadeInk });
+  b += edge([[540, 144], [630, 184], [700, 184]], { mk: 'arrG', color: C.ink3 }); b += lbl(620, 170, '30 分钟未支付 · 微信自动关单', { fill: C.ink3 });
+  // 待支付失败重试说明（网页支付无「支付失败」终态）
+  b += T(330, 188, '支付失败（余额不足 / 风控拦截）停留本态，', { size: 11.5, fill: C.ink2 });
+  b += T(330, 204, '可换支付方式重试；无「支付失败」终态', { size: 11.5, fill: C.ink2 });
+  // —— 兑换码平行道 ——
+  b += node(40, 246, 176, 64, '兑换码订单', ['无支付环节'], { accent: C.amber, tcolor: C.amberInk });
+  b += node(330, 246, 210, 64, '已核销', ['核销即完成 · 金额计 0'], { accent: C.jade, tcolor: C.jadeInk });
+  b += edge([[216, 278], [330, 278]], { mk: 'arrJ', color: C.jade }); b += lbl(273, 266, '核销', { fill: C.jadeInk });
+  // 已支付 → 退款维度（跨轨虚线）
+  b += edge([[930, 88], [1000, 88], [1000, 300], [575, 300], [575, 452], [510, 452]], { mk: 'arrA', color: C.amber, dash: '6 5' });
+  b += lbl(790, 288, '仅「已支付」订单可进入退款维度', { fill: C.amberInk });
   // —— 分隔 ——
-  b += `<line x1="20" y1="335" x2="${W - 20}" y2="335" stroke="${C.line}" stroke-width="1.5" stroke-dasharray="6 5"/>`;
-  // —— 下轨：退款状态（独立维度）——
-  b += T(20, 362, '退款状态（独立维度 · 仅「已支付」订单可由机构后台发起 · 与订单状态解耦）', { size: 13.5, weight: 800, fill: C.amberInk });
-  b += node(40, 398, 170, 56, '未退款', '默认态', { accent: C.ink3, tcolor: C.ink2 });
-  b += node(340, 398, 170, 56, '退款中', '发起后处理中', { accent: C.indigo, tcolor: C.indigoDeep });
-  b += node(720, 364, 200, 52, '部分退款', '退款额 < 实付', { accent: C.amber, tcolor: C.amberInk });
-  b += node(720, 454, 200, 52, '全额退款', '退款额 = 实付', { accent: '#e5533b', tcolor: '#b3402c' });
-  b += edge([[210, 426], [340, 426]], { mk: 'arr' }); b += lbl(275, 414, '机构发起退款', { fill: C.indigoDeep });
-  b += edge([[510, 418], [640, 390], [720, 390]], { mk: 'arrA', color: C.amber }); b += lbl(620, 376, '部分退回', { fill: C.amberInk });
-  b += edge([[510, 434], [640, 480], [720, 480]], { mk: 'arrA', color: '#e5533b' }); b += lbl(620, 466, '全额退回', { fill: '#b3402c' });
-  figs[7] = page('图 7 · 业务规则：订单状态机 + 退款状态', '订单支付生命周期（上）与退款状态（下）为两个独立维度；退款状态独立成列、与订单状态解耦', svg(W, H, b)
-    + `<div class="note"><b>订单状态：</b>待支付 →（支付成功）已支付（兑换码核销显示「已核销」）/（用户取消）已取消 /（失败）支付失败；终态不可逆，重新发起将创建新订单，支付成功即发放对应权益。<b>退款状态（独立列）：</b>仅金额 &gt; 0 且非「退款中 / 全额退款」的已支付订单，可由机构后台发起退款；支持<b>部分退款</b>（可退余额 = 实付 − 已退）；退款发起 → 退款中 →（成功）部分退款 / 全额退款，资金原路退回并记录退款时间线（发起人 / 金额 / 资金路径 / 时间）。兑换码订单金额计 0、不计入 GMV，亦不可退。</div>`, W + 64);
+  b += `<line x1="20" y1="356" x2="${W - 20}" y2="356" stroke="${C.line}" stroke-width="1.5" stroke-dasharray="6 5"/>`;
+  // —— 下轨：退款 / 售后（独立维度）——
+  b += T(20, 386, '退款 / 售后（独立维度 · REFUND + 退款单状态 · 与订单状态解耦，仅「已支付」订单可由机构后台发起）', { size: 13.5, weight: 800, fill: C.amberInk });
+  b += node(40, 424, 170, 56, '未退款', '默认态', { accent: C.ink3, tcolor: C.ink2 });
+  b += node(340, 424, 170, 56, '退款中', '发起后处理中', { accent: C.indigo, tcolor: C.indigoDeep });
+  b += node(720, 390, 200, 52, '部分退款', '退款额 < 实付', { accent: C.amber, tcolor: C.amberInk });
+  b += node(720, 480, 200, 52, '全额退款', '退款额 = 实付', { accent: '#e5533b', tcolor: '#b3402c' });
+  b += edge([[210, 452], [340, 452]], { mk: 'arr' }); b += lbl(275, 440, '机构发起退款', { fill: C.indigoDeep });
+  b += edge([[510, 444], [640, 416], [720, 416]], { mk: 'arrA', color: C.amber }); b += lbl(620, 402, '部分退回', { fill: C.amberInk });
+  b += edge([[510, 460], [640, 506], [720, 506]], { mk: 'arrA', color: '#e5533b' }); b += lbl(620, 492, '全额退回', { fill: '#b3402c' });
+  figs[7] = page('图 7 · 业务规则：订单状态机（四态）+ 退款状态', '订单支付生命周期（上，对齐微信 trade_state 四态）与退款 / 售后（下）为两个独立维度；退款状态独立成列、与订单状态解耦', svg(W, H, b)
+    + `<div class="note"><b>订单状态（四态）：</b>用户发起支付即落库创建订单（待支付 NOTPAY，30 分钟支付有效期）→（支付成功回调 / 查单确认）已支付 SUCCESS /（30 分钟未支付，微信按下单时传入的 time_expire 自动关单）已失效 CLOSED；兑换码订单无支付环节，核销即「已核销」。<b>网页支付无「支付失败」终态</b>——JSAPI / H5 的 trade_state 仅 SUCCESS / REFUND / NOTPAY / CLOSED 四种（PAYERROR 仅付款码支付），余额不足、风控拦截等失败场景停留「待支付」可换方式重试。GMV 等营收指标<b>仅计入「已支付」</b>。<b>退款状态（独立列）：</b>仅金额 &gt; 0 且非「退款中 / 全额退款」的已支付订单，可由机构后台发起退款；支持<b>部分退款</b>（可退余额 = 实付 − 已退）；退款发起 → 退款中 →（成功）部分退款 / 全额退款，资金原路退回并记录退款时间线（发起人 / 金额 / 资金路径 / 时间）。兑换码订单金额计 0、不计入 GMV，亦不可退。</div>`, W + 64);
 })();
 
 // ============ FIG 8：KP 检索生效条件 ============

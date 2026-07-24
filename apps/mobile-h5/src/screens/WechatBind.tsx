@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { useDemoStore } from '@aba/mock';
+import { useDemoStore, verifyCode } from '@aba/mock';
+import { SmsCodeField } from '../SmsCodeField';
 
 // 3 绑定手机号（统一「手机号 + 验证码」，可暂不绑定）
 // 复用三处：微信登录后绑定(from=login) / 我的主动绑定(from=me) / 敏感操作门槛引导绑定(from=gate)
@@ -14,9 +15,14 @@ export function WechatBind() {
   const [code, setCode] = useState('');
 
   const done = () => (from === 'login' ? nav('/chat') : nav(-1));
-  const submit = () => {
+  const submit = async () => {
     if (!/^\d{11}$/.test(phone)) return toast('请输入正确的 11 位手机号');
     if (!/^\d{6}$/.test(code)) return toast('请输入 6 位验证码');
+    try {
+      await verifyCode(phone, code);
+    } catch (e) {
+      return toast((e as Error).message);
+    }
     bindPhone();
     toast('手机号绑定成功');
     setTimeout(done, 600);
@@ -51,14 +57,8 @@ export function WechatBind() {
               <input inputMode="numeric" maxLength={11} placeholder="请输入手机号" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} />
             </div>
           </div>
-          <div className="pf">
-            <label>验证码</label>
-            <div className="pin">
-              <Icon id="i-lock" />
-              <input inputMode="numeric" maxLength={6} placeholder="请输入验证码" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
-              <span className="get" onClick={() => toast('验证码已发送')}>获取验证码</span>
-            </div>
-          </div>
+          {/* 0722：验证码行含语音验证码兜底（60s 未输入出现语音入口） */}
+          <SmsCodeField code={code} onCode={setCode} validPhone={() => /^\d{11}$/.test(phone)} />
           <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 14, marginTop: 8 }} disabled={!phone || !code} onClick={submit}>
             {from === 'login' ? '绑定并进入' : '完成绑定'}
           </button>

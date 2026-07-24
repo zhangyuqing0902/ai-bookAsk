@@ -26,3 +26,6 @@ docs/change-list-assets/thumbs/
 docs/change-list-assets/large/
 __pycache__/
 *.pyc
+
+# 临时验证截图（各会话的 playwright/浏览器验证产物，不入库）
+output/

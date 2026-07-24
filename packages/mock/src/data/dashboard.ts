@@ -6,6 +6,10 @@ export interface DailyPoint {
   newMembers: number;
   gmv: number;
   questions: number;
+  // 0722 会员三分口径：当日到期会员数 / 当日到期且完成续费数 / 当日回流开通数（过期后再开通）
+  expired: number;
+  renewed: number;
+  reflow: number;
 }
 
 const DAY = 86400000;
@@ -23,6 +27,9 @@ interface Cfg {
   nm: [number, number, number];
   gmv: [number, number, number];
   q: [number, number, number];
+  ex: [number, number, number]; // 当日到期会员
+  rn: [number, number, number]; // 当日到期且完成续费
+  rf: [number, number, number]; // 当日回流开通
 }
 
 function buildSeries(n: number, c: Cfg): DailyPoint[] {
@@ -39,6 +46,9 @@ function buildSeries(n: number, c: Cfg): DailyPoint[] {
       newMembers: calc(c.nm),
       gmv: calc(c.gmv),
       questions: calc(c.q),
+      expired: calc(c.ex),
+      renewed: calc(c.rn),
+      reflow: calc(c.rf),
     });
   }
   return out;
@@ -49,6 +59,9 @@ export const orgDaily = buildSeries(60, {
   nm: [8, 0.3, 6],
   gmv: [900, 12, 320],
   q: [780, 7, 170],
+  ex: [10, 0.1, 3],
+  rn: [4, 0.05, 2],
+  rf: [2, 0.03, 1],
 });
 
 export const platformDaily = buildSeries(60, {
@@ -56,6 +69,9 @@ export const platformDaily = buildSeries(60, {
   nm: [220, 4, 120],
   gmv: [22000, 260, 6000],
   q: [88000, 500, 9000],
+  ex: [260, 3, 60],
+  rn: [104, 1.5, 30],
+  rf: [40, 0.6, 15],
 });
 
 // 实时总览快照（截至今日，不随时间筛选变化）
@@ -77,6 +93,10 @@ export interface RangeMetrics {
   newMembers: number;
   gmv: number;
   questions: number;
+  /** 0722：续费率（%）= 区间内到期且完成续费 ÷ 同区间到期会员 */
+  renewRate: number;
+  /** 0722：回流会员 = 区间内过期后重新开通的用户数（不算新增、不算续费） */
+  reflow: number;
   slice: DailyPoint[];
 }
 
@@ -86,16 +106,19 @@ export function rangeMetrics(series: DailyPoint[], days: number, offset = 0): Ra
   const endIdx = Math.max(0, n - offset);
   const startIdx = Math.max(0, endIdx - days);
   const slice = series.slice(startIdx, endIdx);
-  const sum = (k: 'dau' | 'newMembers' | 'gmv' | 'questions') => slice.reduce((a, b) => a + b[k], 0);
+  const sum = (k: 'dau' | 'newMembers' | 'gmv' | 'questions' | 'expired' | 'renewed' | 'reflow') => slice.reduce((a, b) => a + b[k], 0);
   const dauSum = sum('dau');
   // 区间去重活跃用户近似：今日＝当日 DAU；跨度越大去重后高于日均、低于简单累加
   const dedup = days <= 1 ? 1 : days <= 7 ? 0.62 : 0.42;
   const activeUsers = days <= 1 ? (slice[slice.length - 1]?.dau ?? 0) : Math.round(dauSum * dedup);
+  const expiredSum = sum('expired');
   return {
     activeUsers,
     newMembers: sum('newMembers'),
     gmv: sum('gmv'),
     questions: sum('questions'),
+    renewRate: expiredSum ? (sum('renewed') / expiredSum) * 100 : 0,
+    reflow: sum('reflow'),
     slice,
   };
 }

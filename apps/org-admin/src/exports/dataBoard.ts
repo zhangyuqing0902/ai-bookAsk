@@ -21,7 +21,9 @@ const u = (val: string | number, unit: string) => `${val} ${unit}`;
 
 export function buildDataBoardSpec(input: DataBoardExportInput): ExportSpec {
   const { rangeLabel, periodDays, d, retentionRange, retention, active, topkp } = input;
-  const snapshotNote = '实时快照（固定窗口，不随区间联动）';
+  // 0724：活跃概览定稿为固定滚动窗口实时快照（不随区间联动），去重规则独立标注
+  const dauNote = '今日截至当前时刻快照；去重：单日内按用户 ID 去重；环比昨日同时段；不随区间联动';
+  const windowNote = (w: string) => `截至今日${w}滚动窗口快照；去重：窗口内按用户 ID 去重（跨天只计 1 人）；环比上一个等长窗口；不随区间联动`;
 
   // Sheet 1 · 区间指标：页面四主题域 KPI 全量
   const rangeSheet: ExportSheet = {
@@ -31,20 +33,21 @@ export function buildDataBoardSpec(input: DataBoardExportInput): ExportSpec {
     subtitle: `环比口径：${comparisonPeriodLabel(periodDays)}`,
     headers: ['主题', '指标', '数值', '统计说明'],
     rows: [
-      ['用户', 'DAU（日活跃用户）', u(active.dau, '人'), snapshotNote],
-      ['用户', 'WAU（周活跃用户）', u(active.wau, '人'), snapshotNote],
-      ['用户', 'MAU（月活跃用户）', u(active.mau, '人'), snapshotNote],
+      ['用户', 'DAU（日活跃用户）', u(active.dau, '人'), dauNote],
+      ['用户', 'WAU（周活跃用户）', u(active.wau, '人'), windowNote('近 7 日')],
+      ['用户', 'MAU（月活跃用户）', u(active.mau, '人'), windowNote('近 30 日')],
       ['用户', '新增用户', u(d.newUsers, '人'), '区间首次注册，按用户 ID 精确去重'],
       ['提问', '总提问', u(d.totalAsk, '条'), '含追问'],
-      ['提问', '人均提问', u(d.perUser, '条/人'), '总提问 ÷ 活跃用户'],
+      ['提问', '人均提问', u(d.perUser, '条/人'), '总提问 ÷ 活跃用户（活跃按用户 ID 去重）'],
       ['提问', '平均会话轮次', u(d.rounds, '轮'), '总提问 ÷ 总会话数'],
       ['提问', '答案点赞率', d.likeRate, '点赞答案 ÷ 已完成答案'],
       ['提问', '答案反馈率', d.fbRate, '收到反馈的答案 ÷ 已完成答案'],
-      ['营收', '区间 GMV', d.gmv, '区间已支付（会员 + 永享）'],
-      ['营收', '付费用户', u(d.payUsers, '人'), '区间有效支付，去重'],
-      ['营收', '付费转化率', d.payRate, '付费用户 ÷ 活跃用户'],
+      ['营收', '区间 GMV', d.gmv, '区间已支付（会员 + 永享；待支付/已失效不计入）'],
+      ['营收', '付费用户', u(d.payUsers, '人'), '区间有效支付，按用户 ID 去重'],
+      ['营收', '付费转化率', d.payRate, '付费用户 ÷ 活跃用户（均按用户 ID 去重）'],
       ['营收', 'ARPPU', d.arppu, '支付收入 ÷ 付费用户'],
       ['营收', '续费率', d.renew, '到期完成续费会员 ÷ 到期会员'],
+      ['营收', '回流会员', u(d.reflow, '人'), '过期后重新开通，按用户 ID 去重；不算新增/续费'],
       ['营收', '退款金额', d.refundAmt, '区间成功退款'],
       ['营收', '退款率', d.refundRate, '退款金额 ÷ 同区间 GMV'],
       ['营收', '退款订单数', u(d.refundOrders, '单'), '发生成功退款（含部分）的去重订单'],

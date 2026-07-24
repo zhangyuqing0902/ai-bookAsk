@@ -27,8 +27,9 @@ NUM_PREFIX = re.compile(r"^\d+\.\s*")
 # (本地 xlsx 路径, sheet 名, 线上 spreadsheet token, 线上 sheet_id, 列数)
 TARGETS = [
     (f"{ROOT}/feature-list.xlsx", "功能清单",     "Jfl2sKqqmhYrxftHSlAcPzNvn5Q", "0rMuqv", 5),
-    (f"{ROOT}/feature-list.xlsx", "数据看板指标", "Jfl2sKqqmhYrxftHSlAcPzNvn5Q", "1BjMEB", 4),
-    (f"{ROOT}/feature-list.xlsx", "用量看板指标", "Jfl2sKqqmhYrxftHSlAcPzNvn5Q", "2WEPcW", 3),
+    # 0724：两张附表新增「去重规则」列，列数 4→5 / 3→4
+    (f"{ROOT}/feature-list.xlsx", "数据看板指标", "Jfl2sKqqmhYrxftHSlAcPzNvn5Q", "1BjMEB", 5),
+    (f"{ROOT}/feature-list.xlsx", "用量看板指标", "Jfl2sKqqmhYrxftHSlAcPzNvn5Q", "2WEPcW", 4),
     (f"{ROOT}/brand-color-impact.xlsx", "品牌色影响清单", "FneDsve4thptfTtMUKjc1uV7n07", "0otikK", 8),
 ]
 
@@ -140,8 +141,9 @@ def main():
                 snap = json.load(open(snap_path)).get(sheet_id)
                 if not snap:
                     sys.exit(f"✗ [{sheet}] 快照里没有 {sheet_id} 的基线，安全闸无法生效，已中止。")
-                expect = [[str(c) for c in r] for r in snap["rows"]]
-                got = [[str(c) for c in r] for r in online]
+                # 0724：快照可能是旧列数（附表加列前），比对前统一补齐到当前 ncols
+                expect = [([str(c) for c in r] + [""] * ncols)[:ncols] for r in snap["rows"]]
+                got = [([str(c) for c in r] + [""] * ncols)[:ncols] for r in online]
                 if len(expect) != len(got):
                     sys.exit(
                         f"✗ [{sheet}] 线上行数已变（快照 {len(expect)} → 现在 {len(got)}），"

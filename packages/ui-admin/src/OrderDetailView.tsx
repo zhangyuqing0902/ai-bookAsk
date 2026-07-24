@@ -77,7 +77,8 @@ export function OrderDetailView({ order: o, refund: rf, showOrg }: { order: Orde
         <Row k="订单状态" v={o.status} />
         <Row k="用户" v={o.user} mono />
         <Row k="下单时间" v={o.orderTime} mono />
-        <Row k="付款时间" v={o.payTime} mono />
+        {/* 0722：待支付 / 已失效无付款时间 */}
+        <Row k="付款时间" v={o.payTime || '—'} mono />
       </div>
 
       {rf && (
@@ -106,7 +107,8 @@ export function OrderDetailView({ order: o, refund: rf, showOrg }: { order: Orde
         </div>
       )}
 
-      {o.type === '会员' && (
+      {/* 0722：待支付 / 已失效未产生权益，不渲染会员权益卡 */}
+      {o.type === '会员' && o.memberFrom && o.memberTo && (
         <div className="fm-card">
           <div className="fh">会员权益</div>
           <Row k="会员有效期" v={`${o.memberFrom} 至 ${o.memberTo}`} mono />
