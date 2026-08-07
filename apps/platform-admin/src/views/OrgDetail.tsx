@@ -56,18 +56,84 @@ function UsageCard({ title, icon, rows, periodDays, tone }: { title: string; ico
   );
 }
 
-// 0806-3：敏感配置输入框（AppSecret / API 密钥等）——默认脱敏（•••• + 尾 4 位），点眼睛切换明文便于核对；
-// 明文态可编辑，脱敏态只读（避免误改掩码字符）
-function SecretInput({ secret, maxWidth = 320 }: { secret: string; maxWidth?: number }) {
-  const [show, setShow] = useState(false);
-  const [val, setVal] = useState(secret);
+// 0807-2：敏感凭据「写后不回显」——已配置仅显状态行（尾号 / 文件名 + 更新时间到秒），更新 / 重新上传即整体覆写；
+// 密钥在数据库为加密存储（非明文），业务需要原值须联系技术发邮件申请（技术从微信后台获取或数据库解密提供），
+// 界面不提供明文查看与文件下载。原「显隐眼睛」脱敏输入框能力随之移除。
+const SEC_AT = '2026-08-07 09:41:23'; // 演示锚点：既有配置的最近更新时间（精确到秒）
+function secNow() {
+  const d = new Date(), p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// 文本类凭据（AppSecret / API 密钥 / 支付公钥 ID）：已配置态 → 状态行 + 「更新」；更新态 → 空输入框；
+// 保存前二次确认（覆盖原值不可恢复、新值不回显），确认后回状态行
+function SecretText({ last4, maxWidth = 380 }: { last4: string; maxWidth?: number }) {
+  const [cfg, setCfg] = useState({ last4, at: SEC_AT });
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState('');
+  const [ask, setAsk] = useState(false);
+  if (!editing)
+    return (
+      <div className="sec-state" style={{ maxWidth }}>
+        <span className="sec-ok">已配置</span>
+        <span className="sec-tail">尾号 ****{cfg.last4}</span>
+        <span className="sec-at">{cfg.at} 更新</span>
+        <span className="sec-op" onClick={() => setEditing(true)}>更新</span>
+      </div>
+    );
   return (
-    <div style={{ position: 'relative', maxWidth }}>
-      <TextInput value={show ? val : '••••••••••••' + val.slice(-4)} onChange={(e) => { if (show) setVal(e.target.value); }} style={{ paddingRight: 38, width: '100%' }} />
-      <span className="secret-eye" title={show ? '隐藏' : '显示'} onClick={() => setShow((s) => !s)}>
-        <Icon id={show ? 'i-eyeOff' : 'i-eye'} w={15} h={15} />
-      </span>
-    </div>
+    <>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', maxWidth }}>
+        <TextInput value={val} onChange={(e) => setVal(e.target.value)} placeholder="输入新值 · 保存后不再回显" style={{ flex: 1 }} />
+        <span className="sec-op" onClick={() => { if (!val.trim()) { toast('请输入新值'); return; } setAsk(true); }}>保存</span>
+        <span className="sec-op sec-op-ghost" onClick={() => { setEditing(false); setVal(''); }}>取消</span>
+      </div>
+      <ConfirmDialog
+        open={ask}
+        title="保存并覆盖？"
+        desc={<>保存后将<b>整体覆盖</b>当前值（尾号 ****{cfg.last4}），原值不可恢复；新值保存成功后<b>不再回显</b>，请先核对输入无误。</>}
+        confirmText="确认保存"
+        onConfirm={() => {
+          setAsk(false);
+          setCfg({ last4: val.trim().slice(-4), at: secNow() });
+          setEditing(false); setVal('');
+          toast('已保存 · 该项不再回显');
+        }}
+        onClose={() => setAsk(false)}
+      />
+    </>
+  );
+}
+
+// 文件类凭据（校验文件 / 证书 / 私钥 / 公钥文件）：已上传态不提供下载；重新上传须二次确认（覆盖后原文件不可恢复）
+function SecretFile({ name, accept, emptyHint, empty = false, maxWidth = 380 }: { name: string; accept: string; emptyHint: string; empty?: boolean; maxWidth?: number }) {
+  const [st, setSt] = useState<{ name: string; at: string } | null>(empty ? null : { name, at: SEC_AT });
+  const [ask, setAsk] = useState(false);
+  const pick = () => pickFile(accept, (n) => { setSt({ name: n, at: secNow() }); toast('已上传 ' + n + ' · 不提供下载回显'); });
+  if (!st)
+    return (
+      <div className="upbox" style={{ maxWidth }} onClick={pick}>
+        <Icon id="i-up" />
+        <div className="nowrap">{emptyHint}</div>
+      </div>
+    );
+  return (
+    <>
+      <div className="sec-state" style={{ maxWidth }}>
+        <span className="sec-ok">已上传</span>
+        <span className="sec-tail" title={st.name}>{st.name}</span>
+        <span className="sec-at">{st.at} 更新</span>
+        <span className="sec-op" onClick={() => setAsk(true)}>重新上传</span>
+      </div>
+      <ConfirmDialog
+        open={ask}
+        title="重新上传并覆盖？"
+        desc={<>重新上传将<b>整体覆盖</b>当前文件「{st.name}」，覆盖后原文件不可恢复；新文件保存后同样<b>不提供下载与回显</b>。</>}
+        confirmText="选择文件"
+        onConfirm={() => { setAsk(false); pick(); }}
+        onClose={() => setAsk(false)}
+      />
+    </>
   );
 }
 
@@ -662,7 +728,7 @@ export function OrgDetail() {
                   </div>
                   <div className="fm-row">
                     <div className="lab">AppSecret</div>
-                    <div className="ctl"><SecretInput secret="d29e6a814f7c35b08a51e9d4c7f26c2e" /></div>
+                    <div className="ctl"><SecretText last4="6c2e" /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">网页授权回调地址</div>
@@ -671,18 +737,14 @@ export function OrgDetail() {
                   {/* 0722：网页授权域名校验文件属公众平台（非开放平台），随公众号配置上传 */}
                   <div className="fm-row">
                     <div className="lab">域名校验文件</div>
-                    <div className="ctl">
-                      <div className="upbox" style={{ maxWidth: 360 }} onClick={() => pickFile(ACCEPT.txt, (n) => toast('已选择 ' + n))}>
-                        <Icon id="i-up" />
-                        <div className="nowrap">上传 MP_verify_xxx.txt（公众号后台生成）</div>
-                      </div>
-                    </div>
+                    <div className="ctl"><SecretFile name="MP_verify_5f8a2c9d.txt" accept={ACCEPT.txt} emptyHint="上传 MP_verify_xxx.txt（公众号后台生成）" /></div>
                   </div>
                   <ul className="wx-lim">
                     <li>须为「已认证服务号」，订阅号不支持网页授权获取用户信息。</li>
                     <li>回调地址须与公众号后台配置完全一致，并包含协议与实际回调路径。</li>
                     <li>校验文件需放置于网页授权域名根目录下可直接访问，否则授权域名配置不生效。</li>
                     <li>AppSecret 仅在公众号后台可见，重置后需同步更新此处。</li>
+                    <li>敏感项（AppSecret / 校验文件）保存后不回显，仅显示已配置状态；密钥在数据库加密存储，业务需要原值须联系技术发邮件申请（从微信后台获取或数据库解密提供）。</li>
                   </ul>
                   <div style={{ marginTop: 4 }}>
                     <button className="btn btn-primary btn-sm" onClick={() => toast('已保存公众号配置')}>保存</button>
@@ -702,7 +764,7 @@ export function OrgDetail() {
                   </div>
                   <div className="fm-row">
                     <div className="lab">AppSecret</div>
-                    <div className="ctl"><SecretInput secret="7b3e9c25a8d1f4067e2a9c5d8b3f9d4f" /></div>
+                    <div className="ctl"><SecretText last4="9d4f" /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">授权回调地址</div>
@@ -712,6 +774,7 @@ export function OrgDetail() {
                     <li>用于「非微信浏览器」打开时唤起微信扫码登录（开放平台网站应用 / 二维码授权）。</li>
                     <li>须在微信开放平台创建「网站应用」并通过审核，与公众号为不同 AppID。</li>
                     <li>授权回调地址须与开放平台网站应用配置完全一致，并包含协议与实际回调路径。</li>
+                    <li>敏感项（AppSecret）保存后不回显，仅显示已配置状态；密钥在数据库加密存储，业务需要原值须联系技术发邮件申请（从微信后台获取或数据库解密提供）。</li>
                   </ul>
                   <div style={{ marginTop: 4 }}>
                     <button className="btn btn-primary btn-sm" onClick={() => toast('已保存微信开放平台配置')}>保存</button>
@@ -733,49 +796,35 @@ export function OrgDetail() {
                   <div className="fm-row">
                     <div className="lab">API v2 密钥</div>
                     <div className="ctl">
-                      <SecretInput secret="f6d2b8a45c9e17038b6d4a2f5e7c9c41" />
+                      <SecretText last4="9c41" />
                       <div className="hint" style={{ marginTop: 6 }}>32 位，商户平台「API 安全」设置 · 委托代扣（自动续费）接口签名必需，与 API v3 密钥并存</div>
                     </div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">API v3 密钥</div>
-                    <div className="ctl"><SecretInput secret="4e8a2c917d5f3b068a4e1c7d9f2b3a7f" /></div>
+                    <div className="ctl"><SecretText last4="3a7f" /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">商户证书</div>
-                    <div className="ctl">
-                      <div className="upbox" style={{ maxWidth: 360 }} onClick={() => pickFile(ACCEPT.cert, (n) => toast('已选择 ' + n))}>
-                        <Icon id="i-up" />
-                        <div className="nowrap">apiclient_cert.pem（已上传 · 点击替换）</div>
-                      </div>
-                    </div>
+                    <div className="ctl"><SecretFile name="apiclient_cert.pem" accept={ACCEPT.cert} emptyHint="上传 apiclient_cert.pem" /></div>
                   </div>
                   {/* 0722：API v3 请求签名需商户私钥，与证书成对上传 */}
                   <div className="fm-row">
                     <div className="lab">商户 API 私钥</div>
-                    <div className="ctl">
-                      <div className="upbox" style={{ maxWidth: 360 }} onClick={() => pickFile(ACCEPT.cert, (n) => toast('已选择 ' + n))}>
-                        <Icon id="i-up" />
-                        <div className="nowrap">上传 apiclient_key.pem</div>
-                      </div>
-                    </div>
+                    <div className="ctl"><SecretFile name="apiclient_key.pem" accept={ACCEPT.cert} emptyHint="上传 apiclient_key.pem" /></div>
                   </div>
                   {/* 0806：公钥模式验签（2024 起新注册商户默认发放公钥，替代平台证书）——ID + 文件配套 */}
                   <div className="fm-row">
                     <div className="lab">支付公钥 ID</div>
                     <div className="ctl">
-                      <TextInput defaultValue="PUB_KEY_ID_0119000123452026080600000001" style={{ maxWidth: 400 }} />
-                      <div className="hint" style={{ marginTop: 6 }}>微信支付「公钥模式」验签标识 · 验签时按回调头 Wechatpay-Serial 匹配</div>
+                      <SecretText last4="0001" maxWidth={400} />
+                      <div className="hint" style={{ marginTop: 6 }}>微信支付「公钥模式」验签标识（PUB_KEY_ID_ 开头）· 验签时按回调头 Wechatpay-Serial 匹配</div>
                     </div>
                   </div>
+                  {/* 0807-2：支付公钥文件保留「未上传」空态，演示 空态上传 → 已上传状态行 全流程 */}
                   <div className="fm-row">
                     <div className="lab">支付公钥文件</div>
-                    <div className="ctl">
-                      <div className="upbox" style={{ maxWidth: 360 }} onClick={() => pickFile(ACCEPT.cert, (n) => toast('已选择 ' + n))}>
-                        <Icon id="i-up" />
-                        <div className="nowrap">上传 pub_key.pem</div>
-                      </div>
-                    </div>
+                    <div className="ctl"><SecretFile name="pub_key.pem" accept={ACCEPT.cert} emptyHint="上传 pub_key.pem" empty /></div>
                   </div>
                   {/* 0806：委托代扣签约模板（业务参数，置卡片末尾）——C 端签约连续包月时传入 */}
                   <div className="fm-row">
@@ -792,6 +841,7 @@ export function OrgDetail() {
                     <li>支付公钥 ID 与公钥文件 pub_key.pem 配套（公钥模式验签，2024 年起新注册商户默认发放；存量商户走平台证书，二选一）。</li>
                     <li>委托代扣包月模板 ID＝签约模板经微信审核通过后分配，用于 C 端会员连续包月签约。</li>
                     <li>退款 / 自动续费依赖支付能力，未配置支付则前台无法下单。</li>
+                    <li>敏感项（API v2 / v3 密钥、证书、私钥、公钥 ID、公钥文件）保存后不回显——仅显示已配置状态与尾号 / 文件名，更新即整体覆写；密钥在数据库加密存储（非明文），业务需要原值须联系技术发邮件申请（从微信后台获取或数据库解密提供），界面不提供明文查看与文件下载。</li>
                   </ul>
                   <div style={{ marginTop: 4 }}>
                     <button className="btn btn-primary btn-sm" onClick={() => toast('已保存微信支付配置')}>保存</button>

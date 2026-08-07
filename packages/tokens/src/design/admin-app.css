@@ -2634,10 +2634,18 @@ a {
 .sub-scope-note{position:absolute;top:12px;right:16px;z-index:2;font-size:11.5px;color:var(--ink-3);
   background:var(--surface-warm,#faf7f2);border:1px solid var(--line);border-radius:7px;padding:3px 9px;}
 
-/* 0806-3：敏感配置输入框显隐眼睛（微信配置 AppSecret / API 密钥） */
-.secret-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:inline-flex;
-  color:var(--ink-3);cursor:pointer;padding:3px;border-radius:6px;transition:color .12s,background .12s;}
-.secret-eye:hover{color:var(--indigo-ink);background:var(--indigo-soft);}
+/* 0807-2：敏感凭据「写后不回显」状态行（微信配置 AppSecret / 密钥 / 证书私钥文件）——
+   已配置只显 状态 + 尾号/文件名 + 更新时间（到秒），视觉沿用只读框标准（纸白底 + 浅边 + 深灰字），原显隐眼睛移除 */
+.sec-state{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:36px;
+  background:var(--paper);border:1px solid var(--line-2);border-radius:10px;font-size:12.5px;color:var(--ink-2);}
+.sec-state .sec-ok{color:var(--jade);font-weight:600;flex:none;}
+.sec-state .sec-tail{color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sec-state .sec-at{color:var(--ink-3);flex:none;}
+.sec-op{margin-left:auto;color:var(--indigo);cursor:pointer;font-weight:500;flex:none;font-size:12.5px;}
+.sec-op:hover{color:var(--indigo-ink);text-decoration:underline;}
+.sec-op.sec-op-ghost{color:var(--ink-3);margin-left:0;}
+.sec-op.sec-op-ghost:hover{color:var(--ink-2);}
 
 /* 0806-3：MultiSelect 视觉美化——白底浮层 + 轻量选项行。
    选中态不再整行铺靛蓝底（全选时整片蓝过重），改由左侧勾选框表达选中；

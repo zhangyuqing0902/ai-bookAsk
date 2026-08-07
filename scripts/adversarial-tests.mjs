@@ -818,12 +818,19 @@ test('0806-3 导出按页面栏目拆 Sheet；父机构仅注明范围（分机�
   const dash = read('../apps/org-admin/src/views/Dashboard.tsx');
   assert.ok(dash.includes('sub-scope-note') && dash.includes('不随机构筛选变化'), '订阅卡缺本机构注明');
 });
-test('0806-3 微信敏感输入框显隐眼睛（默认脱敏）+ 落地页可滚动 + 内容供给副行占比', () => {
+test('0807-2 微信敏感项写后不回显（状态行+更新覆写，显隐眼睛移除）+ 落地页可滚动 + 内容供给副行占比', () => {
   const od = read('../apps/platform-admin/src/views/OrgDetail.tsx');
-  assert.ok(od.includes('SecretInput') && (od.match(/<SecretInput /g) ?? []).length >= 4, '微信配置敏感项未接 SecretInput（应 ≥4 处）');
-  assert.ok(od.includes("useState(false)") && od.includes('secret-eye'), 'SecretInput 缺默认脱敏 / 眼睛');
+  assert.ok(!od.includes('SecretInput') && !od.includes('secret-eye'), '显隐眼睛（SecretInput/secret-eye）应已移除');
+  assert.ok((od.match(/<SecretText /g) ?? []).length >= 5, '文本类敏感项未接 SecretText（应 ≥5 处：两 AppSecret + v2/v3 密钥 + 公钥 ID）');
+  assert.ok((od.match(/<SecretFile /g) ?? []).length >= 4, '文件类敏感项未接 SecretFile（应 ≥4 处：校验文件/证书/私钥/公钥文件）');
+  assert.ok(od.includes('已配置') && od.includes('不再回显') && od.includes('尾号 ****'), '缺已配置状态行 / 不回显文案');
+  assert.ok(od.includes('重新上传并覆盖？') && od.includes('不提供下载与回显'), '文件重新上传缺二次确认弹窗');
+  assert.ok(od.includes('保存并覆盖？') && od.includes('请先核对输入无误'), '文本保存缺二次确认弹窗（0807-2b）');
+  assert.ok(/\$\{p\(d\.getHours\(\)\)\}:\$\{p\(d\.getMinutes\(\)\)\}:\$\{p\(d\.getSeconds\(\)\)\}/.test(od) && /SEC_AT = '[\d-]+ \d{2}:\d{2}:\d{2}'/.test(od), '更新时间未精确到秒');
+  assert.ok(od.includes('发邮件申请'), 'wx-lim 缺原值获取机制说明（联系技术发邮件申请）');
+  assert.ok(od.includes('empty'), '支付公钥文件缺未上传空态演示');
   const sprite = read('../packages/ui/src/IconSprite.tsx');
-  assert.ok(sprite.includes('i-eye') && sprite.includes('i-eyeOff'), '缺眼睛 icon');
+  assert.ok(!sprite.includes('i-eye'), '眼睛 icon 应随显隐能力一并移除');
   const css = read('../packages/tokens/src/design/proto.css');
   assert.ok(css.includes('justify-content:safe center') && /lg-landing\{[^}]*overflow-y:auto/.test(css), '落地页未修复溢出滚动');
   assert.ok(css.includes('.lg-landing>*{flex:none;}'), '落地页子元素未禁 flex 压缩（brand-orb 会被压没）');
