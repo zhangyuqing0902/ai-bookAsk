@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, Modal, TextInput, EmptyState, Pager } from '@aba/ui-admin';
-import { KP_SOURCE_LABEL } from '@aba/mock';
+import { KP_SOURCE_LABEL, ORG_FILTER_ALL, orgScopeOptions, orgScopeValue, visibleOrgs, CURRENT_ORG } from '@aba/mock';
 import { useKpLifecycle } from '../stores/kpLifecycle';
+import { useOrgScope } from '../stores/orgScope';
 import { ORG_KPS, ORG_KP_STATUS_META, type OrgKp } from '../data/kps';
 
 // 机构后台 · 知识产品 KP 列表（搜索 + 状态/来源筛选 + 空态 + 新建/导入弹窗）
@@ -19,6 +20,10 @@ const sourceLabel = (kp: OrgKp) => KP_SOURCE_LABEL[kp.shareMode ?? 'own'];
 
 export function KpList() {
   const nav = useNavigate();
+  // 0806：父机构视角——机构单选筛选 + 卡片归属机构 + 子机构 KP 只读（详情置灰）
+  const orgType = useOrgScope((s) => s.orgType);
+  const isParent = orgType === 'parent';
+  const [orgSel, setOrgSel] = useState(ORG_FILTER_ALL);
   const overrides = useKpLifecycle((s) => s.overrides);
   const effectiveStatus = (kp: OrgKp) => {
     // 0716 #1.1：详情下架/发布/删除写入 kpLifecycle store 后，列表状态标签叠加覆盖值；
@@ -45,8 +50,12 @@ export function KpList() {
   // 0714 #18：状态筛选按叠加覆盖后的「有效状态」匹配；
   // 0717 #1.5：已删除（逻辑删除）的 KP 不在三端界面展示，数据库保留数据。
   // 0718 #7：来源筛选按三态标签匹配（自建 / 分享导入·实时 / 分享导入·快照）
+  const scope = visibleOrgs(orgType);
   const list = ORG_KPS.filter(
-    (kp) => effectiveStatus(kp).label !== '已删除' && (!q || kp.name.includes(q)) && (status === '全部' || effectiveStatus(kp).label === status) && (source === '全部' || sourceLabel(kp) === source),
+    (kp) =>
+      scope.includes(kp.org) &&
+      (!isParent || orgSel === ORG_FILTER_ALL || kp.org === orgSel) &&
+      effectiveStatus(kp).label !== '已删除' && (!q || kp.name.includes(q)) && (status === '全部' || effectiveStatus(kp).label === status) && (source === '全部' || sourceLabel(kp) === source),
   );
   // 4.2:每页 10 条,即使 ≤10 条也始终显示分页器(KP 列表特例),真实 slice 翻页
   const PAGE_SIZE = 10;
@@ -80,6 +89,8 @@ export function KpList() {
       </div>
       <div className="filter">
         <Search placeholder="搜索 KP 名称" minWidth={220} value={q} onChange={setQ} />
+        {/* 0806：父机构视角——机构单选筛选（全部机构 / 本机构（父机构）/ 各子机构） */}
+        {isParent && <Dropdown label="机构" options={orgScopeOptions()} onSelect={(v) => setOrgSel(v === ORG_FILTER_ALL ? ORG_FILTER_ALL : orgScopeValue(v))} style={{ width: 200 }} />}
         <Dropdown label="状态" options={['全部', '草稿', '已发布', '已下架']} onSelect={setStatus} />
         <Dropdown label="来源" options={['全部', '自建', '分享导入·实时', '分享导入·快照']} onSelect={setSource} />
       </div>
@@ -97,7 +108,11 @@ export function KpList() {
             <div
               className="kp-card"
               key={kp.id}
-              onClick={() => nav('/kps/' + kp.id + (kp.shareMode ? `?share=${kp.shareMode}` : ''))}
+              onClick={() => {
+                // 0806：子机构 KP 仅可查看——详情带 owner=child 进只读态（机构角色「可操作」仅针对本机构数据）
+                const qs = [kp.shareMode ? `share=${kp.shareMode}` : '', kp.org !== CURRENT_ORG ? 'owner=child' : ''].filter(Boolean).join('&');
+                nav('/kps/' + kp.id + (qs ? `?${qs}` : ''));
+              }}
             >
               <div className={'kp-cover ' + kp.cover}>
                 <div className="ct">{kp.name}</div>
@@ -106,6 +121,8 @@ export function KpList() {
                 <div className="kp-info-top">
                   <span className="kp-name">{kp.name}</span>
                 </div>
+                {/* 0806：父机构视角显示数据归属机构 */}
+                {isParent && <div className="kp-org-row">{kp.org}{kp.org !== CURRENT_ORG && <span className="kp-org-ro">仅可查看</span>}</div>}
                 {/* 4.1:来源(自建/分享导入·实时/分享导入·快照)=统一灰色小标签;发布状态=彩色标签;左右并排 */}
                 {/* 0722：分享标识仅接收方显示（分享导入·实时/快照），分享方不再显示角色标签 */}
                 <div className="kp-tags">

@@ -70,6 +70,8 @@ interface DemoStore {
   setPaymentSetting: (s: Partial<PaymentSetting>) => void;
   toggleDemoConsole: () => void;
   setWechatEnv: (v: boolean) => void;
+  /** 0806-2：演示切会员四态（覆盖 user.membership） */
+  setMemberState: (st: 'none' | 'active' | 'grace' | 'expired') => void;
   setOrgTokenExceeded: (v: boolean) => void;
   wechatLogin: () => void;
   phoneLogin: () => void;
@@ -128,6 +130,20 @@ export const useDemoStore = create<DemoStore>()(
         set({ paymentSetting: { ...get().paymentSetting, ...s } }),
       toggleDemoConsole: () => set({ showDemoConsole: !get().showDemoConsole }),
       setWechatEnv: (v) => set({ wechatEnv: v }),
+      // 0806-2：演示直接切会员四态（有效/宽限/过期/未开通），配合到期时间演示 C 端四态展示；
+      // 注意 setRole 会重建 user 覆盖本状态——演示时先选角色再切会员态
+      setMemberState: (st) =>
+        set((s) => ({
+          user: {
+            ...s.user,
+            membership: {
+              ...s.user.membership,
+              state: st,
+              expiresAt: st === 'active' ? '2026-09-12' : st === 'grace' ? '2026-08-01' : st === 'expired' ? '2026-06-10' : undefined,
+              autoRenew: st === 'active',
+            },
+          },
+        })),
       setOrgTokenExceeded: (v) => set({ orgTokenExceeded: v }),
       // 微信授权成功：带回头像 / 昵称 / 性别 / 地区；手机号未绑（H5 无法获取手机号）
       wechatLogin: () =>

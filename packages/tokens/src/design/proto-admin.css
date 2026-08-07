@@ -281,6 +281,14 @@
 .ae-prompt-edit{display:block;width:100%;box-sizing:border-box;resize:vertical;background:var(--surface);color:var(--ink);
   font-family:inherit;outline:none;}
 .ae-prompt-edit:focus{border-color:var(--indigo);}
+/* 0806:TTS 参考音文本(必填,≤100 字)——textarea + 右下角实时字数 */
+.ae-ttstext{position:relative;max-width:560px;}
+.ae-ttstext-input{display:block;width:100%;box-sizing:border-box;resize:vertical;min-height:74px;
+  background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;
+  padding:11px 12px 24px;font-size:13px;line-height:1.7;font-family:inherit;outline:none;}
+.ae-ttstext-input:focus{border-color:var(--indigo);}
+.ae-ttstext-count{position:absolute;right:10px;bottom:8px;font-size:11px;color:var(--ink-3);pointer-events:none;}
+.ae-ttstext-count.full{color:var(--terra);}
 .ae-kp{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border:1px solid var(--line);
   border-radius:12px;margin-bottom:10px;background:var(--surface);cursor:pointer;
   transition:border-color .14s,box-shadow .14s,transform .14s,background .14s;}
@@ -562,3 +570,6 @@
 .inp-field{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13.5px;color:var(--ink);font-family:inherit;padding:0;}
 .inp-field::placeholder{color:var(--ink-3);}
 .login-foot-end{justify-content:flex-end;}
+/* 0806-4:两后台登录页品牌区横版 logo(图标+文字,替换原光球+文字标题)；0806-6 按反馈加大 */
+.login-logo-full{width:356px;max-width:80%;height:auto;object-fit:contain;
+  filter:drop-shadow(0 10px 24px rgba(43,108,229,.18));margin-bottom:6px;}

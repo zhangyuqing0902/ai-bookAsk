@@ -568,6 +568,9 @@ body{
 
 .brand-orb{position:relative;width:172px;height:172px;}
 .brand-orb .core{position:absolute;inset:26px;}
+/* 0806-4：知识核球替换为产品 logo（浅色底纯图标，周边彩带环动画已按反馈移除）；保留轻微浮动 */
+.brand-orb .core-logo{position:absolute;inset:18px;width:calc(100% - 36px);height:calc(100% - 36px);object-fit:contain;
+  filter:drop-shadow(0 10px 22px rgba(43,108,229,.24));}
 .brand-orb .ring{position:absolute;border-radius:50%;
   background:conic-gradient(from 0deg,transparent 0deg,#6A5BF6 70deg,#9B7BF8 130deg,transparent 200deg,transparent 360deg);
   -webkit-mask:radial-gradient(circle,transparent 60%,#000 61%,#000 70%,transparent 71%);
@@ -587,7 +590,8 @@ body{
 .login-particles span{position:absolute;border-radius:50%;background:rgba(75,87,232,.5);}
 
 /* 右侧 毛玻璃登录卡 */
-.login-card{position:absolute;right:86px;top:50%;transform:translateY(-50%);width:384px;z-index:4;
+/* 0806-6 按反馈：登录卡左移并加宽（right 86→148→214，width 384→436） */
+.login-card{position:absolute;right:214px;top:50%;transform:translateY(-50%);width:436px;z-index:4;
   background:rgba(255,255,255,.52);backdrop-filter:blur(30px) saturate(1.5);-webkit-backdrop-filter:blur(30px) saturate(1.5);
   border:1px solid rgba(255,255,255,.75);border-radius:24px;padding:40px 36px;overflow:hidden;
   box-shadow:0 44px 100px -34px rgba(40,46,90,.45), inset 0 1px 0 rgba(255,255,255,.7);}

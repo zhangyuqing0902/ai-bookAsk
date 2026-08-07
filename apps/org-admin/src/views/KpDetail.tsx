@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { KpDetailView } from '@aba/ui-admin';
 import { tenantDomainSuffix } from '@aba/mock';
 import { useKpLifecycle } from '../stores/kpLifecycle';
@@ -11,7 +11,10 @@ import { ORG_KPS } from '../data/kps';
 // 0716 #1.1：发布 / 下架 / 删除接 kpLifecycle store 真状态（key = 路由 id，与列表叠加显示一致）。
 export function KpDetail() {
   const { id = '1' } = useParams();
+  const [sp] = useSearchParams();
   const entry = ORG_KPS.find((k) => k.id === id) ?? ORG_KPS[0];
+  // 0806：父机构查看子机构 KP——整页只读（机构角色「可操作」仅针对本机构数据）
+  const childReadonly = sp.get('owner') === 'child';
   const importMode = entry.shareMode ?? 'own';
   const kpStatus = useKpLifecycle((s) => s.overrides[id]) ?? entry.status;
   const setStatus = useKpLifecycle((s) => s.setStatus);
@@ -21,6 +24,7 @@ export function KpDetail() {
       orgPrefix="xx-press"
       domainSuffix={tenantDomainSuffix(window.location.hostname)}
       importMode={importMode}
+      readonlyBanner={childReadonly ? `子机构数据 · 仅可查看：本 KP 归属「${entry.org}」，机构后台角色的「可操作」权限仅针对本机构数据，如需编辑请在该子机构后台操作。` : undefined}
       shareOrgName="YY 教育"
       kpName={entry.name}
       kpStatus={kpStatus}

@@ -62,6 +62,12 @@ export function Chat() {
   const { guard, gate } = usePhoneGate();
   // 0614：机构本月 Token 超额度 → 给 C 端的友好提示（演示开关在落地页）
   const orgTokenExceeded = useDemoStore((s) => s.orgTokenExceeded);
+  // 0806：抽屉页脚用户卡接演示 store（与「我的」页同源，四态口径），替换硬编码
+  const dUser = useDemoStore((s) => s.user);
+  const dPhoneBound = useDemoStore((s) => s.phoneBound);
+  const dState = dUser.membership.state;
+  // 0806-3：C 端会员标二分（active/grace＝会员）
+  const dBadge = dState === 'active' || dState === 'grace' ? '会员' : null;
   const [jump, setJump] = useState<{ url: string; n: number } | null>(null);
   const msgs = useChatStore((s) => s.messages);
   const setMsgs = useChatStore((s) => s.setMessages);
@@ -322,9 +328,10 @@ export function Chat() {
             <div className="av" />
             <div>
               <div className="nm">
-                微信昵称A <span className="tag-s tag-amber">会员</span>
+                {dUser.nickname || '未设置昵称'}
+                {dBadge && <span className="tag-s tag-amber">{dBadge}</span>}
               </div>
-              <div className="ph">138****8888</div>
+              <div className="ph">{dPhoneBound && dUser.phone ? dUser.phone : '未绑定手机号'}</div>
             </div>
             <span className="more">
               <Icon id="i-chevR" />

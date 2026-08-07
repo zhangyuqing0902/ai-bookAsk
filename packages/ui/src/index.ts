@@ -3,6 +3,7 @@ export { cn } from './cn';
 export { Icon } from './Icon';
 export { IconSprite } from './IconSprite';
 export { FileTypeIcon } from './FileTypeIcon';
+export { BRAND_LOGO, BRAND_LOGO_APP, BRAND_LOGO_FULL, BRAND_LOGO_TEXT } from './brandLogo';
 export type { FileKind } from './FileTypeIcon';
 export { ToastHost, toast } from './Toast';
 // 原型清单（站点地图）

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon, toast } from '@aba/ui';
+import { Icon, toast, BRAND_LOGO_FULL } from '@aba/ui';
 
 // 图形验证码：随机 4 位，排除易混字符（0/O/1/I/L）。
 const VC_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -25,17 +25,8 @@ export function AdminLogin({ title, redirect = '/' }: { title: string; redirect?
       <div className="login-noise" />
 
       <div className="login-left">
-        <div className="brand-orb">
-          <div className="ring r1" />
-          <div className="ring r2" />
-          <div className="orbit">
-            <span className="dot" />
-          </div>
-          <div className="orb float core" />
-        </div>
-        <div className="login-wm">
-          AI <span className="grad">问书</span>
-        </div>
+        {/* 0806-4：品牌区改横版 logo（图标＋文字，按反馈原「AI 问书」文字标题移除） */}
+        <img className="login-logo-full float" src={BRAND_LOGO_FULL} alt="AI 问书" />
         <div className="login-tag">
           答案有出处<span className="login-dot" />知识更可信
         </div>

@@ -71,3 +71,33 @@ export function orgOptionLabel(name: string): string {
 export function orgOptionValue(label: string): string {
   return label.replace(/（(?:父机构|子机构)）$/, '');
 }
+
+// ---- 0806-4：平台主控台机构多选联动 ----
+
+/** 展开所选机构为机构 ID 集：父机构含其全部子机构；父子同选时去重，避免重复计量。 */
+function expandOrgIds(selected: string[], all: PlatformOrg[]): Set<string> {
+  const ids = new Set<string>();
+  for (const o of all) {
+    if (!selected.includes(o.name)) continue;
+    ids.add(o.id);
+    all.filter((x) => x.parentId === o.id).forEach((x) => ids.add(x.id));
+  }
+  return ids;
+}
+
+/**
+ * 主控台机构多选联动系数（0~1]：以各机构当前周期 Token 用量（tkUsed）作为活跃度权重代理（mock 近似），
+ * 返回所选机构集合（父机构含子机构）占全平台的比例。绝对量指标按比例缩放；率类（续费率等）不缩放。
+ */
+export function platformOrgFactor(selected: string[], all: PlatformOrg[] = PLATFORM_ORGS): number {
+  const total = all.reduce((s, o) => s + o.tkUsed, 0);
+  if (!total) return 1;
+  const ids = expandOrgIds(selected, all);
+  const sel = all.filter((o) => ids.has(o.id)).reduce((s, o) => s + o.tkUsed, 0);
+  return sel / total;
+}
+
+/** 所选机构集合展开后的机构数（父机构含全部子机构、去重）；全选时请改用 platformSnapshot.orgs 的全平台口径。 */
+export function platformOrgCount(selected: string[], all: PlatformOrg[] = PLATFORM_ORGS): number {
+  return expandOrgIds(selected, all).size;
+}

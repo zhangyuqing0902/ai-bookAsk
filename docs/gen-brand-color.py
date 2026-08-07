@@ -28,8 +28,8 @@ H = ['序号', '端', '页面 / 模块', '位置 / 元素', '色用法', '是否
 ROWS = [
     # —— 机构前台 H5 · 需随品牌色变 ——
     ['机构前台 H5', '登录落地页', '手机号登录按钮', '主色填充', '✅ 需变', '硬编码 indigo', '--org-primary'],
-    ['机构前台 H5', '登录落地页', '知识核动效球', '主→辅渐变', '✅ 需变', '硬编码', '--org-grad'],
-    ['机构前台 H5', '登录落地页', '「问书」渐变标题', '主→辅渐变文字', '✅ 需变', '--grad', '--org-grad'],
+    ['机构前台 H5', '登录落地页', '产品 logo（0807-4 替换知识核球，周边彩带环动画已按反馈移除）', '产品 logo 固定色', '❌ 不需变', 'BRAND_LOGO(base64 png)，styles.css .core-logo', '产品 logo 不随机构换肤'],
+    ['机构前台 H5', '登录落地页（0807 删除）', '「问书」网页字体渐变标题——已删除，由 logo 文字标题图替代（见文末 0807 新增行）', '主→辅渐变文字', '❌ 已删除', '原 --grad（login-wm2），元素已移除', '0807：网页字体渐变标题随真实 LOGO 接入移除，不再存在换肤点'],
     ['机构前台 H5', '手机验证码登录', '获取验证码 / 登录按钮', '主色', '✅ 需变', '--indigo', '--org-primary'],
     ['机构前台 H5', 'AI 会话', '发送按钮', '主色填充', '✅ 需变', '--indigo', '--org-primary'],
     ['机构前台 H5', 'AI 会话', '能力开关选中态(深度思考/智能搜索)', '主色软底 + 主色字', '✅ 需变', 'indigo 软底', '--org-primary / -soft'],
@@ -63,7 +63,7 @@ ROWS = [
     ['机构前台 H5', 'AI 会话', '答案反馈标签选中态', '主色淡底 + 主色字', '✅ 需变', '.fbk-tag.on', '--org-primary/-soft；mobile-app.css:672-675'],
     # —— 机构后台 PC · 需随品牌色变 ——
     ['机构后台 PC', '登录页', '登录按钮', '主色', '✅ 需变', '--indigo', '--org-primary'],
-    ['机构后台 PC', '登录页', '左侧品牌区 blob / 知识核', '主→辅渐变', '✅ 需变', '硬编码', '--org-grad'],
+    ['两后台 PC', '登录页（0807 明确两后台共用）', '品牌区横版 logo（图标＋文字，0807-4 替换知识核球并移除「AI 问书」文字标题与彩带环）', '产品 logo 固定色（blob 背景保留可随）', '⚠️ 建议固定', 'BRAND_LOGO_FULL + login-blob；proto-admin.css .login-logo-full', '产品 logo 不随机构换肤，背景 blob 可随机构色；机构后台与平台超管登录页同资产同样式'],
     ['机构后台 PC', '全局·侧栏', '菜单激活态(左竖条+底色+文字)', '主色', '✅ 需变', '--side-active / --indigo', '--org-primary'],
     ['机构后台 PC', '全局', '主操作按钮(新建/保存/导出)', '主色填充', '✅ 需变', '硬编码渐变 #7179F8→#3C49D6', '--org-primary；.btn-primary 从不引用 --indigo，hover 另有硬编码 #413bab；styles.css:179-180'],
     ['机构后台 PC', '全局', 'Tab 选中下划线', '主色', '✅ 需变', '--indigo', '--org-primary'],
@@ -133,6 +133,25 @@ ROWS = [
     ['机构前台 H5', '登录 / 绑定 / 换绑 验证码（0724 新增）', '语音验证码入口「接听语音电话获取」文字链', '主色文字链', '✅ 需变', 'var(--indigo)', '--org-primary；mobile-app.css:1414'],
     ['机构前台 H5', '登录 / 绑定 / 换绑 验证码（0724 新增）', '语音拨打中状态行（淡底 + 号段强调 + 重拨按钮）', '主色淡底 + 主色深字 + 主色按钮', '✅ 需变', 'var(--indigo-soft) / var(--indigo-ink) / var(--indigo)', '--org-primary 三阶（color-mix 生成 soft / base / ink）；mobile-app.css:1415-1423'],
     ['平台超管 PC', '机构详情 · 用量看板（0724 新增）', '商业化 / LLM 消耗卡图标色条（tone-amber / tone-jade）', '分类语义色渐变', '❌ 不需变', '硬编码 #ff8a6b→#ff6f55 / #2fd3a0→#15b080', '平台超管端整端固定平台色、不参与机构换肤；admin-app.css:2543/2547'],
+    # —— 0807 批次新增（会员四态 + TTS 参考音文本 + 父子机构 + 协议文档） ——
+    ['两后台 PC', 'C 端用户 / 全域用户 / 答案反馈（0807 新增）', '会员状态四态标（有效会员 / 宽限期（待续费）/ 会员已过期 / 未开通会员）', '生命周期语义四色（玉绿 / 琥珀 / 赤陶 / 灰描边）', '❌ 不需变', '.tag-jade / .tag-amber / .tag-terra / .tag-line 全复用', '状态健康度语义色固定、零新增 CSS；映射单一来源 packages/mock/src/data/memberState.ts:19-24；styles.css:196-199'],
+    ['机构前台 H5', '我的 / 会话抽屉（0807 新增）', '会员标四态变体「会员 · 待续费」', '价值橙（同原会员标）', '⚠️ 建议固定', 'var(--amber-soft) + var(--amber-ink)（.tag-s.tag-amber）', '沿用会员价值色跨机构统一建议（同上「会员标识」条）；My.tsx / Chat.tsx 渲染'],
+    ['两后台 PC', 'Agent 详情（0807 新增）', 'TTS 参考音文本输入框（聚焦态）', '主色描边', '❌ 不需变', 'var(--indigo)', '后台表单聚焦态统一平台色；proto-admin.css:289'],
+    ['两后台 PC', 'Agent 详情（0807 新增）', 'TTS 参考音文本实时字数（右下角，满 100 字转警示）', '中性灰 → 危险赤陶', '❌ 不需变', 'var(--ink-3) → var(--terra)（.full）', '上限警示语义色固定；proto-admin.css:290-291'],
+    ['机构后台 PC', '顶栏（0807 新增）', '机构类型演示切换（父机构 / 子机构 / 独立机构，选中态）', '主色实底 + 白字；容器虚线边暖底', '❌ 不需变', 'var(--indigo) 选中 / var(--surface-warm) + 虚线 var(--line-2)', '〔演示〕控件非上线功能，虚线边刻意与正式控件区分；admin-app.css:2612-2616'],
+    ['机构后台 PC', '六业务页筛选区（0807 新增）', '「机构」单选下拉的「父机构」标', '靛蓝浅底标', '❌ 不需变', '.tag-s.tag-indigo（Dropdown 内建 PARENT_SUFFIX 渲染）', '与平台后台机构下拉父机构标同源同色；Dropdown.tsx:33-43'],
+    ['机构后台 PC', '主控台 / 数据看板（0807 新增，0807-2 视觉重做）', '「机构」多选下拉——自绘勾选框（选中态）+ 父机构标 + 回填省略', '主色实底勾选框 + 靛蓝标', '❌ 不需变', 'var(--indigo)（.ms-box.on）+ .tag-s.tag-indigo', '与单选 Dropdown 同视觉体系；admin-app.css .ms-box/.ms-display/.ms-divider 段'],
+    ['机构后台 PC', '主控台（0807-2 新增）', '订阅卡右上角「本机构订阅」注明胶囊', '中性灰暖底描边', '❌ 不需变', 'var(--surface-warm)+var(--line)+var(--ink-3)（.sub-scope-note）', '合同信息与数据筛选解耦的辅助说明；admin-app.css .sub-scope-note'],
+    ['平台超管 PC', '主控台（0807-2 新增）', '实时总览第二行内容供给三卡（KPI 副行分布明细）', '中性灰副行 + 三色图标章', '❌ 不需变', 'var(--ink-3)（.kpi-sub）+ indigo/jade/amber-soft 图标底', '平台端固定平台色；admin-app.css .kpi-sub'],
+    # —— 0807-4：产品 logo 替换（真实品牌资产接入）——
+    ['机构前台 H5', '微信授权弹窗（0807-4）', 'app 头像（蓝底 app 图标版，按反馈定稿）', '产品 logo 固定色', '❌ 不需变', 'BRAND_LOGO_APP + .wxauth-logo-app', '仿微信真实授权样式；mobile-app.css .wxauth-logo-app'],
+    ['两后台 PC', '侧栏品牌位（0807-4，0807 明确两后台共用）', '横版 logo（图标＋文字，替换原光球与「AI 问书」文字；折叠态切纯图标）', '产品 logo 固定色', '❌ 不需变', 'BRAND_LOGO_FULL / BRAND_LOGO（.side-logo-full / .side-logo-icon）', '两后台共用 AdminShell；产品 logo 不随机构换肤'],
+    ['机构后台 PC', 'KP / Agent 卡片（0807 新增）', '数据归属机构行 +「仅可查看」描边标（父机构视角）', '中性灰 + 灰描边', '❌ 不需变', 'var(--ink-3) + var(--line)（.kp-org-row / .kp-org-ro）', '辅助信息中性色、不与状态标抢视觉；admin-app.css:2620-2621'],
+    ['机构后台 PC', 'KP / Agent 详情（0807 新增）', '子机构数据只读横幅', '锁定提示灰', '❌ 不需变', '.kp-readonly-banner 复用（0716 实时分享只读横幅）', '同一只读语义复用同一样式，零新增；KpDetailView readonlyBanner / AgentDetailView readonlyBanner'],
+    ['平台超管 PC', '机构详情 · 机构资料（0807 新增，0807-2 更名去 PPT）', '批量上传弹窗（拖拽框 / 进度条 / 文件列表）', '复用 KP 知识库上传弹窗全套', '❌ 不需变', '.up-drop / .up-item-bar 等复用（UploadModal 共享组件）', '组件抽取自 KP 知识库、样式零新增；admin-app.css:1868-2045'],
+    # —— 0807 增补（平台主控台机构多选 + LOGO 文字标题图）——
+    ['平台超管 PC', '主控台（0807 修订）', '「机构」筛选单选升级多选——自绘勾选框（选中态）＋父机构标＋回填省略；原父机构汇总说明行（靛蓝底引用块）已删除', '主色实底勾选框 + 靛蓝标', '❌ 不需变', 'var(--indigo)（.ms-box.on）+ .tag-s.tag-indigo（复用机构后台 MultiSelect 共享组件）', '平台端固定平台色；与机构后台主控台多选同组件同视觉'],
+    ['机构前台 H5', '登录落地页（0807 新增）', 'logo 文字标题图（纯图标下方，替换原网页字体渐变标题）', '产品 logo 固定色', '❌ 不需变', 'BRAND_LOGO_TEXT，styles.css .landing-logo-text', '产品 logo 不随机构换肤'],
 ]
 
 wb = openpyxl.Workbook()
@@ -157,12 +176,15 @@ for i, r in enumerate(ROWS, start=2):
     for c, v in enumerate(r, start=2):
         ws.cell(row=i, column=c, value=v)
     fill = change_fill if r[4].startswith('✅') else keep_fill
+    is_0807 = '0807' in r[1]  # 0807 增补/修订行整行标红，与功能清单变更行红字一致
     for c in range(1, len(H) + 1):
         cell = ws.cell(row=i, column=c)
         cell.border = border
         cell.alignment = center if c in (1, 6) else wrap
         if c == 6:
             cell.fill = fill
+        if is_0807 and c >= 2:
+            cell.font = Font(color='DC2626')
 
 widths = [6, 13, 22, 30, 20, 14, 22, 30]
 for col, w in zip('ABCDEFGH', widths):

@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, DataGrid, RangePicker, Modal, ConfirmDialog, TextInput, exportWorkbook, type Col } from '@aba/ui-admin';
-import { AORDERS, byPayDesc, MY_ORG, type AOrder } from '../data/orders';
+import { AORDERS, byPayDesc, MY_ORG, CHILD_ORG_ORDERS, type AOrder } from '../data/orders';
+import { ORG_FILTER_ALL, orgScopeOptions, orgScopeValue, visibleOrgs } from '@aba/mock';
+import { useOrgScope } from '../stores/orgScope';
 import { useRefundStore, operatorLabel } from '../refundStore';
 import { buildOrdersSpec } from '../exports/orders';
 
@@ -41,6 +43,10 @@ export function Orders() {
   const [orderRange, setOrderRange] = useState<TimeRange>(RANGE_UNLIMITED);
   const [payRange, setPayRange] = useState<TimeRange>(RANGE_UNLIMITED);
   const [redeemRange, setRedeemRange] = useState<TimeRange>(RANGE_UNLIMITED);
+  // 0806：父机构视角
+  const orgType = useOrgScope((s) => s.orgType);
+  const isParent = orgType === 'parent';
+  const [orgSel, setOrgSel] = useState(ORG_FILTER_ALL);
   const refunds = useRefundStore((s) => s.refunds);
   const startRefund = useRefundStore((s) => s.startRefund);
   const [refundOrder, setRefundOrder] = useState<AOrder | null>(null);
@@ -52,9 +58,13 @@ export function Orders() {
   const refundable = (r: AOrder) => r.status === '已支付' && r.amount > 0 && !['退款中', '全额退款'].includes(refunds[r.id]?.status ?? '');
   const remaining = refundOrder ? refundOrder.amount - (refunds[refundOrder.id]?.refundedAmount ?? 0) : 0;
 
-  const rows = AORDERS.filter(
+  // 0806：父机构视角——「仅显本机构订单」放宽为本机构＋全部子机构（子机构订单为本地演示扩展）
+  const scope = visibleOrgs(orgType);
+  const pool = isParent ? [...AORDERS, ...CHILD_ORG_ORDERS] : AORDERS;
+  const rows = pool.filter(
     (r) =>
-      r.org === MY_ORG &&
+      scope.includes(r.org) &&
+      (!isParent || orgSel === ORG_FILTER_ALL || r.org === orgSel) &&
       (!q || r.id.includes(q) || r.user.includes(q)) &&
       (type === '全部' || r.type === type) &&
       (status === '全部' || r.status === status) &&
@@ -86,6 +96,8 @@ export function Orders() {
 
   const columns: Col<AOrder>[] = [
     { header: '订单号', className: 'mono', cell: (r) => r.id },
+    // 0806：父机构视角显示数据归属机构
+    ...(isParent ? [{ header: '归属机构', cell: (r: AOrder) => r.org, sortValue: (r: AOrder) => r.org } as Col<AOrder>] : []),
     { header: '类型', cell: (r) => <span className={'tag-s ' + r.tag}>{r.type}</span>, sortValue: (r) => r.type },
     { header: '关联知识产品', cell: (r) => (r.kp ? r.kp : <span className="muted">—</span>) },
     { header: '金额', className: 'mono', cell: (r) => '¥' + r.amount, sortValue: (r) => r.amount },
@@ -122,11 +134,16 @@ export function Orders() {
       cell: (r) => (
         <div className="op-cell">
           <span className="op" onClick={() => nav('/orders/' + r.id)}>详情</span>
-          {refundable(r) && (
+          {/* 0806：子机构订单退款置灰——机构角色「可操作」仅针对本机构数据 */}
+          {refundable(r) && (r.org === MY_ORG ? (
             <span className="op op-danger" onClick={() => openRefund(r)}>
               退款
             </span>
-          )}
+          ) : (
+            <span className="op off" onClick={() => toast('仅可操作本机构数据 · 子机构订单请在其后台处理')}>
+              退款
+            </span>
+          ))}
         </div>
       ),
     },
@@ -141,6 +158,8 @@ export function Orders() {
       </div>
       <div className="orders-filter">
         <Search placeholder="搜索订单号 / 用户" minWidth={220} value={q} onChange={setQ} />
+        {/* 0806：父机构视角——机构单选筛选 */}
+        {isParent && <Dropdown label="机构" options={orgScopeOptions()} onSelect={(v) => setOrgSel(v === ORG_FILTER_ALL ? ORG_FILTER_ALL : orgScopeValue(v))} style={{ width: 200 }} />}
         <Dropdown label="类型" options={TYPES} onSelect={setType} />
         {/* 0722：订单四态筛选（待支付 / 已支付 / 已核销 / 已失效），退款为独立维度 */}
         <Dropdown label="订单状态" options={['全部', '待支付', '已支付', '已核销', '已失效']} onSelect={setStatus} />

@@ -132,20 +132,34 @@ async function main() {
   // 机构主控台实时指标全量（含退款率）
   const orgDash = ORG_SPECS.find((s) => /主控台/.test(s.page));
   if (orgDash) {
-    const rt = orgDash.build().sheets.find((s) => s.kind === 'realtime');
+    // 0806-3：Sheet 对齐页面栏目——当前订阅 / 实时总览 / 经营分析；按名取实时总览（首个 realtime 已是「当前订阅」）
+    const orgSheets = orgDash.build().sheets;
+    for (const need of ['当前订阅', '实时总览', '经营分析']) {
+      check(`机构主控台:含 Sheet「${need}」`, orgSheets.some((s) => s.name === need), `实际 ${orgSheets.map((s) => s.name).join('、')}`);
+    }
+    const rt = orgSheets.find((s) => s.name === '实时总览');
     const cells = (rt?.rows ?? []).flat().map(String).join('|') + (rt?.headers ?? []).join('|');
     for (const kpi of ['累计 GMV', '退款率', '净 GMV', '当前会员', '累计注册']) {
       check(`机构主控台:实时含「${kpi}」`, cells.replaceAll(' ', '').includes(kpi.replaceAll(' ', '')));
     }
+    const subSheet = orgSheets.find((s) => s.name === '当前订阅');
+    check('机构主控台/当前订阅:含配额行', !!subSheet && subSheet.rows.length > 0);
   }
 
   // —— DataBoard 7 Sheet ——
   const board = ORG_SPECS.find((s) => /数据看板/.test(s.page));
   check('机构后台:注册了数据看板导出', !!board);
   if (board) {
-    const names = board.build().sheets.map((s) => s.name);
-    for (const need of ['区间指标', '留存率', '提问趋势', '分布明细', '关键词云', '转化漏斗', '热门KP榜单']) {
+    // 0806-3：Sheet 结构对齐页面栏目——活跃概览 / 用户留存 / 区间分析（四主题 Tab 合一，首列标 Tab 名）
+    const spec = board.build();
+    const names = spec.sheets.map((s) => s.name);
+    for (const need of ['活跃概览', '用户留存', '区间分析']) {
       check(`数据看板:含 Sheet「${need}」`, names.some((n) => n.includes(need)), `实际 ${names.join('、')}`);
+    }
+    const rangeSheet = spec.sheets.find((s) => s.name === '区间分析');
+    check('数据看板/区间分析:首列为主题 Tab', !!rangeSheet && rangeSheet.headers[0] === '主题 Tab');
+    for (const tab of ['用户分析', '提问分析', '营收分析', '热门 KP']) {
+      check(`数据看板/区间分析:覆盖 Tab「${tab}」`, !!rangeSheet && rangeSheet.rows.some((r) => r[0] === tab));
     }
   }
 

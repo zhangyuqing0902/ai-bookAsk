@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon, toast } from '@aba/ui';
+import { Icon, toast, BRAND_LOGO, BRAND_LOGO_TEXT } from '@aba/ui';
 import { useDemoStore } from '@aba/mock';
 
 // 1 登录落地页：知识核动效 + 名称 + slogan + 机构来源 + 协议勾选
@@ -11,6 +11,8 @@ export function Landing() {
   const wechatEnv = useDemoStore((s) => s.wechatEnv);
   const setWechatEnv = useDemoStore((s) => s.setWechatEnv);
   const orgTokenExceeded = useDemoStore((s) => s.orgTokenExceeded);
+  const memberState = useDemoStore((s) => s.user.membership.state);
+  const setMemberState = useDemoStore((s) => s.setMemberState);
   const setOrgTokenExceeded = useDemoStore((s) => s.setOrgTokenExceeded);
 
   const guard = (fn: () => void) => () => {
@@ -25,16 +27,11 @@ export function Landing() {
   return (
     <div className="lg lg-landing">
       <div className="brand-orb">
-        <div className="ring r1" />
-        <div className="ring r2" />
-        <div className="orbit">
-          <span className="dot" />
-        </div>
-        <div className="orb float core" />
+        {/* 0806-4：产品 logo（周边彩带环动画已按反馈移除） */}
+        <img className="core-logo float" src={BRAND_LOGO} alt="AI 问书" />
       </div>
-      <div className="login-wm2" style={{ marginTop: 30 }}>
-        AI <span className="grad">问书</span>
-      </div>
+      {/* 0806-5：标题改用 logo 内文字字形（图标上 / 文字下，垂直排列） */}
+      <img className="landing-logo-text" src={BRAND_LOGO_TEXT} alt="AI 问书 · AI Book Ask" />
       <div className="sgn2" style={{ marginTop: 12 }}>
         答案有出处<span className="sgn-dot" />知识更可信
       </div>
@@ -78,6 +75,12 @@ export function Landing() {
           <div className="env-seg">
             <b className={!orgTokenExceeded ? 'on' : ''} onClick={() => setOrgTokenExceeded(false)}>Token 正常</b>
             <b className={orgTokenExceeded ? 'on' : ''} onClick={() => setOrgTokenExceeded(true)}>机构 Token 超限</b>
+          </div>
+          {/* 0806-2：演示会员四态——「我的」用户卡 / 会员中心右值 / 会话抽屉用户卡随此切换 */}
+          <div className="env-seg">
+            {([['none', '未开通'], ['active', '有效会员'], ['grace', '宽限期'], ['expired', '已过期']] as const).map(([st, lab]) => (
+              <b key={st} className={memberState === st ? 'on' : ''} onClick={() => setMemberState(st)}>{lab}</b>
+            ))}
           </div>
         </div>
       </div>

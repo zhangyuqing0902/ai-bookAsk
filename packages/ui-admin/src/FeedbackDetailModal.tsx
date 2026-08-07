@@ -10,7 +10,9 @@ export interface FeedbackDetailData {
   tag: string;
   cls: string;
   user: string; // 已是昵称（调用方传入 nickOf 后的值）
-  member: boolean;
+  /** 0806：会员状态标（调用方传渲染值——label+tag class；未开通不传＝不挂标，保持视觉克制） */
+  memberLabel?: string;
+  memberTag?: string;
   time: string;
   org?: string; // 平台视角多显示归属机构
 }
@@ -38,7 +40,7 @@ export function FeedbackDetailModal({ detail, onClose }: { detail: FeedbackDetai
                   </>
                 )}
                 {detail.user}
-                {detail.member && <span className="tag-s tag-amber" style={{ marginLeft: 6 }}>会员</span>}
+                {detail.memberLabel && <span className={'tag-s ' + (detail.memberTag ?? 'tag-line')} style={{ marginLeft: 6 }}>{detail.memberLabel}</span>}
                 <span className="mono" style={{ marginLeft: 10, color: 'var(--ink-3)' }}>{detail.time}</span>
               </span>
             </div>

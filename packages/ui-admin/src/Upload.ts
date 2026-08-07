@@ -93,6 +93,8 @@ export const ACCEPT = {
   cert: '.pem',
   // 0722：微信网页授权域名校验文件（MP_verify_xxx.txt）
   txt: '.txt',
+  // 0806：机构资料（ICP 授权函 / 微信登记表 / 产品截图 / 合作协议等；0806-2 去除 ppt/pptx）
+  agreement: '.png,.jpg,.jpeg,.gif,.doc,.docx,.pdf',
   cover: 'image/png,image/jpeg,image/jpg',
 };
 

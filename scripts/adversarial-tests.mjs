@@ -37,7 +37,8 @@ test('今日上一周期取昨日相同已过时长', () => {
   assert.equal(p.end.toISOString(), '2026-07-10T01:30:00.000Z');
 });
 test('计数上期为零不伪造涨幅', () => assert.equal(r.compareMetric(10, 0, 'count').label, '上期为0，暂无可比增幅'));
-test('留存率变化使用百分点', () => assert.equal(r.compareMetric(31.2, 29.7, 'rate').label, '+1.5 个百分点'));
+// 0806-2：率类环比展示统一「%」符号（语义仍为绝对差），原「个百分点」文案废弃
+test('留存率变化为绝对差并以 % 符号展示', () => assert.equal(r.compareMetric(31.2, 29.7, 'rate').label, '+1.5%'));
 test('精确机构默认不汇总下级', () => assert.deepEqual([...r.resolveOrgScope('p', false, [{ id: 'p' }, { id: 'c', parentId: 'p' }])], ['p']));
 test('含下级显式扩展机构范围', () => assert.deepEqual([...r.resolveOrgScope('p', true, [{ id: 'p' }, { id: 'c', parentId: 'p' }])], ['p', 'c']));
 test('停用父机构不级联子机构', () => assert.deepEqual({ ...r.suspensionImpact(true) }, {
@@ -109,7 +110,10 @@ test('PRD 与功能清单均包含各自批次变更（版本号从生成器实�
   for (const token of ['0717周五', prdVer, '逻辑删除', 'KP 状态 × 前台影响矩阵', '跳转规则①', '知识 KP 二维码', '已下架，若有问题请联系客服', '已失效，若有问题请联系客服', '重新上架自动恢复', '草稿 / 已发布 / 已下架', 'not-allowed', '二次确认', '吸顶']) assert.ok(prd.includes(token), `PRD 缺少 ${token}`);
   const featVer = (feature.match(/版本：(v[\d.]+) ·/) || [])[1];
   assert.ok(featVer, '功能清单未能解析出版本号');
-  for (const token of ['0718周六', featVer, '逻辑删除', 'KP 状态 × 前台影响矩阵', '跳转规则①', '知识 KP 二维码', '已下架，若有问题请联系客服', '已失效，若有问题请联系客服', '重新上架自动恢复', '按注册时间', '注册后第', '纸书扫码解锁', '无权限操作']) assert.ok(feature.includes(token), `功能清单缺少 ${token}`);
+  // 0806：本批变更标记锚从生成器实读 CHANGE_DATE（原写死「0718周六」——0722 批冻结旧标记后即失效的旧账，一并修正）
+  const featChangeDate = (feature.match(/CHANGE_DATE = "([^"]+)"/) || [])[1];
+  assert.ok(featChangeDate, '功能清单未能解析出 CHANGE_DATE');
+  for (const token of [featChangeDate, featVer, '逻辑删除', 'KP 状态 × 前台影响矩阵', '跳转规则①', '知识 KP 二维码', '已下架，若有问题请联系客服', '已失效，若有问题请联系客服', '重新上架自动恢复', '按注册时间', '注册后第', '纸书扫码解锁', '无权限操作']) assert.ok(feature.includes(token), `功能清单缺少 ${token}`);
   // 「物理删除」只允许以「不出现『物理删除』」的否定句式存在（口径声明），不得作为规则本身
   const featPhysical = feature.split('物理删除').length - 1;
   assert.ok(featPhysical <= 1 && feature.includes('不出现「物理删除'), '功能清单仍把「物理删除」当规则描述');
@@ -142,7 +146,7 @@ test('metricHelp 快照不追加环比、今日/区间追加对应周期与单�
   assert.match(r.metricHelp('定义。', 'range', 'duration'), /绝对时长差/);
 });
 test('compareMetric 率/时长上期为0仍给绝对差、计数类给零基线提示', () => {
-  assert.equal(r.compareMetric(3.2, 0, 'rate').label, '+3.2 个百分点');
+  assert.equal(r.compareMetric(3.2, 0, 'rate').label, '+3.2%'); // 0806-2：率类差值统一 % 符号
   assert.equal(r.compareMetric(1.5, 0, 'duration').label, '+1.5 秒');
   assert.equal(r.compareMetric(10, 0, 'count').comparable, false);
 });
@@ -298,9 +302,10 @@ test('0715/#5 Dropdown 父机构 tag flex 居中', () => {
   assert.ok(/inline-flex[\s\S]{0,80}alignItems:\s*'center'/.test(m), 'renderOpt 未用 inline-flex 居中容器');
   assert.ok(!/父机构[\s\S]{0,60}verticalAlign/.test(m), 'tag 仍用 verticalAlign（应改 flex 居中）');
 });
-test('0715/#6 主控台机构筛选默认文案改回「全部机构」', () => {
+test('0715/#6 + 0806-3 主控台机构筛选：多选默认全选回填「全部机构」', () => {
+  // 0806-3（并行会话改造）：平台主控台机构筛选由单选 Dropdown 改多选，全选回填「全部机构」与原口径一致
   const src = read('../apps/platform-admin/src/views/Dashboard.tsx');
-  assert.ok(src.includes('label="全部机构"'), '主控台下拉 label 应为「全部机构」');
+  assert.ok(src.includes("allSelected ? '全部机构'"), '多选全选态应回填「全部机构」');
 });
 test('0715/#7 移动端订单双维度筛选（类型 + 状态）', () => {
   const src = read('../apps/mobile-h5/src/screens/Orders.tsx');
@@ -370,7 +375,8 @@ test('0717/#2 状态命名统一「草稿/已发布/已下架」+ 按钮修订',
 });
 test('0717/#2.3 机构列表与详情同源 + 实时分享双视角演示数据', () => {
   const data = read('../apps/org-admin/src/data/kps.ts');
-  for (const t of ["'draft'", "'published'", "'unlisted'", "'sharer'", "'consumer'"]) assert.ok(data.includes(t), `机构 KP 数据缺 ${t}`);
+  // 0806 修正旧账：0722 批清理 shareRole（sharer/consumer）死字段后，双视角改由 shareMode 表达（realtime=接收方只读 / snapshot=快照可编辑），断言同步
+  for (const t of ["'draft'", "'published'", "'unlisted'", "'realtime'", "'snapshot'"]) assert.ok(data.includes(t), `机构 KP 数据缺 ${t}`);
   const list = read('../apps/org-admin/src/views/KpList.tsx');
   assert.ok(list.includes('ORG_KPS'), '列表未接同源数据');
   const detail = read('../apps/org-admin/src/views/KpDetail.tsx');
@@ -429,12 +435,14 @@ test('0718/#4 来源分布环比文案统一（去 pp / 去「扫码占比」前
   assert.ok(!board.includes('}pp'), '来源分布环比仍带 pp 字样');
   assert.ok(!board.includes('扫码占比 较上一周期'), '来源分布环比仍带「扫码占比」前缀');
 });
-test('0717 二批/#6#8 看板重排：留存一行三卡 + 活跃入 Tab 随区间 + 撤吸顶 + 去脚注', () => {
+test('0717 二批/#6#8 + 0724 定稿：留存一行三卡 + 活跃概览页级常驻固定快照 + 撤吸顶 + 去脚注', () => {
   const board = read('../apps/org-admin/src/views/DataBoard.tsx');
-  // 留存回归一行三卡（卡片式）,活跃概览入用户分析 Tab 并随区间联动环比
-  for (const t of ['RetentionCard', 'ret-card', '日活（DAU）', 'deltaPct={d.dauDelta}', 'newTrend', 'saomaCnt']) assert.ok(board.includes(t), `DataBoard 缺 ${t}`);
+  // 0724 定稿（0806 修正断言旧账）：活跃概览为页级常驻固定滚动窗口快照（ACTIVE_SNAPSHOT→scaleActiveSnapshot 消费），
+  // 不再随区间联动（原 0717「入 Tab 随区间」口径已被 0724 推翻，此断言同步反转）
+  for (const t of ['RetentionCard', 'ret-card', '日活（DAU）', 'deltaPct={active.dauDelta}', 'scaleActiveSnapshot', 'newTrend', 'saomaCnt']) assert.ok(board.includes(t), `DataBoard 缺 ${t}`);
+  assert.ok(!board.includes('deltaPct={d.dauDelta}'), '活跃三卡不得再随区间数据 d 联动（0724 定稿固定快照）');
   // 吸顶交互与「数据更新至」脚注已撤销
-  for (const t of ['board-sticky', 'IntersectionObserver', 'seg-panel', 'board-toprow', '数据更新至', 'ACTIVE_SNAPSHOT']) assert.ok(!board.includes(t), `DataBoard 残留 ${t}`);
+  for (const t of ['board-sticky', 'IntersectionObserver', 'seg-panel', 'board-toprow', '数据更新至']) assert.ok(!board.includes(t), `DataBoard 残留 ${t}`);
   const css = read('../packages/tokens/src/design/admin-app.css');
   for (const t of ['.ret-card', '.ret-head', '.ret-rate']) assert.ok(css.includes(t), `CSS 缺 ${t}`);
   assert.ok(!css.includes('.board-sticky') && !css.includes('.board-toprow'), 'CSS 残留吸顶/合并面板样式');
@@ -442,9 +450,10 @@ test('0717 二批/#6#8 看板重排：留存一行三卡 + 活跃入 Tab 随区�
   const i = css.indexOf('.board-rangebar {');
   const block = css.slice(i, css.indexOf('}', i) + 1);
   assert.ok(!/background|border/.test(block), '区间分析条仍有底框样式');
-  // 数据层：活跃三指标随区间 + 新增用户迷你趋势 + 来源人数/占比环比
+  // 数据层（0724 定稿）：活跃三指标在 ACTIVE_SNAPSHOT 固定快照（RangeData 已删 dau/wau/mau）+ 新增用户迷你趋势 + 来源人数/占比环比
   const data = read('../apps/org-admin/src/data/dataBoard.ts');
-  for (const t of ['dau: string', 'dauDelta', 'newTrend', 'saomaCnt', 'directCnt', 'saomaDelta']) assert.ok(data.includes(t), `dataBoard 缺 ${t}`);
+  for (const t of ['ACTIVE_SNAPSHOT', "dau: '", 'dauDelta', 'newTrend', 'saomaCnt', 'directCnt', 'saomaDelta']) assert.ok(data.includes(t), `dataBoard 缺 ${t}`);
+  assert.ok(!/interface RangeData[\s\S]*?dau: string[\s\S]*?^}/m.test(data), 'RangeData 不得再含 dau（0724 移入固定快照）');
 });
 test('0718/#7 来源标签三态统一（自建/分享导入·实时/快照，两后台灰色）', () => {
   const view = read('../packages/ui-admin/src/KpDetailView.tsx');
@@ -457,7 +466,8 @@ test('0718/#7 来源标签三态统一（自建/分享导入·实时/快照，�
   assert.ok(gdetail.includes('consumerReadonly={false}') && gdetail.includes("importMode={kp.shareMode ?? 'own'}"), '平台详情未传来源/监管开关');
   const list = read('../apps/org-admin/src/views/KpList.tsx');
   assert.ok(!list.includes('接收方</span>'), '列表残留「实时同步·接收方」标');
-  assert.ok(list.includes('实时分享 · 分享方'), '分享方标不应删除');
+  // 0722 定稿（0806 修正断言旧账）：分享方不再显示分享标识，分享标识仅保留在接收方（分享导入·实时/快照）
+  assert.ok(!list.includes('实时分享 · 分享方'), '0722 起分享方标签应已删除');
   assert.ok(list.includes('分享导入·实时') && list.includes('分享导入·快照'), '机构列表来源筛选未三分');
   const glist = read('../apps/platform-admin/src/views/GlobalKps.tsx');
   assert.ok(glist.includes("KP_SOURCE_LABEL[k.shareMode ?? 'own']"), '平台列表缺来源标签');
@@ -541,9 +551,313 @@ test('0717 mock：已下架+已解锁演示 KP 存在（kp_icu_manual）', () =>
   assert.ok(kps.includes('kp_icu_manual') && /kp_icu_manual[\s\S]{0,300}unlisted/.test(kps), '缺 kp_icu_manual(unlisted) 演示数据');
 });
 
+// ============================================================
+// 0806 批：会员四态 / TTS 参考音文本 / 微信四参数 / 协议文档 Tab / 父子机构数据范围
+// ============================================================
+
+// vm 加载 0806 自包含模块（memberState / orgScope 均无外部依赖）
+const loadTs = (rel, extraCtx = {}) => {
+  const src2 = fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
+  const js2 = ts.transpileModule(src2, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const mod2 = { exports: {} };
+  vm.runInNewContext(`(function(exports,module){${js2}\n})(module.exports,module)`, { module: mod2, console, Set, Error, Math, parseFloat, String, ...extraCtx });
+  return mod2.exports;
+};
+const ms = loadTs('../packages/mock/src/data/memberState.ts');
+const osc = loadTs('../packages/mock/src/data/orgScope.ts');
+const oag = loadTs('../packages/mock/src/data/orgAgreements.ts');
+
+test('0806/#1 会员四态互斥完整：四态 + 五档筛选 + label 唯一', () => {
+  assert.equal(ms.MEMBER_STATES.length, 4);
+  assert.deepEqual([...ms.MEMBER_STATES], ['active', 'grace', 'expired', 'none']);
+  const labels = ms.MEMBER_STATES.map((s) => ms.MEMBER_STATE_LABEL[s]);
+  assert.equal(new Set(labels).size, 4, '四态 label 必须互斥唯一');
+  assert.deepEqual([...ms.MEMBER_FILTER_OPTIONS], ['全部', '有效会员', '宽限期（待续费）', '会员已过期', '未开通会员']);
+});
+test('0806/#1 筛选 label→state 往返一致；「全部」不参与过滤', () => {
+  for (const s of ms.MEMBER_STATES) assert.equal(ms.memberStateByLabel(ms.MEMBER_STATE_LABEL[s]), s);
+  assert.equal(ms.memberStateByLabel('全部'), null);
+  assert.equal(ms.memberStateByLabel('会员'), null, '旧二分文案不得再命中任何状态');
+  assert.equal(ms.memberStateByLabel('非会员'), null);
+});
+test('0806/#1 四态 badge 全复用既有语义色（零新增 CSS 类）', () => {
+  assert.deepEqual({ ...ms.MEMBER_STATE_TAG }, { active: 'tag-jade', grace: 'tag-amber', expired: 'tag-terra', none: 'tag-line' });
+  const css = read('../packages/tokens/src/design/styles.css');
+  for (const c of ['.tag-jade', '.tag-amber', '.tag-terra', '.tag-line']) assert.ok(css.includes(c), `styles.css 缺 ${c}`);
+});
+test('0806/#1 到期时间文案按态区分（active 有效期至 / grace 宽限期内 / none 空）', () => {
+  assert.equal(ms.memberExpireText('active', '2026-09-12'), '有效期至 2026-09-12');
+  assert.equal(ms.memberExpireText('grace', '2026-08-01'), '已于 2026-08-01 到期 · 宽限期内');
+  assert.equal(ms.memberExpireText('expired', '2026-06-10'), '已于 2026-06-10 到期');
+  assert.equal(ms.memberExpireText('none'), '');
+  assert.equal(ms.memberExpireText('active'), '', '无到期时间不硬造文案');
+});
+test('0806/#1 两后台用户 mock 四态全覆盖且同昵称同状态（跨端一致）', () => {
+  const g = read('../apps/platform-admin/src/data/globalUsers.ts');
+  const c = read('../apps/org-admin/src/data/cusers.ts');
+  for (const src2 of [g, c]) for (const s of ['active', 'grace', 'expired', 'none']) assert.ok(src2.includes(`memberState: '${s}'`), `mock 缺 ${s} 态样本`);
+  // 同昵称同状态抽查（A=active / C=grace / 5678=expired / B=none）
+  for (const [nick, st] of [['微信昵称A', 'active'], ['微信昵称C', 'grace'], ['用户5678', 'expired'], ['微信昵称B', 'none']]) {
+    for (const src2 of [g, c]) {
+      const m = src2.match(new RegExp("nick: '" + nick + "'[^\\n]*memberState: '(\\w+)'"));
+      assert.ok(m && m[1] === st, `${nick} 应为 ${st}`);
+    }
+  }
+  assert.ok(!/member: (true|false)/.test(g) && !/member: (true|false)/.test(c), '不得残留 member 布尔字段');
+});
+test('0806/#1 两后台列表接五档筛选与四态标签；详情接行级数据', () => {
+  const gu = read('../apps/platform-admin/src/views/GlobalUsers.tsx');
+  const cu = read('../apps/org-admin/src/views/CUsers.tsx');
+  for (const src2 of [gu, cu]) {
+    assert.ok(src2.includes('MEMBER_FILTER_OPTIONS'), '筛选未接五档常量');
+    assert.ok(src2.includes('MEMBER_STATE_TAG[') && src2.includes('MEMBER_STATE_LABEL['), '列渲染未接四态映射');
+    assert.ok(!src2.includes("'会员' : '非会员'"), '残留二分渲染');
+  }
+  const cd = read('../apps/org-admin/src/views/CUserDetail.tsx');
+  assert.ok(!cd.includes('微信昵称A <span'), 'CUserDetail 仍硬编码演示用户');
+  assert.ok(cd.includes('loc.state') && cd.includes('memberExpireText'), 'CUserDetail 未接行级数据 / 到期文案');
+  const gd = read('../apps/platform-admin/src/views/GlobalUserDetail.tsx');
+  assert.ok(gd.includes('memberExpireText'), 'GlobalUserDetail 未显示到期文案');
+});
+test('0806/#1 反馈人会员标四态（未开通不挂标）+ 弹窗解耦 mock', () => {
+  const fb = read('../apps/org-admin/src/views/Feedback.tsx');
+  const gfb = read('../apps/platform-admin/src/views/GlobalFeedback.tsx');
+  for (const src2 of [fb, gfb]) {
+    assert.ok(src2.includes('FB_MEMBER'), '反馈人标未接四态');
+    assert.ok(!src2.includes('r.member &&'), '残留布尔判断');
+  }
+  const modal = read('../packages/ui-admin/src/FeedbackDetailModal.tsx');
+  assert.ok(modal.includes('memberLabel') && !modal.includes('member: boolean'), '弹窗未改传渲染值（ui-admin 不依赖 @aba/mock）');
+});
+test('0806/#1 移动端会员标（0806-3 定稿：C 端二分展示，运营四态语义只在后台）', () => {
+  const my = read('../apps/mobile-h5/src/screens/My.tsx');
+  // active/grace 权益在＝「会员」；expired/none＝无标；会员中心右值＝已开通/未开通
+  assert.ok(my.includes("mState === 'active' || mState === 'grace'"), 'My 会员标应为 active/grace 二分');
+  assert.ok(!my.includes('会员 · 待续费'), 'C 端不得再显「待续费」运营语义');
+  assert.ok(!my.includes('宽限期（待续费）'), '会员中心右值不得再显宽限期');
+  assert.ok(my.includes("grace: '已开通'") && my.includes("expired: '未开通'"), '会员中心右值应为 已开通/未开通 二分');
+  const chat = read('../apps/mobile-h5/src/screens/Chat.tsx');
+  assert.ok(!chat.includes('微信昵称A'), 'Chat 抽屉用户卡仍硬编码');
+  assert.ok(!chat.includes('会员 · 待续费'), 'Chat 抽屉不得显「待续费」');
+});
+test('0806/#1 四份导出 spec 用四态 label', () => {
+  for (const f of ['../apps/org-admin/src/exports/cusers.ts', '../apps/platform-admin/src/exports/globalUsers.ts', '../apps/org-admin/src/exports/feedback.ts', '../apps/platform-admin/src/exports/globalFeedback.ts']) {
+    const src2 = read(f);
+    assert.ok(src2.includes('MEMBER_STATE_LABEL'), `${f} 未接四态 label`);
+    assert.ok(!src2.includes("? '会员' : '非会员'"), `${f} 残留二分导出`);
+  }
+});
+
+test('0806/#2 TTS 参考音文本：必填 + 100 字上限 + 不限字符种类 + 实时字数', () => {
+  const src2 = read('../packages/ui-admin/src/AgentDetailView.tsx');
+  assert.ok(src2.includes('TTS 参考音文本<span className="req">*</span>'), '缺必填星标');
+  assert.ok(src2.includes('TTS_TEXT_MAX = 100'), '上限常量非 100');
+  assert.ok(src2.includes('maxLength={TTS_TEXT_MAX}'), '输入框未拦截超长');
+  assert.ok(src2.includes("toast('请输入 TTS 参考音文本')"), '缺必填校验');
+  // 0806-3：hint 文案定稿「参考音频内朗读的文本内容・100 字以内，用于 TTS 引擎将参考音与文本对齐」（置输入框上方）
+  assert.ok(src2.includes('参考音频内朗读的文本内容・100 字以内'), 'hint 文案不符');
+  assert.ok(src2.includes('ae-ttstext-count'), '缺实时字数计数');
+  // 校验顺序：参考音在前、文本在后
+  assert.ok(src2.indexOf("toast('请上传 TTS 参考音')") < src2.indexOf("toast('请输入 TTS 参考音文本')"), '校验顺序应为 参考音 → 文本');
+});
+
+test('0806/#3 微信支付四参数齐备且按接入用途排序', () => {
+  const src2 = read('../apps/platform-admin/src/views/OrgDetail.tsx');
+  for (const f of ['API v2 密钥', '支付公钥 ID', '支付公钥文件', '委托代扣包月模板 ID', 'pub_key.pem', 'PUB_KEY_ID_']) assert.ok(src2.includes(f), `缺 ${f}`);
+  // 0806-2：v2 前置（密钥按版本号升序）
+  const order = ['API v2 密钥', 'API v3 密钥', '商户证书', '商户 API 私钥', '支付公钥 ID', '支付公钥文件', '委托代扣包月模板 ID'];
+  let last = -1;
+  for (const f of order) {
+    const i = src2.indexOf(`<div className="lab">${f}`);
+    assert.ok(i > last, `字段顺序错误：${f}`);
+    last = i;
+  }
+  assert.ok(src2.includes('两者并存不互斥'), 'wx-lim 缺 v2/v3 并存说明');
+  assert.ok(src2.includes('公钥模式验签'), 'wx-lim 缺公钥模式说明');
+});
+
+test('0806/#4 机构资料 Tab 置末位 + 复用共享上传弹窗（0806-2 由协议文档更名）', () => {
+  const src2 = read('../apps/platform-admin/src/views/OrgDetail.tsx');
+  assert.ok(src2.includes("'品牌外观', '机构资料']"), 'TABS 第 6 项应为机构资料（末位）');
+  assert.ok(src2.includes('AgreementsTab') && src2.includes('tab === 5'), '协议文档 Tab 未渲染');
+  assert.ok(src2.includes('UploadModal') && src2.includes('ACCEPT.agreement'), '未复用共享上传弹窗 / accept 未限协议格式');
+  assert.ok(src2.includes('AGREEMENT_SPEC'), '未接规格表');
+  assert.ok(/下载/.test(src2) && src2.includes('op-danger" onClick={() => setDelTarget'), '缺下载 / 删除操作');
+  assert.ok(src2.includes('删除后不可恢复'), '删除缺二次确认文案');
+});
+test('0806/#4 机构资料格式与大小规格（图 20 / 文 50；0806-2 去除 PPT）', () => {
+  assert.deepEqual([...oag.AGREEMENT_TYPES], ['全部', '图片', '文档']);
+  const spec = Object.fromEntries(oag.AGREEMENT_SPEC.map((r2) => [r2.k, r2.z]));
+  assert.equal(spec['图片'], '≤ 20MB');
+  assert.equal(spec['文档'], '≤ 50MB');
+  assert.ok(!('演示文稿' in spec), '0806-2 起不支持 PPT，规格表不得再有演示文稿行');
+  for (const f of oag.ORG_AGREEMENTS) assert.ok(['图片', '文档'].includes(f.type), `预置数据类型越界：${f.name}`);
+  assert.ok(oag.ORG_AGREEMENTS.some((f) => f.name.includes('ICP 授权函')) && oag.ORG_AGREEMENTS.some((f) => f.name.includes('微信网站应用登记表')), '缺 ICP 授权函 / 微信登记表演示数据');
+  const up = read('../packages/ui-admin/src/Upload.ts');
+  assert.equal(up.match(/agreement: '([^']+)'/)?.[1], '.png,.jpg,.jpeg,.gif,.doc,.docx,.pdf', 'ACCEPT.agreement 扩展名清单不符（0806-2 无 ppt/pptx）');
+});
+test('0806/#4 上传弹窗抽为共享组件（KP 知识库改 import，零复制）', () => {
+  const kp = read('../packages/ui-admin/src/KpDetailView.tsx');
+  assert.ok(!kp.includes('function UploadModal'), 'KpDetailView 仍持有私有 UploadModal');
+  assert.ok(kp.includes("from './UploadModal'"), 'KpDetailView 未改 import 共享组件');
+  const um = read('../packages/ui-admin/src/UploadModal.tsx');
+  assert.ok(um.includes('specRows') && um.includes('doneText') && um.includes('accept ='), '共享组件未参数化');
+  // 0806-2：机构资料去 PPT 后 inferKind 回退（ppt/pptx 归文档，与 KP 知识库原口径一致），ppt 专属图标撤销
+  assert.ok(!um.includes('演示文稿'), 'inferKind 不得再有演示文稿类型');
+  const icon = read('../packages/ui/src/FileTypeIcon.tsx');
+  assert.ok(!icon.includes("'ppt'"), 'FileTypeIcon 的 ppt kind 应已撤销');
+});
+
+test('0806/#5 机构类型三态与选项 / 后缀往返', () => {
+  assert.deepEqual({ ...osc.ORG_TYPE_LABEL }, { parent: '父机构', child: '子机构', ordinary: '独立机构' });
+  assert.deepEqual([...osc.orgScopeOptions()], ['全部机构', 'XX 出版社（父机构）', 'XX 少儿分社', 'XX 教辅分社']);
+  assert.equal(osc.orgScopeValue('XX 出版社（父机构）'), 'XX 出版社');
+  assert.equal(osc.orgScopeValue('XX 少儿分社'), 'XX 少儿分社');
+});
+test('0806/#5 可见范围：父=本+子；子/独立=仅本机构（保持现状）', () => {
+  assert.deepEqual([...osc.visibleOrgs('parent')], ['XX 出版社', 'XX 少儿分社', 'XX 教辅分社']);
+  assert.deepEqual([...osc.visibleOrgs('child')], ['XX 出版社']);
+  assert.deepEqual([...osc.visibleOrgs('ordinary')], ['XX 出版社']);
+});
+test('0806/#5 机构系数：全选=1（现状数值不跳变）、空=0、部分单调', () => {
+  assert.equal(osc.orgWeightOf(['XX 出版社', 'XX 少儿分社', 'XX 教辅分社']), 1);
+  assert.equal(osc.orgWeightOf([]), 0);
+  const w1 = osc.orgWeightOf(['XX 出版社']);
+  const w2 = osc.orgWeightOf(['XX 出版社', 'XX 少儿分社']);
+  assert.ok(w1 > 0 && w1 < w2 && w2 < 1, '部分选择系数应单调递增且 <1');
+  assert.equal(osc.orgWeightOf(['不存在的机构']), 0, '未知机构不计权重');
+});
+test('0806/#5 看板缩放：绝对量 ×w、率值 / 时长不缩放、w=1 恒等', () => {
+  const db = loadTs('../apps/org-admin/src/data/dataBoard.ts', { parseFloat });
+  assert.equal(db.scaleCnNum('1,240', 0.5), '620');
+  assert.equal(db.scaleCnNum('1.2万', 0.5), '6,000');
+  assert.equal(db.scaleCnNum('¥25.6万', 0.5), '¥12.8万');
+  assert.equal(db.scaleCnNum('6.6%', 0.5), '6.6%', '率值不得缩放');
+  assert.equal(db.scaleCnNum('1.8s', 0.5), '1.8s', '时长不得缩放');
+  assert.equal(db.scaleCnNum('1,240', 1), '1,240');
+  const d0 = db.RANGE['7 日'];
+  assert.equal(db.scaleRangeData(d0, 1), d0, 'w=1 应原样返回（引用相等）');
+  const half = db.scaleRangeData(d0, 0.5);
+  assert.equal(half.payRate, d0.payRate, '付费转化率不得缩放');
+  assert.equal(half.perUser, d0.perUser, '人均提问不得缩放');
+  assert.notEqual(half.gmv, d0.gmv, 'GMV 应缩放');
+});
+test('0806/#5 六页数据具备归属机构且含子机构演示行', () => {
+  const checks = [
+    ['../apps/org-admin/src/data/kps.ts', 'XX 少儿分社'],
+    ['../apps/org-admin/src/data/cusers.ts', 'XX 教辅分社'],
+    ['../apps/org-admin/src/data/codes.ts', 'XX 少儿分社'],
+    ['../apps/org-admin/src/data/feedback.ts', 'XX 教辅分社'],
+    ['../apps/org-admin/src/data/orders.ts', 'CHILD_ORG_ORDERS'],
+    ['../apps/org-admin/src/views/AgentList.tsx', 'XX 少儿分社'],
+  ];
+  for (const [f, needle] of checks) assert.ok(read(f).includes(needle), `${f} 缺 ${needle}`);
+  // 子机构订单不得进 @aba/mock（避免污染平台全域订单）
+  assert.ok(!read('../packages/mock/src/data/adminOrders.ts').includes('XX 少儿分社'), '子机构订单不得写入共享 adminOrders');
+});
+test('0806/#5 六视图接机构筛选；子机构数据只读置灰', () => {
+  for (const f of ['KpList', 'AgentList', 'CUsers', 'Orders', 'Codes', 'Feedback']) {
+    const src2 = read(`../apps/org-admin/src/views/${f}.tsx`);
+    assert.ok(src2.includes('useOrgScope') && src2.includes('visibleOrgs'), `${f} 未接机构范围`);
+    assert.ok(src2.includes('orgScopeOptions'), `${f} 缺机构筛选下拉`);
+  }
+  const orders = read('../apps/org-admin/src/views/Orders.tsx');
+  assert.ok(orders.includes('仅可操作本机构数据'), 'Orders 子机构退款未置灰提示');
+  const kpd = read('../packages/ui-admin/src/KpDetailView.tsx');
+  assert.ok(kpd.includes('readonlyBanner'), 'KP 详情缺子机构只读扩展');
+  const agd = read('../packages/ui-admin/src/AgentDetailView.tsx');
+  assert.ok(agd.includes('readonlyBanner') && agd.includes('denyRo'), 'Agent 详情缺只读态');
+});
+test('0806/#5 主控台 / 数据看板接机构多选联动', () => {
+  for (const f of ['Dashboard', 'DataBoard']) {
+    const src2 = read(`../apps/org-admin/src/views/${f}.tsx`);
+    assert.ok(src2.includes('MultiSelect') && src2.includes('orgWeightOf'), `${f} 未接多选 / 系数`);
+    assert.ok(src2.includes('isParent'), `${f} 未按机构类型分支`);
+  }
+  const app = read('../apps/org-admin/src/App.tsx');
+  assert.ok(app.includes('org-type-seg') && app.includes('ORG_TYPE_LABEL'), '顶栏缺机构类型演示切换');
+});
+test('0806-2 内容供给三卡：快照字段齐备 + 三卡满行 + 导出同步', () => {
+  const snap = read('../packages/mock/src/data/dashboard.ts');
+  for (const k of ['kpTotal', 'kpPublished', 'kbFiles', 'kbDoc', 'kbImage', 'kbAudio', 'kbVideo', 'kbStorageTb', 'kbMediaPct']) assert.ok(snap.includes(k + ':'), `platformSnapshot 缺 ${k}`);
+  const dash = read('../apps/platform-admin/src/views/Dashboard.tsx');
+  // 副行呈现形式由并行会话持续美化（kpi-sub→kpi-dist 网格），断言只锁功能：三卡存在 + 3 等分 + 分布含占比
+  for (const s2 of ['知识产品 KP 总数', '知识库文件总数', '知识库存储总量', "repeat(3,1fr)"]) assert.ok(dash.includes(s2), `平台主控台缺 ${s2}`);
+  assert.ok(dash.includes('kpi-sub') || dash.includes('kpi-dist'), '三卡缺分布副行/明细区');
+  assert.ok(!dash.includes('个百分点'), '平台主控台残留「个百分点」（0806-2 率类差值统一 %）');
+  const exp = read('../apps/platform-admin/src/exports/dashboard.ts');
+  for (const s2 of ['知识产品 KP 总数', '知识库文件总数', '知识库存储总量']) assert.ok(exp.includes(s2), `平台主控台导出缺 ${s2}`);
+});
+test('0806-2 机构多选定稿：自绘勾选 + 父机构标 + 回填省略 + 至少一家', () => {
+  const ms = read('../packages/ui-admin/src/MultiSelect.tsx');
+  for (const s2 of ['ms-box', 'PARENT_SUFFIX', 'ms-display', '至少选择一家机构', 'allLabel']) assert.ok(ms.includes(s2), `MultiSelect 缺 ${s2}`);
+  assert.ok(!ms.includes('☑'), '不得再用字符勾选符');
+  const css = read('../packages/tokens/src/design/admin-app.css');
+  for (const s2 of ['.ms-box', '.ms-display', '.ms-divider', 'text-overflow:ellipsis']) assert.ok(css.includes(s2), `CSS 缺 ${s2}`);
+  // 调用方传「（父机构）」后缀选项；数据看板多选在页头（导出左侧）
+  for (const f of ['Dashboard', 'DataBoard']) {
+    const v = read(`../apps/org-admin/src/views/${f}.tsx`);
+    assert.ok(v.includes('（父机构）`'), `${f} 选项未带父机构后缀`);
+  }
+  const db = read('../apps/org-admin/src/views/DataBoard.tsx');
+  assert.ok(db.indexOf('MultiSelect label="机构"') < db.indexOf('正在导出'), '数据看板多选应位于页头导出左侧');
+});
+test('0806-3 导出按页面栏目拆 Sheet；父机构仅注明范围（分机构明细已撤销）；订阅卡固定本机构', () => {
+  for (const f of ['../apps/org-admin/src/exports/dashboard.ts', '../apps/org-admin/src/exports/dataBoard.ts']) {
+    const s2 = read(f);
+    assert.ok(s2.includes('机构范围'), `${f} 缺机构范围注明`);
+    assert.ok(s2.includes('（父机构）'), `${f} scope 未标父机构`);
+    // 0806-3：数据随机构多选联动（多选＝合并），不再单独产出分机构明细 Sheet
+    assert.ok(!/name: '分机构明细'/.test(s2), `${f} 不得再产出分机构明细 Sheet`);
+  }
+  const dashSpec = read('../apps/org-admin/src/exports/dashboard.ts');
+  for (const n2 of ["name: '当前订阅'", "name: '实时总览'", "name: '经营分析'"]) assert.ok(dashSpec.includes(n2), `主控台导出缺 ${n2}`);
+  const boardSpec = read('../apps/org-admin/src/exports/dataBoard.ts');
+  for (const n2 of ["name: '活跃概览'", "name: '用户留存'", "name: '区间分析'"]) assert.ok(boardSpec.includes(n2), `数据看板导出缺 ${n2}`);
+  assert.ok(boardSpec.includes("'主题 Tab'"), '区间分析 Sheet 首列应为主题 Tab');
+  const dash = read('../apps/org-admin/src/views/Dashboard.tsx');
+  assert.ok(dash.includes('sub-scope-note') && dash.includes('不随机构筛选变化'), '订阅卡缺本机构注明');
+});
+test('0806-3 微信敏感输入框显隐眼睛（默认脱敏）+ 落地页可滚动 + 内容供给副行占比', () => {
+  const od = read('../apps/platform-admin/src/views/OrgDetail.tsx');
+  assert.ok(od.includes('SecretInput') && (od.match(/<SecretInput /g) ?? []).length >= 4, '微信配置敏感项未接 SecretInput（应 ≥4 处）');
+  assert.ok(od.includes("useState(false)") && od.includes('secret-eye'), 'SecretInput 缺默认脱敏 / 眼睛');
+  const sprite = read('../packages/ui/src/IconSprite.tsx');
+  assert.ok(sprite.includes('i-eye') && sprite.includes('i-eyeOff'), '缺眼睛 icon');
+  const css = read('../packages/tokens/src/design/proto.css');
+  assert.ok(css.includes('justify-content:safe center') && /lg-landing\{[^}]*overflow-y:auto/.test(css), '落地页未修复溢出滚动');
+  assert.ok(css.includes('.lg-landing>*{flex:none;}'), '落地页子元素未禁 flex 压缩（brand-orb 会被压没）');
+  const pd = read('../apps/platform-admin/src/views/Dashboard.tsx');
+  assert.ok(pd.includes('marginTop: 16'), '内容供给行距未对齐');
+  assert.ok((pd.match(/Math\.round\(platformSnapshot\.k/g) ?? []).length >= 4 || (pd.match(/platformSnapshot\.k\w+ \/ platformSnapshot\.k/g) ?? []).length >= 4, '副行缺占比计算');
+  assert.ok(/\* \(100 - platformSnapshot\.kbMediaPct\) \/ 100\)\.toFixed\(1\)/.test(pd), '存储副行缺文档容量＋占比');
+});
+test('0806-2 C 端会员四态演示开关（登录落地页）', () => {
+  const st = read('../packages/mock/src/store.ts');
+  assert.ok(st.includes('setMemberState'), 'demo store 缺 setMemberState');
+  const ld = read('../apps/mobile-h5/src/screens/Landing.tsx');
+  for (const s2 of ["'none', '未开通'", "'grace', '宽限期'", 'setMemberState']) assert.ok(ld.includes(s2), `Landing 缺 ${s2}`);
+});
+test('0806-2 微信支付：API v2 前置于 API v3、命名统一带空格', () => {
+  const src2 = read('../apps/platform-admin/src/views/OrgDetail.tsx');
+  assert.ok(src2.indexOf('API v2 密钥') < src2.indexOf('API v3 密钥'), 'API v2 应在 API v3 之前');
+  assert.ok(!src2.includes('APIv3'), '残留无空格「APIv3」');
+});
+
+test('0806 文档同步：清单 v2.9 + PRD v1.12 五项全落', () => {
+  const feature = read('../docs/feature-list-build/gen.py');
+  assert.ok(feature.includes('v2.9'), '清单未升 v2.9');
+  for (const t2 of ['宽限期（待续费）', 'TTS 参考音文本', '委托代扣包月模板 ID', '机构资料', '机构类型切换']) assert.ok(feature.includes(t2), `清单缺 ${t2}`);
+  const prd = read('../docs/prd-build/build-prd.js');
+  assert.ok(prd.includes('v1.12'), 'PRD 未升 v1.12');
+  for (const t2 of ['宽限期（待续费）', 'TTS 参考音文本', '支付公钥 ID', '机构资料', '父子机构数据范围']) assert.ok(prd.includes(t2), `PRD 缺 ${t2}`);
+  assert.ok(prd.includes('固定滚动窗口快照'), 'PRD 未补 0724 DAU 口径');
+});
+
+
 let passed = 0;
 for (const [name, fn] of tests) {
   try { fn(); passed += 1; console.log(`✓ ${name}`); }
   catch (error) { console.error(`✗ ${name}`); throw error; }
 }
-console.log(`\n${passed}/${tests.length} 条对抗性测试通过（V1.4 基线 + 0714~0718 批）`);
+console.log(`\n${passed}/${tests.length} 条对抗性测试通过（V1.4 基线 + 0714~0806 批）`);

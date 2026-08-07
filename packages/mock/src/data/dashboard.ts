@@ -86,6 +86,18 @@ export const platformSnapshot = {
   totalUsers: 124000,
   totalGmv: 862000,
   totalQuestions: 3200000,
+  // 0806-2：内容供给指标（实时总览第二行）——平台运营能力=机构规模×内容供给×用户消费×商业化
+  kpTotal: 468,
+  kpPublished: 402,
+  kpDraft: 41,
+  kpUnlisted: 25,
+  kbFiles: 126000, // 知识库文件总数
+  kbDoc: 82000,
+  kbImage: 26000,
+  kbAudio: 12000,
+  kbVideo: 6000,
+  kbStorageTb: 4.8, // 知识库存储总量（TB）
+  kbMediaPct: 62, // 媒体资源（图/音/视）存储占比 %
 };
 
 export interface RangeMetrics {

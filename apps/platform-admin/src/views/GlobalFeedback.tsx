@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, RangePicker, DataGrid, FeedbackDetailModal, exportWorkbook, type Col } from '@aba/ui-admin';
-import { orgOptionLabel, orgOptionValue } from '@aba/mock';
+import { orgOptionLabel, orgOptionValue, type MemberState } from '@aba/mock';
 import { FB_TAGS, GLOBAL_FEEDBACK, nickOf, type FB } from '../data/feedback';
 import { buildGlobalFeedbackSpec } from '../exports/globalFeedback';
+
+// 0806：反馈人会员标四态（短文案；未开通不挂标，与机构后台答案反馈同规则）
+const FB_MEMBER: Partial<Record<MemberState, { label: string; tag: string }>> = {
+  active: { label: '有效会员', tag: 'tag-jade' },
+  grace: { label: '宽限期', tag: 'tag-amber' },
+  expired: { label: '已过期', tag: 'tag-terra' },
+};
 
 // 平台超管 · 全域答案反馈（0614b 新增）：跨机构汇总全平台答案反馈，复用机构后台答案反馈工作台；
 // 列表 + 详情多一列「机构」，顶部支持机构筛选。
@@ -38,7 +45,7 @@ export function GlobalFeedback() {
       cell: (r) => (
         <span>
           {nickOf(r.user)}
-          {r.member && <span className="tag-s tag-amber" style={{ marginLeft: 6 }}>会员</span>}
+          {FB_MEMBER[r.memberState] && <span className={'tag-s ' + FB_MEMBER[r.memberState]!.tag} style={{ marginLeft: 6 }}>{FB_MEMBER[r.memberState]!.label}</span>}
         </span>
       ),
     },
@@ -70,7 +77,7 @@ export function GlobalFeedback() {
 
       {/* 详情：与机构后台共用同一组件，平台视角多传 org（机构） */}
       <FeedbackDetailModal
-        detail={detail && { ...detail, user: nickOf(detail.user) }}
+        detail={detail && { ...detail, user: nickOf(detail.user) , memberLabel: FB_MEMBER[detail.memberState]?.label, memberTag: FB_MEMBER[detail.memberState]?.tag }}
         onClose={() => setDetail(null)}
       />
     </>

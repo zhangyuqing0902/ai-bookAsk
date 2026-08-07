@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Icon } from '@aba/ui';
+import { Icon, BRAND_LOGO_APP } from '@aba/ui';
 import { useDemoStore } from '@aba/mock';
 
 // 微信内置浏览器授权场景：模拟微信 App 官方授权弹窗（底部 sheet 盖在模糊背景上）
@@ -31,7 +31,8 @@ export function WechatAuth() {
       {/* 微信官方授权弹窗 */}
       <div className="wxauth-sheet">
         <div className="wxauth-head">
-          <div className="wxauth-logo orb float" />
+          {/* 0806-4：产品 logo（蓝底 app 图标版——按反馈弹窗此处用蓝底效果更好） */}
+          <img className="wxauth-logo-app float" src={BRAND_LOGO_APP} alt="AI 问书" />
           <div className="wxauth-app">AI 问书 申请使用</div>
         </div>
         <div className="wxauth-perm">

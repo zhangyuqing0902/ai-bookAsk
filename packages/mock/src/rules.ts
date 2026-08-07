@@ -77,7 +77,8 @@ export function previousPeriod(start: Date, end: Date, kind: Exclude<PeriodKind,
 export function compareMetric(current: number, previous: number, unit: MetricUnit) {
   if (unit === 'rate') {
     const value = current - previous;
-    return { comparable: true, value, label: `${value >= 0 ? '+' : ''}${value.toFixed(1)} 个百分点` };
+    // 0806-2：率类环比展示统一为「%」符号（与计数类视觉一致；语义仍为绝对差·百分点，各指标 tooltip 已注明差值口径）
+    return { comparable: true, value, label: `${value >= 0 ? '+' : ''}${value.toFixed(1)}%` };
   }
   if (unit === 'duration') {
     const value = current - previous;

@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Outlet, useNavigate } from 'react-router-dom';
 import { IconSprite, ToastHost, PrototypeList } from '@aba/ui';
 import { AdminShell, AdminLogin, UserMenu, AccountCenter, type NavGroup, type AccountInfo } from '@aba/ui-admin';
-import { useAdminAvatar } from '@aba/mock';
+import { useAdminAvatar, CURRENT_ORG, PARENT_ORG_NAME, ORG_TYPE_LABEL, type OrgType } from '@aba/mock';
+import { useOrgScope } from './stores/orgScope';
 import { Dashboard } from './views/Dashboard';
 import { KpList } from './views/KpList';
 import { KpDetail } from './views/KpDetail';
@@ -76,12 +77,12 @@ function Prototypes() {
   return <PrototypeList current="org" onSameApp={(p) => nav(p)} />;
 }
 
-// 0615：当前登录机构账户（演示数据；含上级机构以演示「集团 → 分社」场景）
+// 0615：当前登录机构账户（演示数据）
+// 0806：机构名收敛为「XX 出版社」（与顶栏 / MY_ORG 统一）；上级机构随「机构类型」演示开关——仅子机构视角展示
 const ORG_ACCOUNT: AccountInfo = {
   account: 'zhangsan@xx-press',
   name: '张三',
-  orgName: 'XX 出版社 · 临床医学分社',
-  parentOrgName: 'XX 出版社集团',
+  orgName: CURRENT_ORG,
   roleName: '机构管理员',
   phone: '13800131234',
   status: 'active',
@@ -91,17 +92,33 @@ const ORG_ACCOUNT: AccountInfo = {
 function ProfilePage() {
   const avatar = useAdminAvatar((s) => s.avatar);
   const setAvatar = useAdminAvatar((s) => s.setAvatar);
-  return <AccountCenter account={ORG_ACCOUNT} avatarImg={avatar} onAvatarChange={setAvatar} />;
+  const orgType = useOrgScope((s) => s.orgType);
+  const account: AccountInfo = { ...ORG_ACCOUNT, parentOrgName: orgType === 'child' ? PARENT_ORG_NAME : undefined };
+  return <AccountCenter account={account} avatarImg={avatar} onAvatarChange={setAvatar} />;
 }
 
 function Shell() {
   const avatar = useAdminAvatar((s) => s.avatar);
+  const orgType = useOrgScope((s) => s.orgType);
+  const setOrgType = useOrgScope((s) => s.setOrgType);
   return (
     <AdminShell
       brandSub="机构后台"
       nav={NAV}
       titleMap={TITLES}
-      topRight={<UserMenu org="XX 出版社" avatar="张" avatarImg={avatar} />}
+      topRight={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {/* 0806：〔演示〕机构类型三态切换——父机构视角出现机构筛选与归属展示，子/独立视角保持现状；
+              上线后由登录账号所属机构在机构主数据中的父子关系决定，非用户可切换项 */}
+          <div className="org-type-seg" title="仅用于演示 · 切换机构类型预览界面差异（非上线功能）">
+            <span className="ots-tag">演示 · 机构类型</span>
+            {(Object.keys(ORG_TYPE_LABEL) as OrgType[]).map((t) => (
+              <b key={t} className={orgType === t ? 'on' : ''} onClick={() => setOrgType(t)}>{ORG_TYPE_LABEL[t]}</b>
+            ))}
+          </div>
+          <UserMenu org={CURRENT_ORG} avatar="张" avatarImg={avatar} />
+        </div>
+      }
     >
       <Outlet />
     </AdminShell>

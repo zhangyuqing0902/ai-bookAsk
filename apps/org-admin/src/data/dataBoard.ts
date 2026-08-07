@@ -50,6 +50,50 @@ export interface RangeData {
 }
 
 
+// 0806：父机构视角多选机构——绝对量按所选机构集合系数缩放（w=1 时原样返回，保证子/独立视角零变化）。
+// 规则：计数/金额类字符串（'48' '1,240' '1.2万' '¥25.6万'）解析后 ×w 重新格式化；率值/人均/时长/占比不缩放。
+export function scaleCnNum(v: string, w: number): string {
+  if (w === 1) return v;
+  const m = v.match(/^(¥?)([\d,.]+)(万?)$/);
+  if (!m) return v;
+  const num = parseFloat(m[2].replace(/,/g, '')) * (m[3] ? 10000 : 1) * w;
+  const fmt = num >= 10000 ? String(Math.round(num / 1000) / 10) + '万' : Math.round(num).toLocaleString('en-US');
+  return m[1] + fmt;
+}
+
+export function scaleRangeData(d: RangeData, w: number): RangeData {
+  if (w === 1) return d;
+  const s = (v: string) => scaleCnNum(v, w);
+  return {
+    ...d,
+    newUsers: s(d.newUsers),
+    saomaCnt: s(d.saomaCnt),
+    directCnt: s(d.directCnt),
+    newTrend: { x: d.newTrend.x, v: d.newTrend.v.map((x) => Math.max(0, Math.round(x * w))) },
+    askTrend: { x: d.askTrend.x, v: d.askTrend.v.map((x) => Math.max(0, Math.round(x * w))) },
+    totalAsk: s(d.totalAsk),
+    gmv: s(d.gmv),
+    payUsers: s(d.payUsers),
+    reflow: s(d.reflow),
+    refundAmt: s(d.refundAmt),
+    refundOrders: s(d.refundOrders),
+    netGmv: s(d.netGmv),
+    kwMult: d.kwMult * w,
+    kpFactor: d.kpFactor * w,
+  };
+}
+
+/** 0806：活跃概览快照缩放（DAU/WAU/MAU 绝对量 ×w，环比率不变） */
+export function scaleActiveSnapshot(w: number): typeof ACTIVE_SNAPSHOT {
+  if (w === 1) return ACTIVE_SNAPSHOT;
+  return {
+    ...ACTIVE_SNAPSHOT,
+    dau: scaleCnNum(ACTIVE_SNAPSHOT.dau, w),
+    wau: scaleCnNum(ACTIVE_SNAPSHOT.wau, w),
+    mau: scaleCnNum(ACTIVE_SNAPSHOT.mau, w),
+  };
+}
+
 export const RANGE: Record<string, RangeData> = {
   '今日': {
     newUsers: '48', newUsersDelta: 4.0,

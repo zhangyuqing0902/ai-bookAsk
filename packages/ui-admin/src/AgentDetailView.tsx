@@ -18,29 +18,41 @@ export function AgentDetailView({
   backTo = '/agents',
   kpBase = '/kps',
   promptEditable = false,
+  readonlyBanner,
 }: {
   backTo?: string;
   kpBase?: string;
   promptEditable?: boolean;
+  /** 0806：外部只读原因（父机构查看子机构 Agent）——传入即整页只读：输入禁用、上传与保存置灰，顶部显示该文案 */
+  readonlyBanner?: string;
 }) {
   const nav = useNavigate();
   const { id } = useParams();
   const isNew = id === 'new';
+  const ro = !!readonlyBanner;
+  const denyRo = () => toast('仅可操作本机构数据 · 子机构 Agent 请在其后台编辑');
   const agentType: string = '普通';
   const originalName = isNew ? '' : '李医生';
   const [crop, setCrop] = useState<null | 'avatar'>(null);
   const [name, setName] = useState(originalName);
   const [ttsUploaded, setTtsUploaded] = useState(!isNew);
   const [ttsPlaying, setTtsPlaying] = useState(false);
+  // 0806：TTS 参考音文本（必填，≤100 字，不限字符种类）——参考音频内朗读的文本内容，供 TTS 引擎对齐
+  const TTS_TEXT_MAX = 100;
+  const [ttsText, setTtsText] = useState(isNew ? '' : '大家好，我是李医生。健康路上有疑问，随时问我，我会结合权威医学知识为你解答。');
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
 
   // 0716 #11：保存前校验——名称非空 + 机构内唯一；TTS 参考音必填（格式/时长在上传时已校验）
+  // 0806：TTS 参考音文本必填 + 100 字上限（输入框已按 maxLength 拦截，此处兜底）
   const save = () => {
+    if (ro) return denyRo();
     const nm = name.trim();
     if (!nm) return toast('请输入 Agent 名称');
     const otherNames = EXISTING_AGENT_NAMES.filter((n) => n !== originalName);
     if (otherNames.includes(nm)) return toast('该 Agent 名称在机构内已存在，请更换');
     if (!ttsUploaded) return toast('请上传 TTS 参考音');
+    if (!ttsText.trim()) return toast('请输入 TTS 参考音文本');
+    if (ttsText.length > TTS_TEXT_MAX) return toast(`TTS 参考音文本不能超过 ${TTS_TEXT_MAX} 字`);
     toast(isNew ? '已创建 Agent' : promptEditable ? '已保存（含回答 Prompt）' : '已保存');
     if (isNew) nav(backTo);
   };
@@ -55,16 +67,23 @@ export function AgentDetailView({
         <span className="kpd-name">{isNew ? '新建 Agent' : '编辑 Agent · 李医生'}</span>
         <span className={'tag-s ' + (agentType === '机构' ? 'tag-indigo' : 'tag-line')}>{agentType}</span>
         <span className="kpd-status">
-          <button className="btn btn-primary btn-sm" onClick={save}>{isNew ? '创建' : '保存'}</button>
+          <button className={'btn btn-primary btn-sm' + (ro ? ' off' : '')} onClick={save}>{isNew ? '创建' : '保存'}</button>
         </span>
       </div>
+      {/* 0806：子机构 Agent 只读横幅（复用 KP 只读横幅样式） */}
+      {ro && (
+        <div className="kp-readonly-banner" style={{ marginTop: 12 }}>
+          <Icon id="i-lock" w={14} h={14} />
+          <span>{readonlyBanner}</span>
+        </div>
+      )}
       <div className="agent-edit" style={{ marginTop: 18 }}>
         <div className="fm-card" style={{ margin: 0 }}>
           <div className="fm-row">
             <div className="lab">头像<span className="req">*</span></div>
             <div className="ctl ae-up">
               <div className="ae-avatar" />
-              <button className="btn btn-ghost btn-sm" onClick={() => pickFile(ACCEPT.image, () => setCrop('avatar'))}>
+              <button className={'btn btn-ghost btn-sm' + (ro ? ' off' : '')} onClick={ro ? denyRo : () => pickFile(ACCEPT.image, () => setCrop('avatar'))}>
                 <Icon id="i-up" w={14} h={14} />
                 上传 png/gif/jpg
               </button>
@@ -72,9 +91,10 @@ export function AgentDetailView({
           </div>
           <div className="fm-row">
             <div className="lab">名称<span className="req">*</span></div>
-            <div className="ctl">
-              <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="请输入 Agent 名称" style={{ maxWidth: 280 }} />
-              <div className="hint" style={{ marginTop: 6 }}>名称在机构内不可重复</div>
+            {/* 0806-2：hint 移到输入框同行右侧（原在下方） */}
+            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="请输入 Agent 名称" style={{ width: 280, flex: 'none' }} disabled={ro} />
+              <span className="hint" style={{ margin: 0 }}>名称在机构内不可重复</span>
             </div>
           </div>
           <div className="fm-row">
@@ -100,15 +120,35 @@ export function AgentDetailView({
                     ))}
                   </span>
                   <span className="tts-dur mono">0:08</span>
-                  <span className="tts-reup" onClick={(e) => { e.stopPropagation(); pickAudio((n) => toast('已替换为 ' + n), (r) => toast(r)); }}>重新上传</span>
+                  <span className="tts-reup" onClick={(e) => { e.stopPropagation(); if (ro) return denyRo(); pickAudio((n) => toast('已替换为 ' + n), (r) => toast(r)); }}>重新上传</span>
                 </div>
               ) : (
-                <button className="btn btn-ghost btn-sm" onClick={() => pickAudio(() => setTtsUploaded(true), (r) => toast(r))}>
+                <button className={'btn btn-ghost btn-sm' + (ro ? ' off' : '')} onClick={ro ? denyRo : () => pickAudio(() => setTtsUploaded(true), (r) => toast(r))}>
                   <Icon id="i-up" w={14} h={14} />
                   上传音频
                 </button>
               )}
               <div className="hint" style={{ marginTop: 6 }}>格式 MP3 / WAV · 时长 3~10 秒</div>
+            </div>
+          </div>
+          {/* 0806：TTS 参考音文本（必填）——参考音频内朗读的文本内容，两后台同一组件同步生效 */}
+          <div className="fm-row">
+            <div className="lab">TTS 参考音文本<span className="req">*</span></div>
+            {/* 0806-3：说明定稿放输入框上方 */}
+            <div className="ctl">
+              <div className="hint" style={{ marginTop: 0, marginBottom: 8 }}>参考音频内朗读的文本内容・100 字以内，用于 TTS 引擎将参考音与文本对齐</div>
+              <div className="ae-ttstext">
+                <textarea
+                  className="ae-ttstext-input"
+                  value={ttsText}
+                  maxLength={TTS_TEXT_MAX}
+                  rows={3}
+                  placeholder="请输入 TTS 参考音频内朗读的文本内容"
+                  disabled={ro}
+                  onChange={(e) => setTtsText(e.target.value.slice(0, TTS_TEXT_MAX))}
+                />
+                <span className={'ae-ttstext-count mono' + (ttsText.length >= TTS_TEXT_MAX ? ' full' : '')}>{ttsText.length} / {TTS_TEXT_MAX}</span>
+              </div>
             </div>
           </div>
           <div className="fm-row">

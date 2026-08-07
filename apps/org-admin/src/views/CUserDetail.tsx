@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Icon } from '@aba/ui';
 import { DataGrid, MediaView, type Col, type MediaItem } from '@aba/ui-admin';
+import { MEMBER_STATE_LABEL, MEMBER_STATE_TAG, memberExpireText } from '@aba/mock';
 import { AORDERS, byPayDesc, type AOrder } from '../data/orders';
+import { USERS, type U } from '../data/cusers';
 import { useRefundStore } from '../refundStore';
 
 const YX: MediaItem[] = [
@@ -17,9 +19,12 @@ const ORDER_CLS: Record<string, string> = { 待支付: 'wait', 已支付: 'ok', 
 const RF_CLS: Record<string, string> = { 未退款: 'none', 退款中: 'ing', 部分退款: 'wait', 全额退款: 'fail' };
 
 // 机构后台 · C 端用户详情
+// 0806：随列表所点行真实渲染（loc.state 携行数据，刷新走 :id 兜底），替换原整卡硬编码演示数据；会员标四态。
 export function CUserDetail() {
   const nav = useNavigate();
+  const loc = useLocation();
   const [preview, setPreview] = useState<MediaItem | null>(null);
+  const u: U = (loc.state as U) ?? USERS.find((x) => String(x.i) === window.location.pathname.split('/').pop()) ?? USERS[0];
   const refunds = useRefundStore((s) => s.refunds);
   const refundStatusOf = (r: AOrder) => refunds[r.id]?.status ?? '未退款';
   const rows = AORDERS.slice().sort(byPayDesc);
@@ -70,15 +75,19 @@ export function CUserDetail() {
         <div style={{ width: 56, height: 56, borderRadius: '50%', flex: 'none', background: 'radial-gradient(120% 120% at 30% 25%,#fff,rgba(255,255,255,0) 40%),linear-gradient(150deg,#7c8bf5,#4b57e8)' }} />
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 700 }}>
-            微信昵称A <span className="tag-s tag-amber">会员</span>
+            {u.nick} <span className={'tag-s ' + MEMBER_STATE_TAG[u.memberState]}>{MEMBER_STATE_LABEL[u.memberState]}</span>
+            {/* 0806：有效会员显示有效期、宽限期（待续费）显示「已到期 · 宽限期内」 */}
+            {memberExpireText(u.memberState, u.memberExpire) && (
+              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--ink-3)' }}>{memberExpireText(u.memberState, u.memberExpire)}</span>
+            )}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 6, fontFamily: 'var(--mono)' }}>手机号 138****8888 · 微信号 wx_abc</div>
-          <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 5 }}>地区 上海 · 浦东 ｜ 性别 女 ｜ 活跃度：近 30 天提问 42 次 · 最近活跃 2026-06-06</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 6, fontFamily: 'var(--mono)' }}>手机号 {u.phone} · 微信号 {u.wx}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 5 }}>地区 {u.region} ｜ 性别 {u.gender} ｜ 活跃度：近 30 天提问 42 次 · 最近活跃 {u.lastLogin.slice(0, 10)}</div>
         </div>
       </div>
 
       <div className="card card-pad" style={{ marginTop: 16 }}>
-        <div className="block-t">已购永享 (3) <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 12 }}>点击查看具体内容</span></div>
+        <div className="block-t">已购永享 ({u.yx}) <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 12 }}>点击查看具体内容</span></div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {YX.map((m) => (
             <div

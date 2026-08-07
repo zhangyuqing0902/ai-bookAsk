@@ -4,9 +4,10 @@ import { Icon } from '@aba/ui';
 import { DataGrid, MediaView, type Col, type MediaItem } from '@aba/ui-admin';
 import { AORDERS, byPayDesc, useRefundStore, type AOrder } from '@aba/mock';
 // 0714：GUser 类型改用与列表 / 导出 spec 同一份（../data/globalUsers），不再本地重复定义
+import { MEMBER_STATE_LABEL, MEMBER_STATE_TAG, memberExpireText } from '@aba/mock';
 import type { GUser } from '../data/globalUsers';
 
-const FALLBACK: GUser = { nick: '微信昵称A', wx: 'wx_abc', phone: '13800138888', org: 'XX 出版社', member: true, yx: 3, gmv: 129.6, lastLogin: '2026-06-06 21:30:11', regAt: '2026-01-12 10:03:22' };
+const FALLBACK: GUser = { nick: '微信昵称A', wx: 'wx_abc', phone: '13800138888', org: 'XX 出版集团', memberState: 'active', memberExpire: '2026-09-12', yx: 3, gmv: 129.6, lastLogin: '2026-06-06 21:30:11', regAt: '2026-01-12 10:03:22' };
 const YX: MediaItem[] = [
   { kind: 'image', name: '心电图示例' },
   { kind: 'audio', name: '专题讲座音频' },
@@ -63,7 +64,11 @@ export function GlobalUserDetail() {
         <div style={{ width: 56, height: 56, borderRadius: '50%', flex: 'none', background: 'radial-gradient(120% 120% at 30% 25%,#fff,rgba(255,255,255,0) 40%),linear-gradient(150deg,#7c8bf5,#4b57e8)' }} />
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 700 }}>
-            {u.nick} <span className={'tag-s ' + (u.member ? 'tag-amber' : 'tag-line')}>{u.member ? '会员' : '非会员'}</span>
+            {u.nick} <span className={'tag-s ' + MEMBER_STATE_TAG[u.memberState]}>{MEMBER_STATE_LABEL[u.memberState]}</span>
+            {/* 0806：有效会员显示有效期、宽限期显示「已到期·宽限期内」 */}
+            {memberExpireText(u.memberState, u.memberExpire) && (
+              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--ink-3)' }}>{memberExpireText(u.memberState, u.memberExpire)}</span>
+            )}
           </div>
           <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 6, fontFamily: 'var(--mono)' }}>
             机构 {u.org} · 手机号 {u.phone} · 微信号 {u.wx === '—' ? '—' : u.wx}

@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Icon } from '@aba/ui';
+import { Icon, BRAND_LOGO } from '@aba/ui';
 
 export interface NavItem {
   to: string;
@@ -41,11 +41,9 @@ export function AdminShell({
       <div className="admin">
         <aside className="side">
           <div className="side-brand">
-            <div className="orb" style={{ width: 30, height: 30 }} />
+            {/* 0807：品牌位 = 纯图标 logo +「平台后台/机构后台」纯文字（0806-4 横版图文 logo 已撤）；折叠态只留图标 */}
+            <img className="side-logo-icon" src={BRAND_LOGO} alt="AI 问书" />
             <div className="side-brandtext">
-              <div className="wm">
-                AI <span className="grad">问书</span>
-              </div>
               <div className="side-org">{brandSub}</div>
             </div>
           </div>

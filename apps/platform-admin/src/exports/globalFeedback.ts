@@ -1,5 +1,6 @@
 // 全域答案反馈导出 spec（0714）——纯函数，视图与模板生成共用（node 可运行，约束同 dashboard.ts）。
 import type { ExportSpec } from '@aba/ui-admin';
+import { MEMBER_STATE_LABEL } from '../../../../packages/mock/src/data/memberState.ts';
 import { GLOBAL_FEEDBACK, nickOf, type FB } from '../data/feedback.ts';
 
 export interface GlobalFeedbackExportArgs {
@@ -21,7 +22,7 @@ export function buildGlobalFeedbackSpec(args: GlobalFeedbackExportArgs = {}): Ex
         title: '平台全域答案反馈',
         subtitle: '仅含问答文本与必要元数据，不含媒体 / 溯源',
         headers: ['反馈 ID', '机构', '问题', 'AI 答案', '反馈标签', '反馈人', '会员状态', '提交时间'],
-        rows: rows.map((r) => [r.id, r.org, r.q, r.answer, r.tag, nickOf(r.user), r.member ? '会员' : '非会员', r.time]),
+        rows: rows.map((r) => [r.id, r.org, r.q, r.answer, r.tag, nickOf(r.user), MEMBER_STATE_LABEL[r.memberState], r.time]),
         widths: [16, 22, 38, 72, 18, 18, 14, 22],
       },
     ],

@@ -3,6 +3,8 @@ import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, Modal, TextInput, DateTimeRangeField, DataGrid, exportWorkbook, type Col } from '@aba/ui-admin';
 import { BATCHES, batchCodes, type Batch, type Code } from '../data/codes';
 import { buildCodesSpec } from '../exports/codes';
+import { ORG_FILTER_ALL, orgScopeOptions, orgScopeValue, visibleOrgs } from '@aba/mock';
+import { useOrgScope } from '../stores/orgScope';
 
 // 机构后台 · 兑换码（按批次管理；点击「详情」在当前页右侧抽屉展示该批次全部兑换码）
 export function Codes() {
@@ -15,9 +17,15 @@ export function Codes() {
   const [cPhone, setCPhone] = useState('');
   const openDetail = (b: Batch) => { setCStatus('全部'); setCUser(''); setCPhone(''); setView(b); };
 
-  const rows = BATCHES.filter((b) => !q || b.name.includes(q));
+  // 0806：父机构视角——机构单选筛选 + 归属机构列
+  const orgType = useOrgScope((s) => s.orgType);
+  const isParent = orgType === 'parent';
+  const [orgSel, setOrgSel] = useState(ORG_FILTER_ALL);
+  const scope = visibleOrgs(orgType);
+  const rows = BATCHES.filter((b) => scope.includes(b.org) && (!isParent || orgSel === ORG_FILTER_ALL || b.org === orgSel) && (!q || b.name.includes(q)));
   const columns: Col<Batch>[] = [
     { header: '批次名称', className: 'strong', cell: (b) => b.name },
+    ...(isParent ? [{ header: '归属机构', cell: (b: Batch) => b.org, sortValue: (b: Batch) => b.org } as Col<Batch>] : []),
     { header: '已兑换 / 生成', className: 'mono', cell: (b) => `${b.redeemed} / ${b.total}`, sortValue: (b) => b.redeemed },
     { header: '权益有效期', cell: (b) => '会员 · ' + b.duration },
     { header: '可兑换时间', className: 'mono', cell: (b) => `${b.validFrom ?? '创建后立即'} ~ ${b.validTo ?? '长期有效'}`, sortValue: (b) => b.validFrom ?? '' },
@@ -59,6 +67,8 @@ export function Codes() {
       </div>
       <div className="filter">
         <Search placeholder="搜索批次名称" minWidth={220} value={q} onChange={setQ} />
+        {/* 0806：父机构视角——机构单选筛选 */}
+        {isParent && <Dropdown label="机构" options={orgScopeOptions()} onSelect={(v) => setOrgSel(v === ORG_FILTER_ALL ? ORG_FILTER_ALL : orgScopeValue(v))} style={{ width: 200 }} />}
       </div>
       <DataGrid columns={columns} rows={rows} empty={{ title: '还没有兑换码批次', sub: '点击「批量生成」创建第一个批次' }} pageUnit="批" />
 

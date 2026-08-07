@@ -49,9 +49,15 @@
 /* ============ 登录流程 ============ */
 .lg{background:radial-gradient(130% 70% at 50% -10%,#E6ECFF 0%,#F1ECFF 40%,var(--paper) 72%);
   flex:1;display:flex;flex-direction:column;}
-.lg-landing{align-items:center;justify-content:center;text-align:center;padding:0 32px;gap:0;}
+.lg-landing{align-items:center;justify-content:safe center;text-align:center;padding:24px 32px;gap:0;overflow-y:auto;}
+/* 0806-3：演示开关增多后内容超出视口——safe center 溢出时回退顶部对齐 + 容器可滚，修复只能看到半截；
+   子元素禁止 flex 压缩（否则固定高的 brand-orb 知识核球在溢出时被压缩消失） */
+.lg-landing>*{flex:none;}
 .lg-landing .login-wm2{font-family:var(--serif-cjk);font-weight:900;font-size:34px;margin-top:26px;}
 .lg-landing .login-wm2 .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+/* 0806-5：标题改 logo 文字图（与上方图标垂直排列）；0806-6 按反馈：图标整体下移、与文字间距收紧 */
+.lg-landing .brand-orb{margin-top:20px;}
+.lg-landing .landing-logo-text{width:164px;height:auto;object-fit:contain;margin-top:14px;}
 .lg-landing .sgn{font-family:var(--serif-cjk);font-weight:700;font-size:17px;margin-top:14px;color:var(--ink);}
 .lg-landing .sgn .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .lg-landing .sgn2{font-size:12.5px;color:var(--ink-2);margin-top:7px;}

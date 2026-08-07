@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE, Calendar, fmtD } from '@aba/ui-admin';
 import { comparisonPeriodLabel, metricHelp } from '@aba/mock';
-import { ACTIVE_SNAPSHOT, RANGE, retentionFor, TOPKP, type Bar, type KW, type RetentionNode } from '../data/dataBoard';
+import { ACTIVE_SNAPSHOT, RANGE, retentionFor, scaleActiveSnapshot, scaleRangeData, TOPKP, type Bar, type KW, type RetentionNode } from '../data/dataBoard';
+import { CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
+import { MultiSelect } from '@aba/ui-admin';
+import { useOrgScope } from '../stores/orgScope';
 import { buildDataBoardSpec } from '../exports/dataBoard';
 
 // 0614 指标体系重划：去掉「总览」Tab（职责交主控台），数据看板专做分主题深钻。
@@ -150,7 +153,14 @@ export function DataBoard() {
   // 0716 #15：自定义注册时间——具体某一天（单日日期面板）
   const [retDay, setRetDay] = useState<Date | null>(null);
   const [retCalOpen, setRetCalOpen] = useState(false);
-  const d = RANGE[rangeLabel] ?? RANGE['7 日'];
+  // 0806：父机构视角——机构多选（默认全选＝现状数值）；绝对量按集合系数缩放、率类不缩放
+  const orgType = useOrgScope((s) => s.orgType);
+  const isParent = orgType === 'parent';
+  const ALL_ORGS = [CURRENT_ORG, ...CHILD_ORGS];
+  const [orgs, setOrgs] = useState<string[]>(ALL_ORGS);
+  const w = isParent ? orgWeightOf(orgs) : 1;
+  const active = scaleActiveSnapshot(w);
+  const d = scaleRangeData(RANGE[rangeLabel] ?? RANGE['7 日'], w);
   // 0718 #6：留存按真实日期联动推算——自定义注册日驱动节点状态/样本/截止文案，不再是写死的假数据
   const retention = retentionFor(retentionBatch, retDay);
   const periodDays = rangeLabel === '今日' ? 1 : rangeLabel === '30 日' ? 30 : 7;
@@ -176,8 +186,10 @@ export function DataBoard() {
         </div>
         <div className="pa">
           {/* 0716 #14：区间选择器从页头移入「区间分析」区块就近（见下方 range-bar），页头只留导出 */}
+          {/* 0806-2：父机构视角——「机构」多选筛选置页头导出左边（与主控台同位），联动页内全部指标 */}
+          {isParent && <MultiSelect label="机构" options={[`${CURRENT_ORG}（父机构）`, ...CHILD_ORGS]} value={orgs} onChange={setOrgs} style={{ width: 240 }} />}
           {/* 0724：活跃概览改固定滚动窗口快照（ACTIVE_SNAPSHOT），不随区间联动，导出同源 */}
-          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDataBoardSpec({ rangeLabel, periodDays, d, retentionRange: retLabel, retention, active: { dau: ACTIVE_SNAPSHOT.dau, wau: ACTIVE_SNAPSHOT.wau, mau: ACTIVE_SNAPSHOT.mau }, topkp: TOPKP })); toast('正在导出'); }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDataBoardSpec({ rangeLabel, periodDays, d, retentionRange: retLabel, retention, active: { dau: active.dau, wau: active.wau, mau: active.mau }, topkp: TOPKP, orgs: isParent ? orgs : undefined })); toast('正在导出'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
@@ -190,9 +202,9 @@ export function DataBoard() {
         <span className="dash-section-sub">· 实时滚动窗口快照 · 不随下方时间筛选联动</span>
       </div>
       <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-        <Kpi lab="日活（DAU）" val={ACTIVE_SNAPSHOT.dau} suf="人" deltaPct={ACTIVE_SNAPSHOT.dauDelta} periodDays={1} info="" infoRaw="今日 00:00 至当前时刻的活跃用户，实时滚动快照。去重：单日内按用户 ID 去重。环比对比昨日同时段。不随下方时间筛选联动。" />
-        <Kpi lab="周活（WAU）" val={ACTIVE_SNAPSHOT.wau} suf="人" deltaPct={ACTIVE_SNAPSHOT.wauDelta} periodDays={7} info="" infoRaw="截至今日的近 7 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 7 日窗口。不随下方时间筛选联动。" />
-        <Kpi lab="月活（MAU）" val={ACTIVE_SNAPSHOT.mau} suf="人" deltaPct={ACTIVE_SNAPSHOT.mauDelta} periodDays={30} info="" infoRaw="截至今日的近 30 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 30 日窗口。不随下方时间筛选联动。" />
+        <Kpi lab="日活（DAU）" val={active.dau} suf="人" deltaPct={active.dauDelta} periodDays={1} info="" infoRaw="今日 00:00 至当前时刻的活跃用户，实时滚动快照。去重：单日内按用户 ID 去重。环比对比昨日同时段。不随下方时间筛选联动。" />
+        <Kpi lab="周活（WAU）" val={active.wau} suf="人" deltaPct={active.wauDelta} periodDays={7} info="" infoRaw="截至今日的近 7 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 7 日窗口。不随下方时间筛选联动。" />
+        <Kpi lab="月活（MAU）" val={active.mau} suf="人" deltaPct={active.mauDelta} periodDays={30} info="" infoRaw="截至今日的近 30 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 30 日窗口。不随下方时间筛选联动。" />
       </div>
 
       {/* 0717 二批 #8.1：用户留存页级常驻,一行三张等宽指标卡（按注册时间,独立于下方区间筛选） */}

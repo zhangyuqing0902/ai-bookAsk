@@ -144,7 +144,7 @@ export function App() {
     <BrowserRouter>
       <IconSprite />
       <Routes>
-        <Route path="/login" element={<AdminLogin title="登录 · 平台超管" />} />
+        <Route path="/login" element={<AdminLogin title="登录 · 平台后台" />} />
         <Route element={<Shell />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/orgs" element={<OrgList />} />

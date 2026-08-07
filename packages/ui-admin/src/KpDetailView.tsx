@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon, toast, FileTypeIcon, type FileKind } from '@aba/ui';
+import { Icon, toast } from '@aba/ui';
 import { canDeleteKp, KP_SOURCE_LABEL } from '@aba/mock';
 import { Search, TextInput } from './Fields';
 import { Dropdown } from './Dropdown';
@@ -8,6 +8,7 @@ import { DataGrid, type Col } from './DataGrid';
 import { Modal } from './Modal';
 import { ConfirmDialog } from './ConfirmDialog';
 import { pickFile, ACCEPT } from './Upload';
+import { UploadModal, inferKind, fileIcon } from './UploadModal';
 
 const TABS = [
   { id: 'base', label: '基础信息' },
@@ -18,22 +19,7 @@ const TABS = [
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
-// 0615-2:知识库文件类型彩色图标(用上传的 word/pdf/图片/音频/视频 SVG,FileTypeIcon)。icon 与文件名间距加大。
-const ICON_KIND: Record<string, FileKind> = { 'i-file': 'pdf', 'i-doc': 'word', 'i-image': 'image', 'i-sound': 'audio', 'i-play': 'video', 'i-video': 'video' };
-const fileIcon = (icon: string) => (
-  <FileTypeIcon kind={ICON_KIND[icon] ?? 'word'} size={18} style={{ verticalAlign: -4, marginRight: 9 }} />
-);
-
-// 4.5:按文件扩展名推断 icon + 类型(文档/图片/音频/视频)
-const inferKind = (name: string): { icon: string; type: string } => {
-  const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(ext)) return { icon: 'i-image', type: '图片' };
-  if (['mp3', 'wav', 'm4a', 'aac', 'flac'].includes(ext)) return { icon: 'i-sound', type: '音频' };
-  if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)) return { icon: 'i-video', type: '视频' };
-  if (ext === 'pdf') return { icon: 'i-file', type: '文档' };
-  if (['doc', 'docx', 'txt', 'md', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) return { icon: 'i-doc', type: '文档' };
-  return { icon: 'i-doc', type: '文档' };
-};
+// 0806：ICON_KIND / fileIcon / inferKind 抽至 ./UploadModal.tsx 共享（机构详情 · 协议文档复用），此处 import。
 
 interface KbFile {
   id: number;
@@ -126,11 +112,13 @@ const KP_STATUS_TAG: Record<'draft' | 'published' | 'unlisted' | 'deleted', { la
 //   domainSuffix 由 wrapper 用 @aba/mock 的 tenantDomainSuffix(hostname) 按当前环境算好传入（本地 -aba.localhost）。
 // 0716 #1.1：kpStatus / onKpStatusChange / purchasedUsers 为可选——机构端接 kpLifecycle store 走真状态
 //   （下架↔重新发布、删除后置灰返回列表）；未传时保持旧行为（纯 toast），平台端未接线不受影响。
-export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domainSuffix = '-aba.一级域名.cn', importMode = 'own', consumerReadonly = true, shareOrgName = 'YY 教育', kpName = '心血管分册 · 第4版', kpStatus, onKpStatusChange, purchasedUsers, bookUsers, kpRelations }: {
+export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domainSuffix = '-aba.一级域名.cn', importMode = 'own', consumerReadonly = true, shareOrgName = 'YY 教育', kpName = '心血管分册 · 第4版', kpStatus, onKpStatusChange, purchasedUsers, bookUsers, kpRelations, readonlyBanner }: {
   listBase?: string;
   orgPrefix?: string;
   domainSuffix?: string;
   importMode?: 'own' | 'realtime' | 'snapshot';
+  /** 0806：外部只读原因（父机构查看子机构 KP）——传入即启用与实时分享一致的整页只读机制，横幅显示该文案 */
+  readonlyBanner?: string;
   /** 0718 #7：平台超管查看「分享导入·实时」的 KP 时传 false——不套用接收方只读（banner/禁编辑/隐藏 Tab），保留发布/下架/删除等监管操作，仅展示来源标签 */
   consumerReadonly?: boolean;
   /** 0716 二批 #5.1：实时同步导入时的来源（分享）机构名，banner 动态展示 */
@@ -162,7 +150,7 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
   // 分享权限（对齐 @aba/mock sharePolicy）：实时同步导入的 KP 内容随源机构更新、只读，
   // 二维码 / 分享两 Tab 不可见，下架 / 删除等源机构侧操作也隐藏；独立快照与自建 KP 全功能。
   // 0718 #7：consumerReadonly=false（平台超管）时仅展示来源标签，不套用接收方只读。
-  const isRealtime = importMode === 'realtime' && consumerReadonly;
+  const isRealtime = (importMode === 'realtime' && consumerReadonly) || !!readonlyBanner;
   const visibleTabs = isRealtime ? TABS.filter((t) => t.id !== 'qr' && t.id !== 'share') : TABS;
   // 0716 二批 #5.3：实时同步只读＝操作级——数据可读可查，仅操作按钮置灰、点击提示无权限
   const deny = () => toast('无权限操作');
@@ -536,7 +524,7 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
       {isRealtime && (
         <div className="kp-readonly-banner">
           <Icon id="i-lock" w={14} h={14} />
-          <span>本 KP 由「{shareOrgName}」以「实时同步」分享导入：内容随源机构自动更新、仅可查看不可编辑；不占本机构 KP 数与存储、问答消耗本机构 Token；二维码与分享不可用。</span>
+          <span>{readonlyBanner ?? `本 KP 由「${shareOrgName}」以「实时同步」分享导入：内容随源机构自动更新、仅可查看不可编辑；不占本机构 KP 数与存储、问答消耗本机构 Token；二维码与分享不可用。`}</span>
         </div>
       )}
 
@@ -898,7 +886,8 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
       <UploadModal
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        onDone={(names, slice) => {
+        onDone={(names) => {
+          const slice = '语义'; // 0613：切片方式固定语义（原弹窗参数，抽共享组件后在调用方写死）
           // 进入知识库:把上传文件加入列表(解析/向量化中态),音视频自动向量化(4.6)
           setKb((list) => [
             ...names.map((nm) => {
@@ -930,108 +919,5 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
         onClose={() => setConfirm(null)}
       />
     </>
-  );
-}
-
-// —— 上传知识文件弹窗(4.5)——
-// 切片方式 + 点击/拖拽多文件(图音视混传,不支持文件夹嵌套) + 每文件进度条 + 全部完成后「进入知识库」
-interface UpFile { id: number; name: string; icon: string; prog: number }
-function UploadModal({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: (names: string[], slice: string) => void }) {
-  const slice = '语义'; // 0613：去掉切片方式选择，直接上传，系统默认语义切片
-  const [files, setFiles] = useState<UpFile[]>([]);
-  const [drag, setDrag] = useState(false);
-  const seq = useRef(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const reset = () => { setFiles([]); };
-  const close = () => { reset(); onClose(); };
-
-  // 模拟上传进度(setTimeout 递增)
-  const startProgress = (id: number) => {
-    const tick = () => {
-      setFiles((fs) => {
-        const next = fs.map((f) => (f.id === id ? { ...f, prog: Math.min(100, f.prog + 18 + Math.round(Math.random() * 14)) } : f));
-        const cur = next.find((f) => f.id === id);
-        if (cur && cur.prog < 100) setTimeout(tick, 240 + Math.random() * 160);
-        return next;
-      });
-    };
-    setTimeout(tick, 220);
-  };
-
-  // 4.5:文件名允许重复,不去重不拦截
-  const addFiles = (list: FileList | null) => {
-    if (!list || !list.length) return;
-    const arr = Array.from(list).map((f) => {
-      const id = ++seq.current;
-      return { id, name: f.name, icon: inferKind(f.name).icon, prog: 0 };
-    });
-    setFiles((fs) => [...fs, ...arr]);
-    arr.forEach((f) => startProgress(f.id));
-  };
-
-  const allDone = files.length > 0 && files.every((f) => f.prog >= 100);
-
-  return (
-    <Modal
-      title="上传知识文件"
-      open={open}
-      onClose={close}
-      width={720}
-      footer={
-        <>
-          <button className="btn btn-ghost btn-sm" onClick={close}>取消</button>
-          {/* 4.5:全部完成后「进入知识库」可点 */}
-          <button className={'btn btn-primary btn-sm' + (allDone ? '' : ' off')} disabled={!allDone} onClick={() => { if (allDone) { onDone(files.map((f) => f.name), slice); reset(); } }}>
-            进入知识库
-          </button>
-        </>
-      }
-    >
-      {/* 0613：去掉「切片方式」选择，直接上传（系统默认语义切片） */}
-      {/* 点击选择 + 拖拽上传;input 不用 webkitdirectory(不支持文件夹嵌套) */}
-      <input ref={inputRef} type="file" multiple accept="*/*" style={{ display: 'none' }} onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
-      {/* 0614：弹窗改左右布局——左=上传按钮 + 单文件格式 / 大小 / 时长限制；右=批量上传进度与文件列表 */}
-      <div className="up-modal">
-        <div className="up-left">
-          <div
-            className={'up-drop' + (drag ? ' on' : '')}
-            onClick={() => inputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-            onDragLeave={() => setDrag(false)}
-            onDrop={(e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files); }}
-          >
-            <Icon id="i-up" w={26} h={26} />
-            <div className="up-drop-t">点击选择 或 拖拽文件到此处</div>
-            <div className="up-drop-s">支持文档 / 图片 / 音频 / 视频多文件混传，<br />支持批量上传，不支持文件夹</div>
-          </div>
-          <div className="up-spec">
-            <div className="up-spec-h">单个文件上限（非单次合计）</div>
-            <div className="up-spec-row"><span className="k">文档</span><span className="v">PDF、DOC/DOCX、TXT、MD</span><span className="z">≤ 100MB</span></div>
-            <div className="up-spec-row"><span className="k">图片</span><span className="v">JPG/JPEG、PNG</span><span className="z">≤ 20MB</span></div>
-            <div className="up-spec-row"><span className="k">音频</span><span className="v">MP3、WAV</span><span className="z">≤ 300MB · 120 分钟</span></div>
-            <div className="up-spec-row"><span className="k">视频</span><span className="v">MP4、MOV</span><span className="z">≤ 1GB · 60 分钟</span></div>
-          </div>
-        </div>
-        <div className="up-right">
-          <div className="up-right-h">批量上传{files.length > 0 ? `（${files.length} 个文件）` : ''}</div>
-          {files.length > 0 ? (
-            <div className="up-list">
-              {files.map((f) => (
-                <div className="up-item" key={f.id}>
-                  {fileIcon(f.icon)}
-                  <span className="up-item-nm">{f.name}</span>
-                  <span className="up-item-bar"><i style={{ width: f.prog + '%' }} /></span>
-                  <span className="up-item-pct mono">{f.prog >= 100 ? '完成' : f.prog + '%'}</span>
-                  <span className="up-item-x" onClick={(e) => { e.stopPropagation(); setFiles((fs) => fs.filter((x) => x.id !== f.id)); }}>✕</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="up-empty">选择或拖入文件后，批量上传进度将在此显示</div>
-          )}
-        </div>
-      </div>
-    </Modal>
   );
 }

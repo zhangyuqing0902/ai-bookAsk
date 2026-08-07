@@ -1,14 +1,22 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
-import { LineChart, RangePicker, InfoDot, CurrentSubCard, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { compareMetric, comparisonPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, currentSubCard } from '@aba/mock';
+import { LineChart, RangePicker, InfoDot, CurrentSubCard, MultiSelect, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
+import { compareMetric, comparisonPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, currentSubCard, CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
 import { buildDashboardSpec } from '../exports/dashboard';
+import { useOrgScope } from '../stores/orgScope';
 
 // 机构后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
 // 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
 export function Dashboard() {
   const [days, setDays] = useState(7);
   const [rangeLabel, setRangeLabel] = useState('近 7 天');
+  // 0806：父机构视角——机构多选筛选（默认全选＝现状数值）。绝对量按所选机构集合系数聚合，率类不缩放。
+  const orgType = useOrgScope((s) => s.orgType);
+  const isParent = orgType === 'parent';
+  const ALL_ORGS = [CURRENT_ORG, ...CHILD_ORGS];
+  const [orgs, setOrgs] = useState<string[]>(ALL_ORGS);
+  const w = isParent ? orgWeightOf(orgs) : 1;
+  const s = (v: number) => Math.round(v * w);
   const cur = rangeMetrics(orgDaily, days);
   const prev = rangeMetrics(orgDaily, days, days);
   const n = fmtCn;
@@ -37,8 +45,10 @@ export function Dashboard() {
           <div className="pt">主控台</div>
         </div>
         <div className="pa">
+          {/* 0806：父机构视角——「机构」多选筛选（默认全选，支持跨机构任意组合；联动下方全部指标） */}
+          {isParent && <MultiSelect label="机构" options={[`${CURRENT_ORG}（父机构）`, ...CHILD_ORGS]} value={orgs} onChange={setOrgs} style={{ width: 240 }} />}
           {/* 0714：导出走 spec 纯函数（exports/dashboard.ts），与 docs 模板脚本同源；机构名由 spec 内 MY_ORG 提供 */}
-          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDashboardSpec({ days, rangeLabel, snapshot: orgSnapshot, sub: currentSubCard(MY_ORG_SUBS), cur, prev, chartSlice })); toast('正在导出 报表'); }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDashboardSpec({ days, rangeLabel, orgs: isParent ? orgs : undefined, snapshot: { ...orgSnapshot, totalGmv: s(orgSnapshot.totalGmv), currentMembers: s(orgSnapshot.currentMembers), totalRegistered: s(orgSnapshot.totalRegistered) }, sub: currentSubCard(MY_ORG_SUBS), cur: { ...cur, activeUsers: s(cur.activeUsers), newMembers: s(cur.newMembers), gmv: s(cur.gmv), questions: s(cur.questions) }, prev: { ...prev, activeUsers: s(prev.activeUsers), newMembers: s(prev.newMembers), gmv: s(prev.gmv), questions: s(prev.questions) }, chartSlice })); toast('正在导出 报表'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
@@ -47,7 +57,14 @@ export function Dashboard() {
 
       {/* 0615 / 0615-6：机构配额前置——进后台先看「当前订阅 + 额度是否吃紧」，再看经营数据；
           复用平台机构详情同款「当前生效订阅卡」（机构侧只读：不显商务负责人 / 不显新建订阅按钮） */}
-      <CurrentSubCard data={currentSubCard(MY_ORG_SUBS)} showOwner={false} />
+      {/* 0806-2：订阅是机构级合同（各机构各自签、配额上限不同、聚合无意义）——父机构视角固定显示本机构订阅，
+          与下方机构筛选解耦；右上角灰字注明，避免「选了子机构却显示父机构套餐」的误读 */}
+      <div style={{ position: 'relative' }}>
+        {isParent && (
+          <span className="sub-scope-note">本机构（{CURRENT_ORG}）订阅 · 不随机构筛选变化</span>
+        )}
+        <CurrentSubCard data={currentSubCard(MY_ORG_SUBS)} showOwner={false} />
+      </div>
 
       {/* 实时总览（累计 / 存量，不随时间筛选变化） */}
       <div className="dash-section-title">
@@ -65,7 +82,7 @@ export function Dashboard() {
           </div>
           <div className="val">
             <span className="u">¥</span>
-            {n(orgSnapshot.totalGmv)}
+            {n(s(orgSnapshot.totalGmv))}
           </div>
           <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
             <Icon id="i-chart" w={16} h={16} />
@@ -78,7 +95,7 @@ export function Dashboard() {
           </div>
           <div className="val">
             <span className="u">¥</span>
-            {n(1860)}
+            {n(s(1860))}
             <span style={{ fontSize: 13, color: 'var(--ink-3)', fontWeight: 400, marginLeft: 6 }}>· 2.1%</span>
           </div>
           <div className="ic" style={{ background: 'rgba(229,83,59,.12)', color: 'var(--terra)' }}>
@@ -92,7 +109,7 @@ export function Dashboard() {
           </div>
           <div className="val">
             <span className="u">¥</span>
-            {n(orgSnapshot.totalGmv - 1860)}
+            {n(s(orgSnapshot.totalGmv - 1860))}
           </div>
           <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
             <Icon id="i-chart" w={16} h={16} />
@@ -103,7 +120,7 @@ export function Dashboard() {
             当前会员数
             <InfoDot text={metricHelp('当前拥有有效会员权益的用户数，实时快照。去重：按用户 ID 去重。', 'snapshot')} />
           </div>
-          <div className="val">{n(orgSnapshot.currentMembers)}<span className="uu">人</span></div>
+          <div className="val">{n(s(orgSnapshot.currentMembers))}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--amber-soft)', color: 'var(--amber-ink)' }}>
             <Icon id="i-user" w={16} h={16} />
           </div>
@@ -113,7 +130,7 @@ export function Dashboard() {
             累计注册用户
             <InfoDot text={metricHelp('本机构 C 端注册用户数。去重：按用户 ID 去重。', 'snapshot')} />
           </div>
-          <div className="val">{n(orgSnapshot.totalRegistered)}<span className="uu">人</span></div>
+          <div className="val">{n(s(orgSnapshot.totalRegistered))}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
             <Icon id="i-user" w={16} h={16} />
           </div>
@@ -142,8 +159,8 @@ export function Dashboard() {
             活跃用户
             <InfoDot text={metricHelp('所选区间内有登录或提问行为的用户数；今日为截至当前时刻的 DAU。去重：按用户 ID 去重，跨天重复只计 1 人。', periodKind)} />
           </div>
-          <div className="val">{n(cur.activeUsers)}<span className="uu">人</span></div>
-          <Delta c={cur.activeUsers} p={prev.activeUsers} />
+          <div className="val">{n(s(cur.activeUsers))}<span className="uu">人</span></div>
+          <Delta c={s(cur.activeUsers)} p={s(prev.activeUsers)} />
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
             <Icon id="i-grid" w={16} h={16} />
           </div>
@@ -154,8 +171,8 @@ export function Dashboard() {
             {/* 0722：口径定稿——历史首次开通；续费、回流均不计入 */}
             <InfoDot text={metricHelp('所选区间内历史首次开通会员的用户数；续费与回流不计入。去重：按用户 ID 去重。', periodKind)} />
           </div>
-          <div className="val">{n(cur.newMembers)}<span className="uu">人</span></div>
-          <Delta c={cur.newMembers} p={prev.newMembers} />
+          <div className="val">{n(s(cur.newMembers))}<span className="uu">人</span></div>
+          <Delta c={s(cur.newMembers)} p={s(prev.newMembers)} />
           <div className="ic" style={{ background: 'var(--amber-soft)', color: 'var(--amber-ink)' }}>
             <Icon id="i-user" w={16} h={16} />
           </div>
@@ -167,9 +184,9 @@ export function Dashboard() {
           </div>
           <div className="val">
             <span className="u">¥</span>
-            {n(cur.gmv)}
+            {n(s(cur.gmv))}
           </div>
-          <Delta c={cur.gmv} p={prev.gmv} />
+          <Delta c={s(cur.gmv)} p={s(prev.gmv)} />
           <div className="ic" style={{ background: 'var(--jade-soft)', color: 'var(--jade)' }}>
             <Icon id="i-chart" w={16} h={16} />
           </div>
@@ -179,8 +196,8 @@ export function Dashboard() {
             区间提问数
             <InfoDot text={metricHelp('所选区间内 C 端新增提问条数，包含追问。', periodKind)} />
           </div>
-          <div className="val">{n(cur.questions)}<span className="uu">条</span></div>
-          <Delta c={cur.questions} p={prev.questions} />
+          <div className="val">{n(s(cur.questions))}<span className="uu">条</span></div>
+          <Delta c={s(cur.questions)} p={s(prev.questions)} />
           <div className="ic" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)' }}>
             <Icon id="i-msg" w={16} h={16} />
           </div>
@@ -205,8 +222,8 @@ export function Dashboard() {
             x: chartSlice.map((d) => d.mmdd),
             area: true,
             series: [
-              { name: 'DAU', color: '#4B57E8', values: chartSlice.map((d) => d.dau) },
-              { name: '新增会员', color: '#FF6F55', dash: true, values: chartSlice.map((d) => d.newMembers) },
+              { name: 'DAU', color: '#4B57E8', values: chartSlice.map((d) => s(d.dau)) },
+              { name: '新增会员', color: '#FF6F55', dash: true, values: chartSlice.map((d) => s(d.newMembers)) },
             ],
           }}
         />

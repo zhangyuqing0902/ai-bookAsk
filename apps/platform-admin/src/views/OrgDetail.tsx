@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { Dropdown, Search, TextInput, DomainInput, InfoDot, CurrentSubCard, DateTimeRangeField, RangePicker, Modal, ConfirmDialog, SubPackDrawer, type PackForm, QtyStepper, DataGrid, type Col, pickFile, pickImageColor, ACCEPT, UNIT_NOTE } from '@aba/ui-admin';
-import { MY_ORG_SUBS, PLATFORM_ORGS, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, type Subscription } from '@aba/mock';
+import { Dropdown, Search, TextInput, DomainInput, InfoDot, CurrentSubCard, DateTimeRangeField, RangePicker, Modal, ConfirmDialog, SubPackDrawer, type PackForm, QtyStepper, DataGrid, type Col, pickFile, pickImageColor, ACCEPT, UNIT_NOTE, UploadModal, fileIcon, inferKind } from '@aba/ui-admin';
+import { MY_ORG_SUBS, PLATFORM_ORGS, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, type Subscription, ORG_AGREEMENTS, AGREEMENT_SPEC, AGREEMENT_TYPES, type OrgAgreementFile } from '@aba/mock';
 import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 
 // 0613-2：套餐 / 配额独立成 Tab；用量看板重排（配额进度重点 + 2×2）；微信配置分区卡片
 // 0615：「套餐 / 配额」Tab 改造为订阅闭环（当前生效订阅只读 + 订阅记录 + 新建续签 / 升级）
-const TABS = ['基本资料', '订阅配额', '机构配置', '用量看板', '品牌外观'];
+// 0806：新增 Tab 6（置末位）——归档与机构相关的全部资料；0806-2 由「协议文档」更名「机构资料」
+const TABS = ['基本资料', '订阅配额', '机构配置', '用量看板', '品牌外观', '机构资料'];
 const SUBTABS = ['LLM 配置', '联网配置', '微信配置'];
 
 // 机构套餐预设（KP 数 / 存储 GB / 当前订阅周期 Token 亿）；Token 值只填数字、单位「亿」放后缀 / 单位标；定制版手填
@@ -51,6 +52,21 @@ function UsageCard({ title, icon, rows, periodDays, tone }: { title: string; ico
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// 0806-3：敏感配置输入框（AppSecret / API 密钥等）——默认脱敏（•••• + 尾 4 位），点眼睛切换明文便于核对；
+// 明文态可编辑，脱敏态只读（避免误改掩码字符）
+function SecretInput({ secret, maxWidth = 320 }: { secret: string; maxWidth?: number }) {
+  const [show, setShow] = useState(false);
+  const [val, setVal] = useState(secret);
+  return (
+    <div style={{ position: 'relative', maxWidth }}>
+      <TextInput value={show ? val : '••••••••••••' + val.slice(-4)} onChange={(e) => { if (show) setVal(e.target.value); }} style={{ paddingRight: 38, width: '100%' }} />
+      <span className="secret-eye" title={show ? '隐藏' : '显示'} onClick={() => setShow((s) => !s)}>
+        <Icon id={show ? 'i-eyeOff' : 'i-eye'} w={15} h={15} />
+      </span>
     </div>
   );
 }
@@ -646,7 +662,7 @@ export function OrgDetail() {
                   </div>
                   <div className="fm-row">
                     <div className="lab">AppSecret</div>
-                    <div className="ctl"><TextInput defaultValue="••••••••••••••6c2e" style={{ maxWidth: 320 }} /></div>
+                    <div className="ctl"><SecretInput secret="d29e6a814f7c35b08a51e9d4c7f26c2e" /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">网页授权回调地址</div>
@@ -686,7 +702,7 @@ export function OrgDetail() {
                   </div>
                   <div className="fm-row">
                     <div className="lab">AppSecret</div>
-                    <div className="ctl"><TextInput defaultValue="••••••••••••9d4f" style={{ maxWidth: 320 }} /></div>
+                    <div className="ctl"><SecretInput secret="7b3e9c25a8d1f4067e2a9c5d8b3f9d4f" /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">授权回调地址</div>
@@ -713,9 +729,17 @@ export function OrgDetail() {
                     <div className="lab">商户号 MchID</div>
                     <div className="ctl"><TextInput defaultValue="1900012345" style={{ maxWidth: 320 }} /></div>
                   </div>
+                  {/* 0806：v2 版接口签名密钥——委托代扣（自动续费）签约/扣款接口仍走 v2 体系，配置连续包月必需 */}
                   <div className="fm-row">
-                    <div className="lab">APIv3 密钥</div>
-                    <div className="ctl"><TextInput defaultValue="••••••••••••3a7f" style={{ maxWidth: 320 }} /></div>
+                    <div className="lab">API v2 密钥</div>
+                    <div className="ctl">
+                      <SecretInput secret="f6d2b8a45c9e17038b6d4a2f5e7c9c41" />
+                      <div className="hint" style={{ marginTop: 6 }}>32 位，商户平台「API 安全」设置 · 委托代扣（自动续费）接口签名必需，与 API v3 密钥并存</div>
+                    </div>
+                  </div>
+                  <div className="fm-row">
+                    <div className="lab">API v3 密钥</div>
+                    <div className="ctl"><SecretInput secret="4e8a2c917d5f3b068a4e1c7d9f2b3a7f" /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">商户证书</div>
@@ -726,7 +750,7 @@ export function OrgDetail() {
                       </div>
                     </div>
                   </div>
-                  {/* 0722：APIv3 请求签名需商户私钥，与证书成对上传 */}
+                  {/* 0722：API v3 请求签名需商户私钥，与证书成对上传 */}
                   <div className="fm-row">
                     <div className="lab">商户 API 私钥</div>
                     <div className="ctl">
@@ -736,10 +760,37 @@ export function OrgDetail() {
                       </div>
                     </div>
                   </div>
+                  {/* 0806：公钥模式验签（2024 起新注册商户默认发放公钥，替代平台证书）——ID + 文件配套 */}
+                  <div className="fm-row">
+                    <div className="lab">支付公钥 ID</div>
+                    <div className="ctl">
+                      <TextInput defaultValue="PUB_KEY_ID_0119000123452026080600000001" style={{ maxWidth: 400 }} />
+                      <div className="hint" style={{ marginTop: 6 }}>微信支付「公钥模式」验签标识 · 验签时按回调头 Wechatpay-Serial 匹配</div>
+                    </div>
+                  </div>
+                  <div className="fm-row">
+                    <div className="lab">支付公钥文件</div>
+                    <div className="ctl">
+                      <div className="upbox" style={{ maxWidth: 360 }} onClick={() => pickFile(ACCEPT.cert, (n) => toast('已选择 ' + n))}>
+                        <Icon id="i-up" />
+                        <div className="nowrap">上传 pub_key.pem</div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* 0806：委托代扣签约模板（业务参数，置卡片末尾）——C 端签约连续包月时传入 */}
+                  <div className="fm-row">
+                    <div className="lab">委托代扣包月模板 ID</div>
+                    <div className="ctl">
+                      <TextInput defaultValue="100086" style={{ maxWidth: 320 }} />
+                      <div className="hint" style={{ marginTop: 6 }}>委托代扣「签约模板」审核通过后分配（plan_id）· 会员连续包月签约扣费时传入</div>
+                    </div>
+                  </div>
                   <ul className="wx-lim">
                     <li>商户号须与上方公众号 AppID 完成「关联绑定」（JSAPI 支付 / 退款前置条件）。</li>
-                    <li>证书 apiclient_cert.pem 与私钥 apiclient_key.pem 成对下载、成对上传；私钥用于 APIv3 请求签名。</li>
-                    <li>APIv3 密钥在商户平台「API 安全」设置。</li>
+                    <li>证书 apiclient_cert.pem 与私钥 apiclient_key.pem 成对下载、成对上传；私钥用于 API v3 请求签名。</li>
+                    <li>API v3 密钥在商户平台「API 安全」设置；API v2 密钥用于委托代扣（自动续费）等 v2 版接口签名，两者并存不互斥。</li>
+                    <li>支付公钥 ID 与公钥文件 pub_key.pem 配套（公钥模式验签，2024 年起新注册商户默认发放；存量商户走平台证书，二选一）。</li>
+                    <li>委托代扣包月模板 ID＝签约模板经微信审核通过后分配，用于 C 端会员连续包月签约。</li>
                     <li>退款 / 自动续费依赖支付能力，未配置支付则前台无法下单。</li>
                   </ul>
                   <div style={{ marginTop: 4 }}>
@@ -875,6 +926,98 @@ export function OrgDetail() {
           </div>
         </div>
       )}
+
+      {/* —— Tab 6 机构资料（0806 新增，0806-2 更名）—— */}
+      {tab === 5 && <AgreementsTab />}
     </>
+  );
+}
+
+// 0806：机构资料 Tab（0806-2 由「协议文档」更名）——归档与机构相关的全部资料（ICP 授权函 / 微信网站应用登记表 / 产品截图 / 合作协议等）。
+// 批量上传复用 KP 知识库上传弹窗（UploadModal 共享组件，研发零新增）；列表支持搜索 / 类型筛选 / 排序 / 下载 / 删除。
+function AgreementsTab() {
+  const [files, setFiles] = useState<OrgAgreementFile[]>(ORG_AGREEMENTS);
+  const [q, setQ] = useState('');
+  const [type, setType] = useState('全部');
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [delTarget, setDelTarget] = useState<OrgAgreementFile | null>(null);
+  const seq = useRef(100);
+
+  const rows = files.filter((f) => (!q || f.name.includes(q)) && (type === '全部' || f.type === type));
+
+  // 演示态生成文件大小（真实场景由后端返回）
+  const mockSize = () => `${(1 + Math.random() * 30).toFixed(1)} MB`;
+
+  const columns: Col<OrgAgreementFile>[] = [
+    { header: '文件名', className: 'strong', cell: (f) => <span>{fileIcon(f.icon)}{f.name}</span>, sortValue: (f) => f.name },
+    { header: '类型', cell: (f) => f.type, sortValue: (f) => f.type },
+    { header: '大小', className: 'mono', cell: (f) => f.size, sortValue: (f) => parseFloat(f.size) },
+    { header: '上传时间', className: 'mono', cell: (f) => f.uploadedAt, sortValue: (f) => f.uploadedAt },
+    {
+      header: '操作',
+      cell: (f) => (
+        <div className="op-cell">
+          <span className="op" onClick={() => toast('已开始下载「' + f.name + '」')}>下载</span>
+          <span className="op op-danger" onClick={() => setDelTarget(f)}>删除</span>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div className="filter">
+        <Search placeholder="搜索文件名" minWidth={240} value={q} onChange={setQ} />
+        <Dropdown label="类型" options={AGREEMENT_TYPES} onSelect={setType} />
+        <div className="grow" />
+        <span style={{ fontSize: 12, color: 'var(--ink-3)', alignSelf: 'center' }}>ICP 授权函、微信网站应用登记表、产品截图等与机构相关的资料文件</span>
+        <button className="btn btn-primary btn-sm" onClick={() => setUploadOpen(true)}>
+          <Icon id="i-up" w={14} h={14} />
+          上传文件
+        </button>
+      </div>
+      <DataGrid columns={columns} rows={rows} empty={{ title: '还没有机构资料', sub: '点击「上传文件」归档与该机构相关的资料' }} minWidth={760} pageUnit="个" />
+
+      {/* 批量上传（多选 + 拖拽 + 逐文件进度条）——复用 KP 知识库同一组件，仅规格与文案参数化 */}
+      <UploadModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        title="上传机构资料"
+        accept={ACCEPT.agreement}
+        doneText="完成上传"
+        dropHint="支持图片 / 文档多文件混传，支持批量上传，不支持文件夹"
+        specRows={AGREEMENT_SPEC}
+        onDone={(names) => {
+          const now = new Date();
+          const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+          setFiles((list) => [
+            ...names.map((nm) => {
+              const k = inferKind(nm);
+              return { id: ++seq.current, name: nm, icon: k.icon, type: (k.type === '图片' ? '图片' : '文档') as OrgAgreementFile['type'], size: mockSize(), uploadedAt: ts };
+            }),
+            ...list,
+          ]);
+          setUploadOpen(false);
+          toast(`已上传 ${names.length} 个文件`);
+        }}
+      />
+
+      {/* 删除二次确认（不可恢复） */}
+      <ConfirmDialog
+        open={!!delTarget}
+        danger
+        title="删除机构资料"
+        desc={delTarget ? `删除后不可恢复，确认删除「${delTarget.name}」？` : ''}
+        confirmText="删除"
+        onClose={() => setDelTarget(null)}
+        onConfirm={() => {
+          if (delTarget) {
+            setFiles((list) => list.filter((f) => f.id !== delTarget.id));
+            toast('已删除「' + delTarget.name + '」');
+          }
+          setDelTarget(null);
+        }}
+      />
+    </div>
   );
 }
