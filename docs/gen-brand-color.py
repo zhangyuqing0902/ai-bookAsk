@@ -149,8 +149,8 @@ ROWS = [
     ['机构后台 PC', 'KP / Agent 卡片（0807 新增）', '数据归属机构行 +「仅可查看」描边标（父机构视角）', '中性灰 + 灰描边', '❌ 不需变', 'var(--ink-3) + var(--line)（.kp-org-row / .kp-org-ro）', '辅助信息中性色、不与状态标抢视觉；admin-app.css:2620-2621'],
     ['机构后台 PC', 'KP / Agent 详情（0807 新增）', '子机构数据只读横幅', '锁定提示灰', '❌ 不需变', '.kp-readonly-banner 复用（0716 实时分享只读横幅）', '同一只读语义复用同一样式，零新增；KpDetailView readonlyBanner / AgentDetailView readonlyBanner'],
     ['平台超管 PC', '机构详情 · 机构资料（0807 新增，0807-2 更名去 PPT）', '批量上传弹窗（拖拽框 / 进度条 / 文件列表）', '复用 KP 知识库上传弹窗全套', '❌ 不需变', '.up-drop / .up-item-bar 等复用（UploadModal 共享组件）', '组件抽取自 KP 知识库、样式零新增；admin-app.css:1868-2045'],
-    # —— 0807-2：微信配置敏感项写后不回显 ——
-    ['平台超管 PC', '机构详情 · 微信配置（0807-2 修订）', '敏感项「已配置/已上传」状态行（玉绿状态字 + 等宽尾号/文件名 + 灰更新时间 + 靛蓝操作链接）；原显隐眼睛删除', '语义绿 + 中性灰 + 主色链接', '❌ 不需变', 'var(--jade)/var(--ink)/var(--ink-3)/var(--indigo)（.sec-state/.sec-op，admin-app.css）', '平台端固定平台色；状态行沿用只读框标准（纸白底+浅边），零新增色值'],
+    # —— 0807-2：微信配置敏感项写后不回显；0810：状态行收敛为「状态 + 操作」两段 ——
+    ['平台超管 PC', '机构详情 · 微信配置（0810 修订）', '敏感项「已配置/已上传」状态行（玉绿状态字 + 靛蓝操作链接）；0810 起状态行只保留「状态 + 操作」两段——等宽尾号/文件名与灰色更新时间不再展示（原 0807-2 展示取消），显隐眼睛此前已删除', '语义绿 + 主色链接', '❌ 不需变', 'var(--jade)/var(--indigo)（.sec-state/.sec-op，admin-app.css；.sec-tail/.sec-at 两个中性灰样式类随之删除，容器改 inline-flex 随内容收窄）', '平台端固定平台色；状态行沿用只读框标准（纸白底+浅边），零新增色值'],
     # —— 0807 增补（平台主控台机构多选 + LOGO 文字标题图）——
     ['平台超管 PC', '主控台（0807 修订）', '「机构」筛选单选升级多选——自绘勾选框（选中态）＋父机构标＋回填省略；原父机构汇总说明行（靛蓝底引用块）已删除', '主色实底勾选框 + 靛蓝标', '❌ 不需变', 'var(--indigo)（.ms-box.on）+ .tag-s.tag-indigo（复用机构后台 MultiSelect 共享组件）', '平台端固定平台色；与机构后台主控台多选同组件同视觉'],
     ['机构前台 H5', '登录落地页（0807 新增）', 'logo 文字标题图（纯图标下方，替换原网页字体渐变标题）', '产品 logo 固定色', '❌ 不需变', 'BRAND_LOGO_TEXT，styles.css .landing-logo-text', '产品 logo 不随机构换肤'],
@@ -178,7 +178,7 @@ for i, r in enumerate(ROWS, start=2):
     for c, v in enumerate(r, start=2):
         ws.cell(row=i, column=c, value=v)
     fill = change_fill if r[4].startswith('✅') else keep_fill
-    is_0807 = '0807' in r[1]  # 0807 增补/修订行整行标红，与功能清单变更行红字一致
+    is_0807 = '0807' in r[1] or '0810' in r[1]  # 0807 / 0810 增补·修订行整行标红，与功能清单变更行红字一致
     for c in range(1, len(H) + 1):
         cell = ws.cell(row=i, column=c)
         cell.border = border

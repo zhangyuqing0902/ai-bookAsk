@@ -2635,17 +2635,20 @@ a {
   background:var(--surface-warm,#faf7f2);border:1px solid var(--line);border-radius:7px;padding:3px 9px;}
 
 /* 0807-2：敏感凭据「写后不回显」状态行（微信配置 AppSecret / 密钥 / 证书私钥文件）——
-   已配置只显 状态 + 尾号/文件名 + 更新时间（到秒），视觉沿用只读框标准（纸白底 + 浅边 + 深灰字），原显隐眼睛移除 */
-.sec-state{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:36px;
+   视觉沿用只读框标准（纸白底 + 浅边 + 深灰字），原显隐眼睛移除。
+   0810：状态行只留 状态 + 操作两段（尾号 / 文件名 / 更新时间不再展示），容器随内容收窄成短条 */
+.sec-state{display:inline-flex;align-items:center;gap:16px;padding:8px 12px;min-height:36px;
   background:var(--paper);border:1px solid var(--line-2);border-radius:10px;font-size:12.5px;color:var(--ink-2);}
 .sec-state .sec-ok{color:var(--jade);font-weight:600;flex:none;}
-.sec-state .sec-tail{color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;
-  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.sec-state .sec-at{color:var(--ink-3);flex:none;}
 .sec-op{margin-left:auto;color:var(--indigo);cursor:pointer;font-weight:500;flex:none;font-size:12.5px;}
 .sec-op:hover{color:var(--indigo-ink);text-decoration:underline;}
 .sec-op.sec-op-ghost{color:var(--ink-3);margin-left:0;}
 .sec-op.sec-op-ghost:hover{color:var(--ink-2);}
+
+/* 0810-2：微信配置 Tab（.wx-form 作用域）控件列宽统一——输入框 / 密钥状态条 / 上传框同宽、右缘对齐；
+   状态条由「随内容收窄的短条」改为铺满控件栏，「更新 / 重新上传」操作统一右对齐 */
+.wx-form .fm-row .ctl{max-width:420px;}
+.wx-form .ctl .sec-state{display:flex;width:100%;}
 
 /* 0806-3：MultiSelect 视觉美化——白底浮层 + 轻量选项行。
    选中态不再整行铺靛蓝底（全选时整片蓝过重），改由左侧勾选框表达选中；

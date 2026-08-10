@@ -56,34 +56,28 @@ function UsageCard({ title, icon, rows, periodDays, tone }: { title: string; ico
   );
 }
 
-// 0807-2：敏感凭据「写后不回显」——已配置仅显状态行（尾号 / 文件名 + 更新时间到秒），更新 / 重新上传即整体覆写；
+// 0807-2：敏感凭据「写后不回显」——已配置仅显状态行，更新 / 重新上传即整体覆写；
 // 密钥在数据库为加密存储（非明文），业务需要原值须联系技术发邮件申请（技术从微信后台获取或数据库解密提供），
 // 界面不提供明文查看与文件下载。原「显隐眼睛」脱敏输入框能力随之移除。
-const SEC_AT = '2026-08-07 09:41:23'; // 演示锚点：既有配置的最近更新时间（精确到秒）
-function secNow() {
-  const d = new Date(), p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
+// 0810：状态行收敛为「状态 + 操作」两段——尾号 / 文件名 / 更新时间均不再展示。
 
 // 文本类凭据（AppSecret / API 密钥 / 支付公钥 ID）：已配置态 → 状态行 + 「更新」；更新态 → 空输入框；
 // 保存前二次确认（覆盖原值不可恢复、新值不回显），确认后回状态行
-function SecretText({ last4, maxWidth = 380 }: { last4: string; maxWidth?: number }) {
-  const [cfg, setCfg] = useState({ last4, at: SEC_AT });
+// 0810-2：宽度不再由组件内联 maxWidth 控制，统一交给 .wx-form 作用域（控件列同宽对齐）
+function SecretText() {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState('');
   const [ask, setAsk] = useState(false);
   if (!editing)
     return (
-      <div className="sec-state" style={{ maxWidth }}>
+      <div className="sec-state">
         <span className="sec-ok">已配置</span>
-        <span className="sec-tail">尾号 ****{cfg.last4}</span>
-        <span className="sec-at">{cfg.at} 更新</span>
         <span className="sec-op" onClick={() => setEditing(true)}>更新</span>
       </div>
     );
   return (
     <>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', maxWidth }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         <TextInput value={val} onChange={(e) => setVal(e.target.value)} placeholder="输入新值 · 保存后不再回显" style={{ flex: 1 }} />
         <span className="sec-op" onClick={() => { if (!val.trim()) { toast('请输入新值'); return; } setAsk(true); }}>保存</span>
         <span className="sec-op sec-op-ghost" onClick={() => { setEditing(false); setVal(''); }}>取消</span>
@@ -91,11 +85,10 @@ function SecretText({ last4, maxWidth = 380 }: { last4: string; maxWidth?: numbe
       <ConfirmDialog
         open={ask}
         title="保存并覆盖？"
-        desc={<>保存后将<b>整体覆盖</b>当前值（尾号 ****{cfg.last4}），原值不可恢复；新值保存成功后<b>不再回显</b>，请先核对输入无误。</>}
+        desc={<>保存后将<b>整体覆盖</b>当前值，原值不可恢复；新值保存成功后<b>不再回显</b>，请先核对输入无误。</>}
         confirmText="确认保存"
         onConfirm={() => {
           setAsk(false);
-          setCfg({ last4: val.trim().slice(-4), at: secNow() });
           setEditing(false); setVal('');
           toast('已保存 · 该项不再回显');
         }}
@@ -106,29 +99,27 @@ function SecretText({ last4, maxWidth = 380 }: { last4: string; maxWidth?: numbe
 }
 
 // 文件类凭据（校验文件 / 证书 / 私钥 / 公钥文件）：已上传态不提供下载；重新上传须二次确认（覆盖后原文件不可恢复）
-function SecretFile({ name, accept, emptyHint, empty = false, maxWidth = 380 }: { name: string; accept: string; emptyHint: string; empty?: boolean; maxWidth?: number }) {
-  const [st, setSt] = useState<{ name: string; at: string } | null>(empty ? null : { name, at: SEC_AT });
+function SecretFile({ accept, emptyHint, empty = false }: { accept: string; emptyHint: string; empty?: boolean }) {
+  const [uploaded, setUploaded] = useState(!empty);
   const [ask, setAsk] = useState(false);
-  const pick = () => pickFile(accept, (n) => { setSt({ name: n, at: secNow() }); toast('已上传 ' + n + ' · 不提供下载回显'); });
-  if (!st)
+  const pick = () => pickFile(accept, (n) => { setUploaded(true); toast('已上传 ' + n + ' · 不提供下载回显'); });
+  if (!uploaded)
     return (
-      <div className="upbox" style={{ maxWidth }} onClick={pick}>
+      <div className="upbox" onClick={pick}>
         <Icon id="i-up" />
         <div className="nowrap">{emptyHint}</div>
       </div>
     );
   return (
     <>
-      <div className="sec-state" style={{ maxWidth }}>
+      <div className="sec-state">
         <span className="sec-ok">已上传</span>
-        <span className="sec-tail" title={st.name}>{st.name}</span>
-        <span className="sec-at">{st.at} 更新</span>
         <span className="sec-op" onClick={() => setAsk(true)}>重新上传</span>
       </div>
       <ConfirmDialog
         open={ask}
         title="重新上传并覆盖？"
-        desc={<>重新上传将<b>整体覆盖</b>当前文件「{st.name}」，覆盖后原文件不可恢复；新文件保存后同样<b>不提供下载与回显</b>。</>}
+        desc={<>重新上传将<b>整体覆盖</b>当前文件，覆盖后原文件不可恢复；新文件保存后同样<b>不提供下载与回显</b>。</>}
         confirmText="选择文件"
         onConfirm={() => { setAsk(false); pick(); }}
         onClose={() => setAsk(false)}
@@ -714,7 +705,7 @@ export function OrgDetail() {
             )}
             {/* 0613-2：微信配置改为「公众号 / 支付」分区卡片 + 后台标准 + 结构化限制提示 */}
             {sub === 2 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="wx-form" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="fm-card" style={{ margin: 0 }}>
                   {/* 0614：用途说明改行内灰色小号字（去单独大字行）；公众号为必填 */}
                   <div className="fh">
@@ -724,20 +715,20 @@ export function OrgDetail() {
                   </div>
                   <div className="fm-row">
                     <div className="lab">公众号 AppID</div>
-                    <div className="ctl"><TextInput defaultValue="wx0123456789abcdef" style={{ maxWidth: 320 }} /></div>
+                    <div className="ctl"><TextInput defaultValue="wx0123456789abcdef" /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">AppSecret</div>
-                    <div className="ctl"><SecretText last4="6c2e" /></div>
+                    <div className="ctl"><SecretText /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">网页授权回调地址</div>
-                    <div className="ctl"><TextInput defaultValue="ai-book-ask-mobile-h5.zhangyuqing.top" style={{ maxWidth: 380 }} /></div>
+                    <div className="ctl"><TextInput defaultValue="ai-book-ask-mobile-h5.zhangyuqing.top" /></div>
                   </div>
                   {/* 0722：网页授权域名校验文件属公众平台（非开放平台），随公众号配置上传 */}
                   <div className="fm-row">
                     <div className="lab">域名校验文件</div>
-                    <div className="ctl"><SecretFile name="MP_verify_5f8a2c9d.txt" accept={ACCEPT.txt} emptyHint="上传 MP_verify_xxx.txt（公众号后台生成）" /></div>
+                    <div className="ctl"><SecretFile accept={ACCEPT.txt} emptyHint="上传 MP_verify_xxx.txt（公众号后台生成）" /></div>
                   </div>
                   <ul className="wx-lim">
                     <li>须为「已认证服务号」，订阅号不支持网页授权获取用户信息。</li>
@@ -760,15 +751,15 @@ export function OrgDetail() {
                   </div>
                   <div className="fm-row">
                     <div className="lab">网站应用 AppID</div>
-                    <div className="ctl"><TextInput defaultValue="wxopen0123456789ab" style={{ maxWidth: 320 }} /></div>
+                    <div className="ctl"><TextInput defaultValue="wxopen0123456789ab" /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">AppSecret</div>
-                    <div className="ctl"><SecretText last4="9d4f" /></div>
+                    <div className="ctl"><SecretText /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">授权回调地址</div>
-                    <div className="ctl"><TextInput defaultValue="ai-book-ask-mobile-h5.zhangyuqing.top" style={{ maxWidth: 380 }} /></div>
+                    <div className="ctl"><TextInput defaultValue="ai-book-ask-mobile-h5.zhangyuqing.top" /></div>
                   </div>
                   <ul className="wx-lim">
                     <li>用于「非微信浏览器」打开时唤起微信扫码登录（开放平台网站应用 / 二维码授权）。</li>
@@ -790,47 +781,47 @@ export function OrgDetail() {
                   </div>
                   <div className="fm-row">
                     <div className="lab">商户号 MchID</div>
-                    <div className="ctl"><TextInput defaultValue="1900012345" style={{ maxWidth: 320 }} /></div>
+                    <div className="ctl"><TextInput defaultValue="1900012345" /></div>
                   </div>
                   {/* 0806：v2 版接口签名密钥——委托代扣（自动续费）签约/扣款接口仍走 v2 体系，配置连续包月必需 */}
                   <div className="fm-row">
                     <div className="lab">API v2 密钥</div>
                     <div className="ctl">
-                      <SecretText last4="9c41" />
+                      <SecretText />
                       <div className="hint" style={{ marginTop: 6 }}>32 位，商户平台「API 安全」设置 · 委托代扣（自动续费）接口签名必需，与 API v3 密钥并存</div>
                     </div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">API v3 密钥</div>
-                    <div className="ctl"><SecretText last4="3a7f" /></div>
+                    <div className="ctl"><SecretText /></div>
                   </div>
                   <div className="fm-row">
                     <div className="lab">商户证书</div>
-                    <div className="ctl"><SecretFile name="apiclient_cert.pem" accept={ACCEPT.cert} emptyHint="上传 apiclient_cert.pem" /></div>
+                    <div className="ctl"><SecretFile accept={ACCEPT.cert} emptyHint="上传 apiclient_cert.pem" /></div>
                   </div>
                   {/* 0722：API v3 请求签名需商户私钥，与证书成对上传 */}
                   <div className="fm-row">
                     <div className="lab">商户 API 私钥</div>
-                    <div className="ctl"><SecretFile name="apiclient_key.pem" accept={ACCEPT.cert} emptyHint="上传 apiclient_key.pem" /></div>
+                    <div className="ctl"><SecretFile accept={ACCEPT.cert} emptyHint="上传 apiclient_key.pem" /></div>
                   </div>
                   {/* 0806：公钥模式验签（2024 起新注册商户默认发放公钥，替代平台证书）——ID + 文件配套 */}
                   <div className="fm-row">
                     <div className="lab">支付公钥 ID</div>
                     <div className="ctl">
-                      <SecretText last4="0001" maxWidth={400} />
+                      <SecretText />
                       <div className="hint" style={{ marginTop: 6 }}>微信支付「公钥模式」验签标识（PUB_KEY_ID_ 开头）· 验签时按回调头 Wechatpay-Serial 匹配</div>
                     </div>
                   </div>
                   {/* 0807-2：支付公钥文件保留「未上传」空态，演示 空态上传 → 已上传状态行 全流程 */}
                   <div className="fm-row">
                     <div className="lab">支付公钥文件</div>
-                    <div className="ctl"><SecretFile name="pub_key.pem" accept={ACCEPT.cert} emptyHint="上传 pub_key.pem" empty /></div>
+                    <div className="ctl"><SecretFile accept={ACCEPT.cert} emptyHint="上传 pub_key.pem" empty /></div>
                   </div>
                   {/* 0806：委托代扣签约模板（业务参数，置卡片末尾）——C 端签约连续包月时传入 */}
                   <div className="fm-row">
                     <div className="lab">委托代扣包月模板 ID</div>
                     <div className="ctl">
-                      <TextInput defaultValue="100086" style={{ maxWidth: 320 }} />
+                      <TextInput defaultValue="100086" />
                       <div className="hint" style={{ marginTop: 6 }}>委托代扣「签约模板」审核通过后分配（plan_id）· 会员连续包月签约扣费时传入</div>
                     </div>
                   </div>
@@ -841,7 +832,7 @@ export function OrgDetail() {
                     <li>支付公钥 ID 与公钥文件 pub_key.pem 配套（公钥模式验签，2024 年起新注册商户默认发放；存量商户走平台证书，二选一）。</li>
                     <li>委托代扣包月模板 ID＝签约模板经微信审核通过后分配，用于 C 端会员连续包月签约。</li>
                     <li>退款 / 自动续费依赖支付能力，未配置支付则前台无法下单。</li>
-                    <li>敏感项（API v2 / v3 密钥、证书、私钥、公钥 ID、公钥文件）保存后不回显——仅显示已配置状态与尾号 / 文件名，更新即整体覆写；密钥在数据库加密存储（非明文），业务需要原值须联系技术发邮件申请（从微信后台获取或数据库解密提供），界面不提供明文查看与文件下载。</li>
+                    <li>敏感项（API v2 / v3 密钥、证书、私钥、公钥 ID、公钥文件）保存后不回显——仅显示已配置状态，更新即整体覆写；密钥在数据库加密存储（非明文），业务需要原值须联系技术发邮件申请（从微信后台获取或数据库解密提供），界面不提供明文查看与文件下载。</li>
                   </ul>
                   <div style={{ marginTop: 4 }}>
                     <button className="btn btn-primary btn-sm" onClick={() => toast('已保存微信支付配置')}>保存</button>
