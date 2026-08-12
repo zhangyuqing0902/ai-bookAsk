@@ -33,8 +33,8 @@ export function MemberCenter() {
   };
   const reopen = () => {
     setAutoRenew(true);
-    // 0613：开启自动续费 → 3 秒 tips，告知提前 3 天短信提醒
-    toast('已开启自动续费 · 将于到期前 3 天短信提醒', 3000);
+    // 0613：开启自动续费 → 3 秒 tips；0812：提醒时点定版为「扣费前 5 天」（扣费日=到期日前 1 天）
+    toast('已开启自动续费 · 将于扣费前 5 天短信提醒', 3000);
   };
 
   return (
@@ -103,7 +103,7 @@ export function MemberCenter() {
                 自动续费
               </button>
             )}
-            <div className="auto-tip">自动续费将于到期前 3 天短信提醒，可随时取消</div>
+            <div className="auto-tip">自动续费将于扣费前 5 天短信提醒，可随时取消</div>
           </div>
         </div>
       </div>

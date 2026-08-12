@@ -4,13 +4,17 @@ import { Icon } from '@aba/ui';
 import { ORDERS, byPayDesc } from '../data/orders';
 
 const TABS = ['全部', '会员', '永享', '兑换码'] as const;
-// 0722：订单四态——发起支付即落库为「待支付」（30 分钟有效期），到期转「已失效」；退款售后为独立分组。
+// 0722：订单四态——发起支付即落库为「待支付」（0812-e：支付有效期全平台统一 15 分钟），到期转「已失效」；退款售后为独立分组。
 const STATUS_CHIPS = ['全部', '待支付', '已支付', '已失效', '退款/售后'] as const;
-// 把自由文本的 o.status 归并到状态分组（供状态 chips 过滤）
-const statusGroup = (s: string): string => {
-  if (s === '待支付' || s === '已失效') return s;
-  if (s === '部分退款' || s === '全额退款' || s === '退款中') return '退款/售后';
-  return '已支付'; // 已支付 / 已核销 均归「已支付」
+// 0812：筛选改双维谓词（订单状态 × 退款状态，与后台同模型）——一单可命中多个筛选：
+// 「已支付」＝付款曾成功（含其后退款中 / 部分 / 全额退款的单，钱的事实由卡片退款标记表达）；
+// 「退款/售后」＝发生过退款动作。全额退款的单不再从「已支付」里消失，避免用户"找不到付过钱的订单"。
+const REFUNDISH = ['退款中', '部分退款', '全额退款'];
+const matchesChip = (s: string, chip: string): boolean => {
+  if (chip === '全部') return true;
+  if (chip === '待支付' || chip === '已失效') return s === chip;
+  if (chip === '退款/售后') return REFUNDISH.includes(s);
+  return s === '已支付' || s === '已核销' || REFUNDISH.includes(s); // chip=已支付
 };
 const fmtCd = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
@@ -37,7 +41,7 @@ export function Orders() {
   // 0716 #5：兑换码 tab 不做状态筛选（能显示的兑换码必为已核销），忽略 statusChip
   const isRedeemTab = tab === 3;
   const list = ORDERS.filter(
-    (o) => (tab === 0 || o.type === TABS[tab]) && (isRedeemTab || statusChip === '全部' || statusGroup(o.status) === statusChip),
+    (o) => (tab === 0 || o.type === TABS[tab]) && (isRedeemTab || matchesChip(o.status, statusChip)),
   ).slice().sort(byPayDesc);
   return (
     <>
@@ -89,7 +93,7 @@ export function Orders() {
                 {/* 0722：待支付 / 已失效无付款时间，显示下单时间 */}
                 <span>{o.payTime || o.orderTime}</span>
               </div>
-              {/* 0722：待支付条——剩余支付时间倒计时 + 去支付（30 分钟未支付自动失效） */}
+              {/* 0722：待支付条——剩余支付时间倒计时 + 去支付（15 分钟未支付自动失效） */}
               {o.status === '待支付' && (
                 <div className="pay-pending-strip" onClick={(e) => e.stopPropagation()}>
                   <span>剩余支付时间</span>

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
+import { CUSTOM_PRESET_KEY, PROMPT_PRESETS, promptPresetOf } from '@aba/mock';
 import { TextInput } from './Fields';
 import { Modal } from './Modal';
 import { pickFile, pickAudio, ACCEPT } from './Upload';
@@ -12,19 +13,26 @@ const DEFAULT_PROMPT =
   '你是一位资深心血管科医生「李医生」。回答需严谨、有出处,优先引用知识库内容并标注来源;语气专业而亲切。遇到受限的图/音/视内容时,引导用户开通会员或单独永享解锁。涉及诊断与用药时提醒用户以线下医嘱为准。';
 
 // Agent 详情编辑（机构后台 + 平台后台共用，0614b 抽公共组件）。
-// promptEditable=true 时「回答 Prompt」对超管开放编辑（不受权限限制，可改可存）；
+// 0812：「回答 Prompt」升级为「人设风格」——七档平台预设 + 自定义。选预设时正文只读展示预设全文（可见不黑盒）；
+//   选「自定义」时可编辑，并预填切换前文本作起点。后端仅存 preset_key，custom 才存 prompt 全文（最小改动）。
+// 0812-e：权限语义随权限项定名「人设风格-自定义」对齐——**预设人人可切**（机构侧不再整块只读），
+//   **仅「自定义」受权限控制**（customEditable=false 时该 chip 锁定、正文只读）。
 // backTo / kpBase 适配两端不同路由。
 export function AgentDetailView({
   backTo = '/agents',
   kpBase = '/kps',
-  promptEditable = false,
+  customEditable = false,
   readonlyBanner,
+  headExtra,
 }: {
   backTo?: string;
   kpBase?: string;
-  promptEditable?: boolean;
+  /** 0812-e：是否具备「人设风格-自定义」权限（对应权限点 agent.prompt.edit）；预设切换不受此限制 */
+  customEditable?: boolean;
   /** 0806：外部只读原因（父机构查看子机构 Agent）——传入即整页只读：输入禁用、上传与保存置灰，顶部显示该文案 */
   readonlyBanner?: string;
+  /** 0812-f：页头右侧插槽（保存按钮之前）——机构后台放〔演示〕权限切换，上线后由角色权限决定、无此开关 */
+  headExtra?: ReactNode;
 }) {
   const nav = useNavigate();
   const { id } = useParams();
@@ -40,7 +48,26 @@ export function AgentDetailView({
   // 0806：TTS 参考音文本（必填，≤100 字，不限字符种类）——参考音频内朗读的文本内容，供 TTS 引擎对齐
   const TTS_TEXT_MAX = 100;
   const [ttsText, setTtsText] = useState(isNew ? '' : '大家好，我是李医生。健康路上有疑问，随时问我，我会结合权威医学知识为你解答。');
-  const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+  // 0812：人设风格——存量 Agent（李医生）视为自定义；新建默认「专业友好」预设
+  const [presetKey, setPresetKey] = useState(isNew ? PROMPT_PRESETS[0].key : CUSTOM_PRESET_KEY);
+  const [prompt, setPrompt] = useState(isNew ? PROMPT_PRESETS[0].text : DEFAULT_PROMPT);
+  const isCustom = presetKey === CUSTOM_PRESET_KEY;
+  // 0812-e：预设切换不受权限限制（仅跨机构只读时禁用）；「自定义」需 agent.prompt.edit 权限。
+  // 权限锁的是「编辑」不是「查看」——无权限机构切到预设后仍可切回查看原有自定义文案（只读），
+  // 否则一次切换就把原文案永久换掉、无权限再也写不回来，等于不可逆的数据丢失。
+  const canEditCustom = customEditable && !ro;
+  const savedCustom = useRef(isNew ? '' : DEFAULT_PROMPT); // 该 Agent 已保存的自定义文案（无权限时只读回看）
+  const pickPreset = (k: string) => {
+    if (ro) return denyRo();
+    if (k === CUSTOM_PRESET_KEY && !canEditCustom && !savedCustom.current) {
+      return toast('「自定义」需平台管理员授权（权限项：人设风格-自定义）');
+    }
+    if (k === presetKey) return;
+    setPresetKey(k);
+    if (k !== CUSTOM_PRESET_KEY) setPrompt(promptPresetOf(k)?.text ?? '');
+    // 切到自定义：有权限＝保留当前文本作起点（降低从零编写门槛）；无权限＝恢复已保存的自定义文案供查看
+    else if (!canEditCustom) setPrompt(savedCustom.current);
+  };
 
   // 0716 #11：保存前校验——名称非空 + 机构内唯一；TTS 参考音必填（格式/时长在上传时已校验）
   // 0806：TTS 参考音文本必填 + 100 字上限（输入框已按 maxLength 拦截，此处兜底）
@@ -53,12 +80,17 @@ export function AgentDetailView({
     if (!ttsUploaded) return toast('请上传 TTS 参考音');
     if (!ttsText.trim()) return toast('请输入 TTS 参考音文本');
     if (ttsText.length > TTS_TEXT_MAX) return toast(`TTS 参考音文本不能超过 ${TTS_TEXT_MAX} 字`);
-    toast(isNew ? '已创建 Agent' : promptEditable ? '已保存（含回答 Prompt）' : '已保存');
+    // 0812-f：人设风格空值拦截不区分权限——「自定义」态正文为空一律不可保存（人设风格是必填的生效配置，
+    // 空文案会让 Agent 回落到无人设状态）；无自定义权限者按其可行动路径引导去选预设，而非提示他去改文本框
+    if (isCustom && !prompt.trim()) {
+      return toast(canEditCustom ? '自定义人设风格不能为空，可先选择一个预设作起点' : '人设风格不能为空，请选择一个平台预设后保存');
+    }
+    toast(isNew ? '已创建 Agent' : '已保存');
     if (isNew) nav(backTo);
   };
 
   return (
-    <>
+    <div className="agent-detail">
       <div className="kpd-head">
         <span className="kpd-back" onClick={() => nav(backTo)}>
           <Icon id="i-chevL" />
@@ -67,6 +99,7 @@ export function AgentDetailView({
         <span className="kpd-name">{isNew ? '新建 Agent' : '编辑 Agent · 李医生'}</span>
         <span className={'tag-s ' + (agentType === '机构' ? 'tag-indigo' : 'tag-line')}>{agentType}</span>
         <span className="kpd-status">
+          {headExtra}
           <button className={'btn btn-primary btn-sm' + (ro ? ' off' : '')} onClick={save}>{isNew ? '创建' : '保存'}</button>
         </span>
       </div>
@@ -78,7 +111,7 @@ export function AgentDetailView({
         </div>
       )}
       <div className="agent-edit" style={{ marginTop: 18 }}>
-        <div className="fm-card" style={{ margin: 0 }}>
+        <div className="fm-card ae-card">
           <div className="fm-row">
             <div className="lab">头像<span className="req">*</span></div>
             <div className="ctl ae-up">
@@ -151,32 +184,63 @@ export function AgentDetailView({
               </div>
             </div>
           </div>
+          {/* 0812：「回答 Prompt」→「人设风格」——七档预设 chip + 自定义；预设全文可见（只读）
+              0812-e：两端同一结构——预设人人可切；「自定义」按权限（人设风格-自定义）开关，无权限时 chip 锁定、正文只读。
+              说明合并为一行置于输入区上方：既讲清「人设段只管身份语气」的分层边界，也讲清预设 / 自定义的用法 */}
           <div className="fm-row">
-            <div className="lab">回答 Prompt</div>
+            <div className="lab">人设风格<span className="req">*</span></div>
             <div className="ctl">
-              {/* 平台超管：不受权限限制，可针对任意机构 / 任意 Agent 编辑并保存回答 Prompt */}
               <div className="hint" style={{ marginTop: 0, marginBottom: 8 }}>
-                {promptEditable ? '平台超管可编辑全平台任意 Agent 的回答 Prompt，保存后即时生效' : '受权限控制，若需编辑请联系平台管理员'}
+                {ro
+                  ? '此处只定义身份与语气，事实与安全规则由系统统一控制；子机构 Agent 仅可查看'
+                  : canEditCustom
+                    ? '此处只定义身份与语气，事实与安全规则由系统统一控制；选预设即用即生效，「自定义」可自由改写'
+                    : '此处只定义身份与语气，事实与安全规则由系统统一控制；可切换平台预设，「自定义」需平台授权'}
               </div>
-              {promptEditable ? (
-                <textarea
-                  className="ae-prompt ae-prompt-edit"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={5}
-                />
-              ) : (
-                <div className="ae-prompt" style={{ background: '#F3F4F8', color: 'var(--ink-3)' }}>
-                  {prompt}
-                </div>
-              )}
+              <div className="ae-preset-row">
+                {PROMPT_PRESETS.map((p) => (
+                  <button
+                    key={p.key}
+                    className={'ae-preset-chip' + (presetKey === p.key ? ' on' : '') + (ro ? ' is-locked' : '')}
+                    onClick={() => pickPreset(p.key)}
+                  >
+                    {p.label}
+                    {p.key === PROMPT_PRESETS[0].key && <span className="ae-preset-def">默认</span>}
+                    {/* 适用场景提示：平台通用深色浮层（同 InfoDot 的 info-pop） */}
+                    <span className="ae-preset-tip">{p.apply}</span>
+                  </button>
+                ))}
+                <button
+                  className={'ae-preset-chip' + (isCustom ? ' on' : '') + (canEditCustom ? '' : ' is-locked')}
+                  onClick={() => pickPreset(CUSTOM_PRESET_KEY)}
+                >
+                  {!canEditCustom && <Icon id="i-lock" w={10} h={10} />}
+                  自定义
+                  <span className="ae-preset-tip">
+                    {canEditCustom
+                      ? '在预设基础上自行编写身份与语气描述'
+                      : savedCustom.current
+                        ? '可查看本 Agent 已保存的自定义文案；编辑需平台管理员授权（权限项：人设风格-自定义）'
+                        : '需平台管理员授权（权限项：人设风格-自定义）'}
+                  </span>
+                </button>
+              </div>
+              {/* 0812-e：预设文案为结构化多行（风格 / 避免分段）；高度收窄，可手动拉高 */}
+              <textarea
+                className={'ae-prompt ae-prompt-edit' + (isCustom && canEditCustom ? '' : ' ae-prompt-preset')}
+                value={prompt}
+                readOnly={!(isCustom && canEditCustom)}
+                onChange={(e) => isCustom && canEditCustom && setPrompt(e.target.value)}
+                rows={10}
+              />
             </div>
           </div>
         </div>
         <div>
-          <div className="card card-pad" style={{ marginBottom: 16 }}>
-            <div className="block-t">关联 KP</div>
+          <div className="card card-pad ae-side" style={{ marginBottom: 16 }}>
+            <div className="block-t">关联 KP<span className="ae-kp-n">2</span></div>
             <div className="ae-kp" style={{ cursor: 'pointer' }} onClick={() => nav(kpBase + '/1')}>
+              <span className="ae-kp-ic"><Icon id="i-doc" w={15} h={15} /></span>
               <span className="nm">心血管分册 · 第4版</span>
               <span className="go">
                 前往 KP
@@ -184,6 +248,7 @@ export function AgentDetailView({
               </span>
             </div>
             <div className="ae-kp" style={{ cursor: 'pointer' }} onClick={() => nav(kpBase + '/3')}>
+              <span className="ae-kp-ic"><Icon id="i-doc" w={15} h={15} /></span>
               <span className="nm">内科精要</span>
               <span className="go">
                 前往 KP
@@ -213,6 +278,6 @@ export function AgentDetailView({
           拖动调整裁剪区域 · 输出圆形头像
         </div>
       </Modal>
-    </>
+    </div>
   );
 }

@@ -385,12 +385,13 @@ body,
 }
 
 /* ============ 一-9:模拟微信支付收银台(会员+永享共用) ============ */
+/* 0812-c 美化：品牌氛围底 + 光晕商户球 + 金额大标题 + 悬浮二维码卡 + 渐变步骤链（仅样式） */
 .wxpay {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: #fff;
+  background: var(--paper);
 }
 .wxpay-top {
   display: flex;
@@ -412,39 +413,34 @@ body,
 }
 .wxpay-body {
   flex: 1;
-  background: #fff;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 24px;
-}
-.wxpay-merchant {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 22px;
-}
-/* 商户 logo:会话界面同款电光靛紫色动画球(复用 .orb .float,弃微信绿) */
-.wxpay-logo {
-  width: 46px;
-  height: 46px;
-}
-.wxpay-mname {
-  font-size: 14px;
-  color: var(--ink-2);
+  /* 0812-d：去掉商户 logo 区后整体上移，顶部留白收窄 */
+  padding: 2px 20px 28px;
+  background:
+    radial-gradient(130% 42% at 50% -8%, rgba(75, 87, 232, 0.1), rgba(75, 87, 232, 0) 68%),
+    var(--paper);
 }
 .wxpay-amount {
-  font-size: 38px;
+  font-size: 40px;
   font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
   color: var(--ink);
   font-family: var(--serif-cjk);
 }
+/* 0812-c：商品说明改浅冷胶囊，收银台感 */
 .wxpay-subject {
-  font-size: 12.5px;
-  color: var(--ink-3);
-  margin-top: 6px;
-  margin-bottom: 26px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: var(--surface-warm);
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 10px;
+  margin-bottom: 18px;
   text-align: center;
 }
 .wxpay-method {
@@ -488,19 +484,26 @@ body,
   color: #07c160;
   display: flex;
 }
+/* 0812-c：主按钮渐变绿 + 投影 + 微按压（支付语义色保留） */
 .wxpay-btn {
   width: 100%;
   border: none;
-  background: #07c160;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #10cf6f, #07c160);
   color: #fff;
   font-size: 16px;
   font-weight: 600;
-  border-radius: 9px;
-  padding: 14px;
+  border-radius: 12px;
+  padding: 15px 14px;
   cursor: pointer;
+  box-shadow: 0 10px 20px -9px rgba(7, 193, 96, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 .wxpay-btn:active {
   background: #06ad56;
+  transform: scale(0.985);
 }
 .wxpay-foot {
   display: flex;
@@ -539,6 +542,157 @@ body,
 }
 .wxpay-h5tip svg {
   flex: none;
+}
+/* 0812：非微信浏览器 Native 扫码卡——二维码 + 保存引导 + 三步 + 轮询等待 */
+/* 0812-c：悬浮白卡（深投影大圆角）+ 大二维码 + 有效期暖橙胶囊 */
+.wxqr-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 18px 20px 14px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid var(--line-2);
+  box-shadow: var(--sh-md);
+}
+.wxqr-svg {
+  width: 178px;
+  height: 178px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+.wxqr-expire {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+  font-size: 11px;
+  font-weight: 500;
+}
+/* 0812-c：三步引导悬浮白卡——渐变序号圆 + 虚线串联 */
+.wxqr-steps {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 12px;
+  padding: 9px 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--sh-sm);
+}
+.wxqr-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.wxqr-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 9.6px;
+  top: 29px;
+  bottom: -1px;
+  border-left: 1.5px dashed rgba(75, 87, 232, 0.28);
+}
+.wxqr-step i {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--grad-soft);
+  color: #fff;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px -3px rgba(75, 87, 232, 0.5);
+}
+.wxqr-wait {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+/* 0812-c：收银台页等待条升级翡翠胶囊 + 「我已完成支付」白底小胶囊（.od-qr-body 内嵌卡不受影响） */
+/* 0812-d：等待条上移到价格下方（商品说明与二维码卡之间），间距改为下外边距 */
+.wxpay .wxqr-wait {
+  width: 100%;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 5px;
+  margin: 0 0 16px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: var(--jade-soft);
+  color: #0e7a5a;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.wxqr-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--jade, #2fa877);
+  animation: wxqr-pulse 1.2s ease-in-out infinite;
+}
+@keyframes wxqr-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.75); }
+}
+.wxqr-check {
+  color: var(--indigo);
+  font-weight: 600;
+}
+.wxpay .wxqr-check {
+  margin-left: 2px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--sh-sm);
+}
+/* 0812-b：订单详情 · Native 待支付内嵌扫码卡（复用 wxqr-svg / wxqr-wait，紧凑版） */
+.od-qr-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px 4px;
+}
+.od-qr-body .wxqr-svg {
+  width: 148px;
+  height: 148px;
+}
+.od-qr-save {
+  margin-top: 12px;
+  width: auto;
+  padding: 9px 22px;
+  font-size: 13.5px;
+}
+.od-qr-tip {
+  margin-top: 9px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.od-qr-body .wxqr-wait {
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.od-qr-body .wxqr-check {
+  margin-left: 8px;
 }
 .wxpay {
   position: relative;

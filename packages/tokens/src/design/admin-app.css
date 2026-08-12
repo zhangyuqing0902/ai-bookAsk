@@ -517,10 +517,63 @@ a {
 .cursub-quota {
   padding: 14px 20px 18px;
 }
+/* 0812-b：空态美化——虚线面板 + 圆形图标徽章（过期=暖橙 / 未开通=靛蓝）+ 引导胶囊 */
 .cursub-empty {
-  padding: 22px 20px;
-  color: var(--ink-3);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 14px 20px 18px;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px dashed rgba(75, 87, 232, 0.28);
+  background: linear-gradient(135deg, rgba(236, 238, 254, 0.55), rgba(255, 255, 255, 0) 60%);
   font-size: 13px;
+}
+.cursub-empty.is-expired {
+  border-color: rgba(224, 74, 46, 0.26);
+  background: linear-gradient(135deg, rgba(255, 233, 227, 0.5), rgba(255, 255, 255, 0) 60%);
+}
+.cursub-empty-ic {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--indigo);
+  background: radial-gradient(120% 120% at 30% 24%, #fff, rgba(255, 255, 255, 0) 55%), var(--indigo-soft);
+  box-shadow: 0 6px 14px -8px rgba(75, 87, 232, 0.55);
+}
+.cursub-empty.is-expired .cursub-empty-ic {
+  color: var(--amber-ink);
+  background: radial-gradient(120% 120% at 30% 24%, #fff, rgba(255, 255, 255, 0) 55%), var(--amber-soft);
+  box-shadow: 0 6px 14px -8px rgba(224, 74, 46, 0.5);
+}
+.cursub-empty-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.cursub-empty-title {
+  color: var(--ink);
+  font-size: 14px;
+}
+.cursub-empty-desc {
+  color: var(--ink-3);
+  line-height: 1.7;
+}
+.cursub-empty-hint {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--indigo-soft);
+  color: var(--indigo);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.6;
 }
 
 /* 0615-2：新建订阅弹窗 · 套餐竖排左对齐列表（替代横向卡片，修复变形） */

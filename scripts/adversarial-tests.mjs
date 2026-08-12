@@ -61,8 +61,12 @@ test('无关系 KP 删除同为逻辑删除（无影响声明）', () => {
   assert.equal(v.action, 'soft-delete');
   assert.equal(v.hasRelations, false);
 });
-test('实时分享不占 KP/存储但消费接收方 Token', () => assert.deepEqual({ ...r.sharePolicy('realtime') }, {
-  consumesKp: false, consumesStorage: false, consumesToken: true, editable: false, showQrShare: false,
+// 0812：实时分享改为占接收方 KP（存储仍不占、Token 仍归接收方）
+test('实时分享占 KP、不占存储、消费接收方 Token', () => assert.deepEqual({ ...r.sharePolicy('realtime') }, {
+  consumesKp: true, consumesStorage: false, consumesToken: true, editable: false, showQrShare: false,
+}));
+test('快照分享占 KP/存储、Token 归接收方', () => assert.deepEqual({ ...r.sharePolicy('snapshot') }, {
+  consumesKp: true, consumesStorage: true, consumesToken: true, editable: true, showQrShare: true,
 }));
 test('撤销后实时导入失效、快照保留', () => {
   assert.equal(r.shareAccessAfterRevocation('realtime'), 'revoked');
@@ -308,12 +312,18 @@ test('0715/#6 + 0806-3 主控台机构筛选：多选默认全选回填「全部
   assert.ok(src.includes("allSelected ? '全部机构'"), '多选全选态应回填「全部机构」');
 });
 test('0715/#7 移动端订单双维度筛选（类型 + 状态）', () => {
+  // 0812：statusGroup 单值映射改 matchesChip 双维谓词（一单可命中多个筛选）
   const src = read('../apps/mobile-h5/src/screens/Orders.tsx');
-  for (const t of ['statusGroup', '待支付', '退款/售后', 'STATUS_CHIPS', 'fchip']) {
+  for (const t of ['matchesChip', '待支付', '退款/售后', 'STATUS_CHIPS', 'fchip']) {
     assert.ok(src.includes(t), `Orders 缺 ${t}`);
   }
   const data = read('../apps/mobile-h5/src/data/orders.ts');
   assert.ok(data.includes("'待支付'") || data.includes('待支付'), 'orders 数据缺待支付演示单');
+});
+test('0812 订单双维谓词：已支付含退款态、退款/售后含退款中', () => {
+  const src = read('../apps/mobile-h5/src/screens/Orders.tsx');
+  assert.ok(/REFUNDISH = \['退款中', '部分退款', '全额退款'\]/.test(src), '缺退款态集合 REFUNDISH');
+  assert.ok(src.includes("s === '已支付' || s === '已核销' || REFUNDISH.includes(s)"), '「已支付」谓词应含已支付/已核销/退款态');
 });
 test('0715/#8 额度步进器 QtyStepper + 卡片', () => {
   const qs = read('../packages/ui-admin/src/QtyStepper.tsx');
@@ -823,10 +833,11 @@ test('0807-2 微信敏感项写后不回显（状态行+更新覆写，显隐眼
   assert.ok(!od.includes('SecretInput') && !od.includes('secret-eye'), '显隐眼睛（SecretInput/secret-eye）应已移除');
   assert.ok((od.match(/<SecretText /g) ?? []).length >= 5, '文本类敏感项未接 SecretText（应 ≥5 处：两 AppSecret + v2/v3 密钥 + 公钥 ID）');
   assert.ok((od.match(/<SecretFile /g) ?? []).length >= 4, '文件类敏感项未接 SecretFile（应 ≥4 处：校验文件/证书/私钥/公钥文件）');
-  assert.ok(od.includes('已配置') && od.includes('不再回显') && od.includes('尾号 ****'), '缺已配置状态行 / 不回显文案');
+  assert.ok(od.includes('已配置') && od.includes('不再回显'), '缺已配置状态行 / 不回显文案');
+  // 0810：状态行收敛为「状态 + 操作」两段，尾号/文件名/更新时间全部移除
+  assert.ok(!od.includes('尾号 ****') && !od.includes('SEC_AT'), '0810 后状态行不得再含尾号/更新时间');
   assert.ok(od.includes('重新上传并覆盖？') && od.includes('不提供下载与回显'), '文件重新上传缺二次确认弹窗');
   assert.ok(od.includes('保存并覆盖？') && od.includes('请先核对输入无误'), '文本保存缺二次确认弹窗（0807-2b）');
-  assert.ok(/\$\{p\(d\.getHours\(\)\)\}:\$\{p\(d\.getMinutes\(\)\)\}:\$\{p\(d\.getSeconds\(\)\)\}/.test(od) && /SEC_AT = '[\d-]+ \d{2}:\d{2}:\d{2}'/.test(od), '更新时间未精确到秒');
   assert.ok(od.includes('发邮件申请'), 'wx-lim 缺原值获取机制说明（联系技术发邮件申请）');
   assert.ok(od.includes('empty'), '支付公钥文件缺未上传空态演示');
   const sprite = read('../packages/ui/src/IconSprite.tsx');
@@ -851,12 +862,19 @@ test('0806-2 微信支付：API v2 前置于 API v3、命名统一带空格', ()
   assert.ok(!src2.includes('APIv3'), '残留无空格「APIv3」');
 });
 
-test('0806 文档同步：清单 v2.9 + PRD v1.12 五项全落', () => {
+test('0806 文档同步：清单 ≥v2.9 + PRD ≥v1.12 五项全落', () => {
+  // 0812：版本断言改实读比较（原写死 v2.9 / v1.12，版本升级即失效的旧账，与「版本号从生成器实读」测试同原则）
+  const geVer = (v, base) => {
+    const [a1, a2] = v.split('.').map(Number); const [b1, b2] = base.split('.').map(Number);
+    return a1 > b1 || (a1 === b1 && a2 >= b2);
+  };
   const feature = read('../docs/feature-list-build/gen.py');
-  assert.ok(feature.includes('v2.9'), '清单未升 v2.9');
+  const featVer = (feature.match(/版本：v([\d.]+) ·/) || [])[1];
+  assert.ok(featVer && geVer(featVer, '2.9'), `清单版本 ${featVer} 应 ≥ v2.9`);
   for (const t2 of ['宽限期（待续费）', 'TTS 参考音文本', '委托代扣包月模板 ID', '机构资料', '机构类型切换']) assert.ok(feature.includes(t2), `清单缺 ${t2}`);
   const prd = read('../docs/prd-build/build-prd.js');
-  assert.ok(prd.includes('v1.12'), 'PRD 未升 v1.12');
+  const prdVer = (prd.match(/版本 v([\d.]+)　/) || [])[1];
+  assert.ok(prdVer && geVer(prdVer, '1.12'), `PRD 版本 ${prdVer} 应 ≥ v1.12`);
   for (const t2 of ['宽限期（待续费）', 'TTS 参考音文本', '支付公钥 ID', '机构资料', '父子机构数据范围']) assert.ok(prd.includes(t2), `PRD 缺 ${t2}`);
   assert.ok(prd.includes('固定滚动窗口快照'), 'PRD 未补 0724 DAU 口径');
 });

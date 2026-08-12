@@ -13,11 +13,11 @@ const STRATEGIES = [
 export function SysConfig() {
   const [strategy, setStrategy] = useState(1);
   const [confirm, setConfirm] = useState<null | { title: string; desc?: ReactNode; confirmText: string; onOk: () => void }>(null);
-  // 保存价格 → 二次确认（说明影响范围）
+  // 保存价格 → 二次确认（说明影响范围）；0812：扣费口径改「就低不就高」（涨价保护存量签约用户）
   const askSavePrice = () =>
     setConfirm({
       title: '保存会员价格',
-      desc: '保存后新开通用户按新价格收费；已开通自动续费的用户，下一扣费周期将按修改后的价格扣款。',
+      desc: '保存后新开通用户按新价格签约；已开通自动续费的用户按「就低不就高」扣费——降价后按新价格扣款（扣费前短信告知），涨价后仍按其签约价扣款。',
       confirmText: '确认保存',
       onOk: () => toast('已保存价格'),
     });
@@ -78,9 +78,12 @@ export function SysConfig() {
         {/* 0716 #10：会员价变更警示——无序序号结构化，提醒运营确定后非必要不改，避免续费扣款争议
             0718 #5：续费规则 + 调价须知合并为同一灰色说明块，与「连续包月」面板左对齐（不再缩进表单标签列）；
             0718 #6：纯文字呈现——去掉编辑态标记与两行间分隔线；保存按钮单独一行、同样左对齐 */}
+        {/* 0812：调价扣费口径定版「就低不就高」——自动扣费价 = min(签约价, 当前售价)；降价须扣费前告知（并入续费提醒短信） */}
         <div className="price-note" style={{ marginTop: 10 }}>
           <div className="price-note-row">续费规则：支持随时退订，到期赠 72 小时会员缓冲使用期</div>
-          <div className="price-note-row">调价须知：会员价一经确定，非必要请勿修改；已开通自动续费的用户，下一扣费周期将按修改后的价格扣款。</div>
+          <div className="price-note-row">调价须知：会员价一经确定，非必要请勿修改；新用户始终按最新价格签约。</div>
+          <div className="price-note-row">降价：已开通自动续费的用户按最新（更低）价格扣款，并在扣费前 5 天的续费提醒短信中一并告知降价信息。</div>
+          <div className="price-note-row">涨价：已开通自动续费的用户仍按其签约价格扣款（就低不就高，保护存量用户），仅新签约用户按新价格执行。</div>
         </div>
         <div style={{ marginTop: 14 }}>
           <button className="btn btn-primary btn-sm" onClick={askSavePrice}>

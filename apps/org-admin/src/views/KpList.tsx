@@ -211,7 +211,7 @@ export function KpList() {
           {/* 弹窗加宽至 680，li 不换行，三条各占一行不折 */}
           <ul style={{ margin: 0, paddingLeft: 16, lineHeight: 1.9 }}>
             <li style={{ whiteSpace: 'nowrap' }}><b>导入限制</b>：仅支持导入外部机构分享，本机构分享不可导入</li>
-            <li style={{ whiteSpace: 'nowrap' }}><b>实时同步</b>：不占用接收方 KP 与存储，内容只读，Token 消耗归属接收方</li>
+            <li style={{ whiteSpace: 'nowrap' }}><b>实时同步</b>：占用接收方 KP、不占存储，内容只读，Token 消耗归属接收方</li>
             <li style={{ whiteSpace: 'nowrap' }}><b>独立快照</b>：占用接收方 KP 与存储，支持编辑，Token 消耗归属接收方</li>
           </ul>
         </div>

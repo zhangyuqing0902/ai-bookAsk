@@ -34,7 +34,7 @@ export const MY_ORG = 'XX 出版社';
 
 export const AORDERS: AOrder[] = [
   // 0722：订单四态（待支付 / 已支付 / 已核销 / 已失效）。用户发起支付即落库为「待支付」，
-  // 30 分钟未支付微信自动关单（time_expire）转「已失效」；待支付 / 已失效无付款时间、不可退款、不计入营收指标。
+  // 0812-e：支付有效期全平台统一 15 分钟，未支付微信自动关单（time_expire）转「已失效」；待支付 / 已失效无付款时间、不可退款、不计入营收指标。
   { id: 'OD20260722100215', org: 'XX 出版社', type: '会员', tag: 'tag-amber', title: '月度会员', amount: 19.9, status: '待支付', payMethod: '微信支付', orderTime: '2026-07-22 10:02:15', payTime: '', user: '138****8888' },
   { id: 'OD20260721143050', org: 'XX 出版社', type: '永享', tag: 'tag-indigo', title: '永久解锁', amount: 9.9, status: '已失效', payMethod: '微信支付', orderTime: '2026-07-21 14:30:50', payTime: '', user: 'wx_abc', kp: '心血管分册', media: { kind: 'image', name: '心电图示例' } },
   { id: 'OD20260530140208', org: 'XX 出版社', type: '会员', tag: 'tag-amber', title: '月度会员', amount: 19.9, status: '已支付', payMethod: '微信支付', orderTime: '2026-05-30 14:01:50', payTime: '2026-05-30 14:02:08', user: '138****8888', autoRenew: true, memberFrom: '2026-05-30', memberTo: '2026-06-30' },

@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Dropdown, Search, TextInput, DomainInput, InfoDot, CurrentSubCard, DateTimeRangeField, RangePicker, Modal, ConfirmDialog, SubPackDrawer, type PackForm, QtyStepper, DataGrid, type Col, pickFile, pickImageColor, ACCEPT, UNIT_NOTE, UploadModal, fileIcon, inferKind } from '@aba/ui-admin';
-import { MY_ORG_SUBS, PLATFORM_ORGS, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, type Subscription, ORG_AGREEMENTS, AGREEMENT_SPEC, AGREEMENT_TYPES, type OrgAgreementFile } from '@aba/mock';
+import { EXPIRED_DEMO_ORG_ID, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, NEVER_SUB_DEMO_ORG_ID, PLATFORM_ORGS, lastExpiredSub, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, type Subscription, ORG_AGREEMENTS, AGREEMENT_SPEC, AGREEMENT_TYPES, type OrgAgreementFile } from '@aba/mock';
 import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 
 // 0613-2：套餐 / 配额独立成 Tab；用量看板重排（配额进度重点 + 2×2）；微信配置分区卡片
@@ -187,7 +187,12 @@ export function OrgDetail() {
   };
 
   // 0615-3 / 0615-6：订阅 / 配额 Tab —— 当前生效订阅卡（共享 CurrentSubCard，数据用 currentSubCard 计算）+ 订阅记录 + 加油包右抽屉
-  const [subs, setSubs] = useState<Subscription[]>(MY_ORG_SUBS);
+  // 0812：EE 美术出版（EXPIRED_DEMO_ORG_ID）取全过期快照、AA 少儿分社（NEVER_SUB_DEMO_ORG_ID）取空集，
+  // 分别演示「套餐全部过期」与「从未开通」两种空态；机构切换时重置
+  const subsSeedOf = (orgId?: string) =>
+    orgId === EXPIRED_DEMO_ORG_ID ? MY_ORG_SUBS_EXPIRED : orgId === NEVER_SUB_DEMO_ORG_ID ? [] : MY_ORG_SUBS;
+  const [subs, setSubs] = useState<Subscription[]>(subsSeedOf(org?.id));
+  useEffect(() => { setSubs(subsSeedOf(org?.id)); }, [org?.id]);
   const packsOf = (subId: string) => subs.filter((s) => s.type === '加油包' && s.parentId === subId);
   const tidy = (n: number) => Number(n.toFixed(2)); // 浮点求和后修整（1.76+0.12 → 1.88）
   // 0615-6 新建订阅生效规则（A+C）日期工具
@@ -380,6 +385,24 @@ export function OrgDetail() {
             <div className="lab">机构名称<span className="req">*</span></div>
             <div className="ctl"><TextInput key={org.id} defaultValue={org.name} style={{ maxWidth: 360 }} /></div>
           </div>
+          {/* 0812：机构主体全称（营业执照名称）——作为变量注入四份协议文本；必填、可重复 */}
+          <div className="fm-row">
+            <div className="lab">
+              机构主体全称<span className="req">*</span>
+              <InfoDot
+                width={340}
+                lines={[
+                  '填写营业执照登记的主体全称',
+                  '作为变量注入 C 端《用户协议》《隐私政策》《会员服务协议》《自动续费（扣费）协议》',
+                  '可与其他机构重复（同一主体可运营多个机构）',
+                ]}
+              />
+            </div>
+            <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <TextInput key={`entity-${org.id}`} defaultValue={`${org.name}有限公司`} style={{ maxWidth: 360 }} placeholder="营业执照名称" />
+              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>同步至协议文本</span>
+            </div>
+          </div>
           <div className="fm-row">
             <div className="lab">机构域名前缀<span className="req">*</span></div>
             <div className="ctl">
@@ -483,8 +506,8 @@ export function OrgDetail() {
       {/* —— 订阅 / 配额（0615-3：当前生效订阅卡 + 订阅记录按订阅维度 + 加油包右抽屉）—— */}
       {tab === 1 && (
         <>
-          {/* 当前生效订阅卡（共享组件；订阅 Tab 显示商务负责人 + 新建订阅按钮） */}
-          <CurrentSubCard data={currentSubCard(subs)} showOwner showNew onNew={openNew} />
+          {/* 当前生效订阅卡（共享组件；订阅 Tab 显示商务负责人 + 新建订阅按钮）；0812：空态带过期史 */}
+          <CurrentSubCard data={currentSubCard(subs)} lastExpired={lastExpiredSub(subs)} showOwner showNew onNew={openNew} />
 
           {/* 订阅订单（按订阅维度；加油包通过操作列「加油包」进右抽屉查看 / 新建） */}
           <div className="dash-section-head" style={{ marginTop: 20 }}>
@@ -713,6 +736,12 @@ export function OrgDetail() {
                     <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 12, marginLeft: 8 }}>用于微信登录 / 网页授权（自动带回头像 · 昵称 · 性别 · 地区），必填</span>
                     <span className="tag-s tag-indigo" style={{ marginLeft: 8 }}>已配置</span>
                   </div>
+                  {/* 0812：新增公众号名称（必填）与备注（选填）；非敏感项，正常回显
+                      0812-e：备注移至卡片末位（域名校验文件之下）——备注是整卡的补充说明，不该插在接入参数序列中间 */}
+                  <div className="fm-row">
+                    <div className="lab">微信公众号名称<span className="req">*</span></div>
+                    <div className="ctl"><TextInput defaultValue="科技文献出版社" placeholder="公众号后台展示的账号名称" /></div>
+                  </div>
                   <div className="fm-row">
                     <div className="lab">公众号 AppID</div>
                     <div className="ctl"><TextInput defaultValue="wx0123456789abcdef" /></div>
@@ -729,6 +758,10 @@ export function OrgDetail() {
                   <div className="fm-row">
                     <div className="lab">域名校验文件</div>
                     <div className="ctl"><SecretFile accept={ACCEPT.txt} emptyHint="上传 MP_verify_xxx.txt（公众号后台生成）" /></div>
+                  </div>
+                  <div className="fm-row">
+                    <div className="lab">备注</div>
+                    <div className="ctl"><TextInput placeholder="选填" /></div>
                   </div>
                   <ul className="wx-lim">
                     <li>须为「已认证服务号」，订阅号不支持网页授权获取用户信息。</li>
@@ -848,14 +881,16 @@ export function OrgDetail() {
       {tab === 3 && (
         <div className="usage-board">
           <div className="dash-section-title">实时订阅与资源占用 <span className="dash-realtime-tag">实时</span><span className="dash-section-sub">· 不随时间筛选变化</span></div>
-          <CurrentSubCard data={currentSubCard(subs)} showOwner={false} />
-          {/* 0614：阈值预警短信演示（达 70/80/90/95% 给机构联系人发短信） */}
-          <div className="quota-alert">
-            <Icon id="i-warn" w={15} h={15} />
-            <span>
-              Token 本订阅周期消耗已达 <b>88%</b>，已向机构联系人（张三 · 13800138888）发送 <b>70% / 80%</b> 预警；Token 展示本周期不可回收消耗。
-            </span>
-          </div>
+          <CurrentSubCard data={currentSubCard(subs)} lastExpired={lastExpiredSub(subs)} emptyHint="可切换到「订阅配额」Tab 新建订阅为机构开通或续费；历史用量数据仍按下方板块正常展示。" showOwner={false} />
+          {/* 0614：阈值预警短信演示（达 70/80/90/95% 给机构联系人发短信）；0812：无生效订阅时无「本周期」，预警条隐藏 */}
+          {currentSubCard(subs) && (
+            <div className="quota-alert">
+              <Icon id="i-warn" w={15} h={15} />
+              <span>
+                Token 本订阅周期消耗已达 <b>88%</b>，已向机构联系人（张三 · 13800138888）发送 <b>70% / 80%</b> 预警；Token 展示本周期不可回收消耗。
+              </span>
+            </div>
+          )}
           {/* 0724：「内容存量」板块删除（不再统计）；用户与营收存量独占整行 */}
           <div className="grid2" style={{ marginTop: 16 }}>
             <div style={{ gridColumn: '1 / -1' }}>

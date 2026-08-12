@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot, CurrentSubCard, MultiSelect, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { compareMetric, comparisonPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, currentSubCard, CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
+import { compareMetric, comparisonPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, currentSubCard, lastExpiredSub, CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
 import { buildDashboardSpec } from '../exports/dashboard';
 import { useOrgScope } from '../stores/orgScope';
+
+// 0812-e：〔演示〕订阅状态三态——正常 / 全部过期（有过期史）/ 未开通（从未签约，无过期史）
+type SubDemo = 'normal' | 'expired' | 'none';
+const SUB_DEMO_LABEL: Record<SubDemo, string> = { normal: '正常', expired: '全部过期', none: '未开通' };
+const SUB_DEMO_SUBS: Record<SubDemo, typeof MY_ORG_SUBS> = { normal: MY_ORG_SUBS, expired: MY_ORG_SUBS_EXPIRED, none: [] };
 
 // 机构后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
 // 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
@@ -15,6 +20,10 @@ export function Dashboard() {
   const isParent = orgType === 'parent';
   const ALL_ORGS = [CURRENT_ORG, ...CHILD_ORGS];
   const [orgs, setOrgs] = useState<string[]>(ALL_ORGS);
+  // 0812：〔演示〕订阅状态切换——预览无生效套餐空态（上线后由真实订阅数据决定，非用户可切换项）
+  // 0812-e：由两态扩为三态，补「未开通」（从未签过订阅，无过期史）——与「全部过期」的空态文案 / 引导不同
+  const [subDemo, setSubDemo] = useState<SubDemo>('normal');
+  const subsInUse = SUB_DEMO_SUBS[subDemo];
   const w = isParent ? orgWeightOf(orgs) : 1;
   const s = (v: number) => Math.round(v * w);
   const cur = rangeMetrics(orgDaily, days);
@@ -45,10 +54,17 @@ export function Dashboard() {
           <div className="pt">主控台</div>
         </div>
         <div className="pa">
+          {/* 0812：〔演示〕订阅状态切换——预览「无生效套餐」空态（样式复用顶栏机构类型 seg）；0812-e 扩为三态 */}
+          <div className="org-type-seg" title="仅用于演示 · 预览订阅正常 / 全部过期 / 未开通三种状态的展示（非上线功能）">
+            <span className="ots-tag">演示 · 订阅状态</span>
+            {(Object.keys(SUB_DEMO_LABEL) as SubDemo[]).map((k) => (
+              <b key={k} className={subDemo === k ? 'on' : ''} onClick={() => setSubDemo(k)}>{SUB_DEMO_LABEL[k]}</b>
+            ))}
+          </div>
           {/* 0806：父机构视角——「机构」多选筛选（默认全选，支持跨机构任意组合；联动下方全部指标） */}
           {isParent && <MultiSelect label="机构" options={[`${CURRENT_ORG}（父机构）`, ...CHILD_ORGS]} value={orgs} onChange={setOrgs} style={{ width: 240 }} />}
           {/* 0714：导出走 spec 纯函数（exports/dashboard.ts），与 docs 模板脚本同源；机构名由 spec 内 MY_ORG 提供 */}
-          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDashboardSpec({ days, rangeLabel, orgs: isParent ? orgs : undefined, snapshot: { ...orgSnapshot, totalGmv: s(orgSnapshot.totalGmv), currentMembers: s(orgSnapshot.currentMembers), totalRegistered: s(orgSnapshot.totalRegistered) }, sub: currentSubCard(MY_ORG_SUBS), cur: { ...cur, activeUsers: s(cur.activeUsers), newMembers: s(cur.newMembers), gmv: s(cur.gmv), questions: s(cur.questions) }, prev: { ...prev, activeUsers: s(prev.activeUsers), newMembers: s(prev.newMembers), gmv: s(prev.gmv), questions: s(prev.questions) }, chartSlice })); toast('正在导出 报表'); }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDashboardSpec({ days, rangeLabel, orgs: isParent ? orgs : undefined, snapshot: { ...orgSnapshot, totalGmv: s(orgSnapshot.totalGmv), currentMembers: s(orgSnapshot.currentMembers), totalRegistered: s(orgSnapshot.totalRegistered) }, sub: currentSubCard(subsInUse), cur: { ...cur, activeUsers: s(cur.activeUsers), newMembers: s(cur.newMembers), gmv: s(cur.gmv), questions: s(cur.questions) }, prev: { ...prev, activeUsers: s(prev.activeUsers), newMembers: s(prev.newMembers), gmv: s(prev.gmv), questions: s(prev.questions) }, chartSlice })); toast('正在导出 报表'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出
           </button>
@@ -63,7 +79,7 @@ export function Dashboard() {
         {isParent && (
           <span className="sub-scope-note">本机构（{CURRENT_ORG}）订阅 · 不随机构筛选变化</span>
         )}
-        <CurrentSubCard data={currentSubCard(MY_ORG_SUBS)} showOwner={false} />
+        <CurrentSubCard data={currentSubCard(subsInUse)} lastExpired={lastExpiredSub(subsInUse)} showOwner={false} />
       </div>
 
       {/* 实时总览（累计 / 存量，不随时间筛选变化） */}

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Icon } from '@aba/ui';
+import { Icon, toast } from '@aba/ui';
 import { MediaPreview, type PreviewItem } from '@aba/ui-mobile';
 import { ORDERS } from '../data/orders';
+import { FakeQr } from './WechatPay';
 
 const fmtCd = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
@@ -12,7 +13,7 @@ export function OrderDetail() {
   const { id } = useParams();
   const [preview, setPreview] = useState<PreviewItem | null>(null);
   const o = ORDERS.find((x) => x.id === id);
-  // 0722：待支付倒计时（30 分钟支付有效期）；0724b：按进入页面的时间戳计算流逝，
+  // 0722：待支付倒计时（0812-e：支付有效期全平台统一 15 分钟）；0724b：按进入页面的时间戳计算流逝，
   // 后台标签页 / 锁屏节流时切回即校准（逐秒 +1 会在页面后台时变慢）
   const mountTs = useRef(Date.now());
   const [elapsed, setElapsed] = useState(0);
@@ -114,18 +115,37 @@ export function OrderDetail() {
             <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 4 }}>{o.title} · {o.status}</div>
           </div>
 
-          {/* 0722：待支付——剩余支付时间 + 去支付；30 分钟未支付自动失效。0724：左右边距与 od-card 对齐（同宽） */}
+          {/* 0722：待支付——剩余支付时间 + 去支付；15 分钟未支付自动失效。0724：左右边距与 od-card 对齐（同宽）
+              0812-b：Native（非微信浏览器扫码）待支付详情内嵌支付二维码卡——用户回到订单即可继续支付（最短路径），
+              倒计时条不再放「去支付」（二维码就在下方）；JSAPI 单保持「去支付」回收银台 */}
           {o.status === '待支付' && (
             <div className="pay-pending-strip" style={{ margin: '4px 16px 0' }}>
               <span>剩余支付时间</span>
               <span className="cd">{fmtCd(Math.max(0, (o.payRemainSec ?? 0) - elapsed))}</span>
-              <span className="go-pay tap" onClick={() => nav('/pay/wechat')}>去支付</span>
+              {o.payChannel !== 'native' && <span className="go-pay tap" onClick={() => nav('/pay/wechat')}>去支付</span>}
+            </div>
+          )}
+          {o.status === '待支付' && o.payChannel === 'native' && (
+            <div className="od-card od-qr">
+              <div className="od-h">扫码支付</div>
+              <div className="od-qr-body">
+                <FakeQr seed={`${o.title}|${o.amount}|${o.id}`} />
+                <button className="wxpay-btn od-qr-save" onClick={() => toast('二维码已保存到相册')}>
+                  <Icon id="i-dl" w={14} h={14} /> 保存二维码到相册
+                </button>
+                <div className="od-qr-tip">微信扫一扫 · 点击相册选择二维码完成支付</div>
+                <div className="wxqr-wait" style={{ marginTop: 10 }}>
+                  <span className="wxqr-dot" />
+                  等待支付中 · 支付成功后本页自动更新
+                  <span className="wxqr-check tap" onClick={() => { toast('已确认到账'); setTimeout(() => nav('/pay/success', { replace: true }), 600); }}>我已完成支付</span>
+                </div>
+              </div>
             </div>
           )}
           {/* 0722：已失效——超时关单说明；0724：同宽对齐 */}
           {o.status === '已失效' && (
             <div className="pay-pending-strip" style={{ margin: '4px 16px 0', background: 'var(--surface-warm)', color: 'var(--ink-3)', borderColor: 'var(--line-2)' }}>
-              <span>订单超 30 分钟未支付已自动失效，如需购买请重新下单</span>
+              <span>订单超 15 分钟未支付已自动失效，如需购买请重新下单</span>
             </div>
           )}
 

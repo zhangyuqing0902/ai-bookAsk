@@ -40,6 +40,27 @@ export const MY_ORG_SUBS: Subscription[] = [
   { id: 'PKG202609021109-XX', orgId: 'xx', orgName: 'XX 出版社', type: '加油包', parentId: 'SUB202605181620-XX', kp: '0', storage: '0', token: '0.5', kpUsed: '0', storageUsed: '0', tokenUsed: '0.12', startDate: '2026-09-02', endDate: '2027-05-31', owner: '王磊', note: 'Token 临时不足，加 0.5 亿', status: '生效', createdAt: '2026-09-02 11:09:30', createdBy: 'wanglei@aba-platform' },
 ];
 
+// 0812：全过期演示快照——机构后台主控台「演示 · 订阅状态」开关 + 平台机构详情演示机构（EE 美术出版）共用。
+// 状态字段仅存储值，「订阅」实际状态由 subStatus 按有效期判定：两条均早于今日 → 全部过期。
+export const MY_ORG_SUBS_EXPIRED: Subscription[] = [
+  { id: 'SUB202405201038-EXP', orgId: 'xx', orgName: 'XX 出版社', type: '订阅', plan: '专业版', kp: '50', storage: '100', token: '2', kpUsed: '30', storageUsed: '62', tokenUsed: '1.92', startDate: '2024-06-01', endDate: '2025-05-31', owner: '王磊', note: '首年签约', status: '生效', createdAt: '2024-05-20 10:38:12', createdBy: 'wanglei@aba-platform' },
+  { id: 'SUB202505181620-EXP', orgId: 'xx', orgName: 'XX 出版社', type: '订阅', plan: '专业版', kp: '50', storage: '100', token: '2', kpUsed: '30', storageUsed: '62', tokenUsed: '1.76', startDate: '2025-06-01', endDate: '2026-07-15', owner: '王磊', note: '续约一年', status: '生效', createdAt: '2025-05-18 16:20:45', createdBy: 'wanglei@aba-platform' },
+];
+
+/** 0812：平台后台全过期演示机构（EE 美术出版）——机构详情打开时订阅记录取 MY_ORG_SUBS_EXPIRED */
+export const EXPIRED_DEMO_ORG_ID = 'ORG013';
+
+/** 0812-b：平台后台「从未开通」演示机构（AA 少儿分社，新入驻未订阅故事线）——机构详情打开时订阅记录为空 */
+export const NEVER_SUB_DEMO_ORG_ID = 'ORG005';
+
+/** 0812：最近一条已过期「订阅」（按到期日取最晚），供空态卡展示「上一套餐 · 到期日」；无过期史返回 null */
+export function lastExpiredSub(subs: Subscription[]): { plan?: string; endDate: string } | null {
+  const ex = subs.filter((s) => s.type === '订阅' && subStatus(s) === '已过期');
+  if (!ex.length) return null;
+  const last = ex.reduce((a, b) => (a.endDate >= b.endDate ? a : b));
+  return { plan: last.plan, endDate: last.endDate };
+}
+
 // 当前生效订阅卡视图模型（含其生效加油包累加后的「已用 / 上限」三项）；无生效订阅返回 null
 export interface SubCardRow { k: string; used: number; limit: number; unit: string; kind: 'occupancy' | 'consumption'; info: string }
 export interface SubCardVM {

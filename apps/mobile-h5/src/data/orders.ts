@@ -16,8 +16,10 @@ export interface Order {
   autoRenew?: boolean;
   /** 兑换码订单：兑换时间 */
   redeemTime?: string;
-  /** 待支付订单：剩余支付秒数（演示值，进入页面后倒计时） */
+  /** 待支付订单：剩余支付秒数（演示值，进入页面后倒计时；上限 900 秒＝15 分钟支付有效期） */
   payRemainSec?: number;
+  /** 0812：下单时所处支付通道——微信内 jsapi / 非微信浏览器 native（扫码）；待支付详情按此差异化（native 内嵌二维码卡） */
+  payChannel?: 'jsapi' | 'native';
   memberFrom?: string;
   memberTo?: string;
   kp?: string;
@@ -27,9 +29,11 @@ export interface Order {
 }
 
 export const ORDERS: Order[] = [
-  // 0722：订单四态（推翻 0716 #4「支付成功才落库」）——发起支付即落库为「待支付」，30 分钟支付有效期，
+  // 0722：订单四态（推翻 0716 #4「支付成功才落库」）——发起支付即落库为「待支付」，0812-e：支付有效期全平台统一 15 分钟（微信内 JSAPI / 非微信 Native 扫码同口径，二维码随单同时失效），
   // 到期微信自动关单转「已失效」；订单态 = 待支付 / 已支付(含已核销) / 已失效 / 退款售后。
-  { id: 'OD20260722100215', type: '会员', tag: 'tag-amber', title: '月度会员', amount: '¥19.9', status: '待支付', payTime: '', orderTime: '2026-07-22 10:02:15', payMethod: '微信支付', payRemainSec: 1725 },
+  // 0812：非微信浏览器（Native 扫码）下单的待支付演示单——详情页内嵌支付二维码卡
+  { id: 'OD20260812090233', type: '会员', tag: 'tag-amber', title: '月度会员（首月特惠）', amount: '¥9.9', status: '待支付', payTime: '', orderTime: '2026-08-12 09:02:33', payMethod: '微信支付', autoRenew: true, payRemainSec: 812, payChannel: 'native' },
+  { id: 'OD20260722100215', type: '会员', tag: 'tag-amber', title: '月度会员', amount: '¥19.9', status: '待支付', payTime: '', orderTime: '2026-07-22 10:02:15', payMethod: '微信支付', payRemainSec: 725, payChannel: 'jsapi' },
   { id: 'OD20260721143050', type: '永享', tag: 'tag-indigo', title: '永久解锁', amount: '¥9.9', status: '已失效', payTime: '', orderTime: '2026-07-21 14:30:50', payMethod: '微信支付', kp: '心血管分册', media: { kind: 'image', name: '心电图示例' } },
   { id: 'OD20260530140208', type: '会员', tag: 'tag-amber', title: '月度会员', amount: '¥19.9', status: '部分退款', payTime: '2026-05-30 14:02:08', orderTime: '2026-05-30 14:01:50', payMethod: '微信支付', autoRenew: true, memberFrom: '2026-05-30', memberTo: '2026-06-30', refunds: [{ id: 'RF202606011030', amount: '¥5.00', status: '退款成功', createdAt: '2026-06-01 10:30:12' }, { id: 'RF202606021205', amount: '¥2.00', status: '退款成功', createdAt: '2026-06-02 12:05:36' }] },
   { id: 'OD20260530152133', type: '永享', tag: 'tag-indigo', title: '永久解锁', amount: '¥9.9', status: '全额退款', payTime: '2026-05-30 15:21:33', orderTime: '2026-05-30 15:21:20', payMethod: '微信支付', kp: '心血管分册', media: { kind: 'image', name: '心电图示例' }, refunds: [{ id: 'RF202606031430', amount: '¥9.90', status: '退款成功', createdAt: '2026-06-03 14:30:08' }] },

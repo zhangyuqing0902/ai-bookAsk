@@ -524,7 +524,7 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
       {isRealtime && (
         <div className="kp-readonly-banner">
           <Icon id="i-lock" w={14} h={14} />
-          <span>{readonlyBanner ?? `本 KP 由「${shareOrgName}」以「实时同步」分享导入：内容随源机构自动更新、仅可查看不可编辑；不占本机构 KP 数与存储、问答消耗本机构 Token；二维码与分享不可用。`}</span>
+          <span>{readonlyBanner ?? `本 KP 由「${shareOrgName}」以「实时同步」分享导入：内容随源机构自动更新、仅可查看不可编辑；占本机构 KP 数、不占存储、问答消耗本机构 Token；二维码与分享不可用。`}</span>
         </div>
       )}
 
@@ -879,7 +879,7 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
           <div className="lab">导入次数上限</div>
           <div className="ctl"><TextInput placeholder="如 10" /></div>
         </div>
-        <div className="sub-tip">实时同步：不占接收方 KP/存储，接收方消耗 Token，内容只读且隐藏二维码/分享；撤销或源 KP 下架后立即失权。独立快照：占接收方 KP/存储，可编辑五个页签并生成自有二维码/分享；源侧撤销不影响已导入快照。发起机构不能导入自己的分享。</div>
+        <div className="sub-tip">实时同步：占接收方 KP、不占存储，接收方消耗 Token，内容只读且隐藏二维码/分享；撤销或源 KP 下架后立即失权。独立快照：占接收方 KP/存储，可编辑五个页签并生成自有二维码/分享；源侧撤销不影响已导入快照。发起机构不能导入自己的分享。</div>
       </Modal>
 
       {/* —— 上传知识文件弹窗(4.5) —— */}

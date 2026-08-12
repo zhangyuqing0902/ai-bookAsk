@@ -29,6 +29,8 @@ export function CurrentSubCard({
   showOwner = true,
   showNew = false,
   onNew,
+  lastExpired = null,
+  emptyHint,
 }: {
   /** 当前生效订阅视图模型；null = 暂无生效订阅 */
   data: CurrentSubData | null;
@@ -37,13 +39,18 @@ export function CurrentSubCard({
   /** 是否显示「新建订阅」按钮（仅平台机构详情订阅 Tab 传 true） */
   showNew?: boolean;
   onNew?: () => void;
+  /** 0812：最近一条已过期订阅（data 为 null 时区分「全部过期」与「从未开通」）；用 @aba/mock lastExpiredSub() 计算 */
+  lastExpired?: { plan?: string; endDate: string } | null;
+  /** 0812：空态引导行（机构端「联系平台客服」/ 平台端「新建订阅」指引） */
+  emptyHint?: string;
 }) {
   return (
     <div className="cursub-card">
       <div className="cursub-top">
         <div className="cursub-top-l">
-          <span className="cursub-plan">{data?.plan ?? '暂无生效订阅'}</span>
+          <span className="cursub-plan">{data?.plan ?? lastExpired?.plan ?? '暂无生效订阅'}</span>
           {data && <span className={'fstat ' + (data.status === '生效' ? 'ok' : 'none')}><span className="dt" />{data.status}</span>}
+          {!data && lastExpired && <span className="fstat none"><span className="dt" />已过期</span>}
           {data && data.packsCount > 0 && <span className="tag-s tag-amber">含加油包 ×{data.packsCount}</span>}
         </div>
         {showNew && (
@@ -82,7 +89,22 @@ export function CurrentSubCard({
           </div>
         </>
       ) : (
-        <div className="cursub-empty">暂无生效中订阅{showNew ? '，请「新建订阅」。' : '。'}</div>
+        /* 0812：空态升级——区分「全部过期」（保留过期套餐与到期日 + 影响说明）与「从未开通」；配引导行 */
+        /* 0812-b：空态美化——图标徽章 + 三段排版（标题 / 说明 / 引导胶囊），仅样式不动逻辑 */
+        <div className={'cursub-empty' + (lastExpired ? ' is-expired' : ' is-none')}>
+          <span className="cursub-empty-ic">
+            <Icon id={lastExpired ? 'i-warn' : 'i-crownO'} w={22} h={22} />
+          </span>
+          <div className="cursub-empty-body">
+            <b className="cursub-empty-title">{lastExpired ? '订阅套餐已全部过期' : '暂未开通订阅套餐'}</b>
+            <span className="cursub-empty-desc">
+              {lastExpired
+                ? `上一套餐「${lastExpired.plan ?? '—'}」已于 ${lastExpired.endDate} 到期：机构既有内容与数据完整保留，C 端问答与新建 / 上传暂停，续费后即时恢复。`
+                : '开通订阅后机构才具备 KP / 存储 / Token 额度，C 端方可扫码问答。'}
+            </span>
+            <span className="cursub-empty-hint">{emptyHint ?? (showNew ? '可点击右上角「新建订阅」为机构开通或续费。' : '如需开通或续费，请联系平台客服。')}</span>
+          </div>
+        </div>
       )}
     </div>
   );

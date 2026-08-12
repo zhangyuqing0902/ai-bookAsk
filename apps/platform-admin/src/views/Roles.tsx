@@ -10,7 +10,8 @@ type Lvl = 'none' | 'read' | 'write';
 
 const ORG_MODULES: { g: string; items: [string, string, string][] }[] = [
   { g: '主控台', items: [['dashboard.view', '查看主控台', 'i-grid']] },
-  { g: '产品中心', items: [['kp.manage', '知识产品 KP', 'i-cube'], ['agent.manage', 'Agent 人设', 'i-robot'], ['agent.prompt.edit', 'Agent 回答 Prompt 编辑', 'i-robot']] },
+  // 0812：「回答 Prompt」字段更名「人设风格」，权限项随之改名（key 不变，避免存量角色数据迁移）
+  { g: '产品中心', items: [['kp.manage', '知识产品 KP', 'i-cube'], ['agent.manage', 'Agent 人设', 'i-robot'], ['agent.prompt.edit', '人设风格-自定义', 'i-robot']] },
   { g: '运营中心', items: [['user.view', 'C 端用户', 'i-user'], ['order.view', '订单管理', 'i-doc'], ['code.manage', '兑换码', 'i-ticket']] },
   { g: '数据中心', items: [['board.view', '数据看板', 'i-chart']] },
   { g: '系统设置', items: [['cs.config', '客服配置', 'i-headset'], ['sys.config', '系统配置', 'i-gear']] },
@@ -67,7 +68,7 @@ export function Roles() {
   const st = perms[kind][curRole] ?? {};
   const setLvl = (k: string, lvl: Lvl) => setPerms((p) => ({ ...p, [kind]: { ...p[kind], [curRole]: { ...p[kind][curRole], [k]: lvl } } }));
 
-  // 0716 #7/#8：渲染单个权限项（三态开关）。nested=true 时作为嵌套子项（Agent 回答 Prompt 编辑）。
+  // 0716 #7/#8：渲染单个权限项（三态开关）。nested=true 时作为嵌套子项（人设风格-自定义）。
   // agent.prompt.edit 为「功能权限」——无「无」态，两态（只读 / 可操作）；存量 'none' 按 'read' 显示。
   const renderItem = (it: [string, string, string], nested = false) => {
     const isFeature = it[0] === 'agent.prompt.edit';
@@ -154,7 +155,7 @@ export function Roles() {
                     <div className="lvl-pop-row"><i className="read" />只读：可进入查看，不能编辑 / 操作</div>
                     <div className="lvl-pop-row"><i className="write" />可操作：该功能全部操作可用</div>
                     {/* 0714 #14：功能权限两态说明 */}
-                    <div className="lvl-pop-row"><i className="read" />功能权限（如 Agent 回答 Prompt 编辑）无「无」态，未授权即只读</div>
+                    <div className="lvl-pop-row"><i className="read" />功能权限（如 人设风格-自定义）无「无」态，未授权即只读</div>
                   </div>
                 }
               />
@@ -163,7 +164,7 @@ export function Roles() {
           </div>
           {MODULES[kind].map((m) => {
             // 0716 #7/#8/#8.1：机构「产品中心」特殊布局——知识产品 KP（左）与 Agent 人设（右）同行两列；
-            // KP 落左列后其三开关与「查看主控台」垂直对齐（#7）；Agent 回答 Prompt 编辑作为 Agent 人设的
+            // KP 落左列后其三开关与「查看主控台」垂直对齐（#7）；人设风格-自定义作为 Agent 人设的
             // 嵌套子项，仅当「Agent 人设 = 可操作」时展开、带缩进连接线（#8）；无 / 只读时不显示（#8）。
             const kpItem = m.items.find((i) => i[0] === 'kp.manage');
             const agentItem = m.items.find((i) => i[0] === 'agent.manage');

@@ -158,10 +158,11 @@ export function canDeleteKp(relations: { orders?: number; grants?: number; share
   };
 }
 
+// 0812：实时分享改为占用接收方 KP 数（存储仍不占，文件实体在源机构）；两种模式 Token 均归属接收方
 export function sharePolicy(mode: 'realtime' | 'snapshot') {
   return mode === 'realtime'
-    ? { consumesKp: false, consumesStorage: false, consumesToken: true, editable: false, showQrShare: false }
-    : { consumesKp: true, consumesStorage: true, consumesToken: false, editable: true, showQrShare: true };
+    ? { consumesKp: true, consumesStorage: false, consumesToken: true, editable: false, showQrShare: false }
+    : { consumesKp: true, consumesStorage: true, consumesToken: true, editable: true, showQrShare: true };
 }
 
 export function shareAccessAfterRevocation(mode: 'realtime' | 'snapshot') {
