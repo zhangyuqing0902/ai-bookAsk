@@ -53,6 +53,15 @@ export const EXPIRED_DEMO_ORG_ID = 'ORG013';
 /** 0812-b：平台后台「从未开通」演示机构（AA 少儿分社，新入驻未订阅故事线）——机构详情打开时订阅记录为空 */
 export const NEVER_SUB_DEMO_ORG_ID = 'ORG005';
 
+// 0812-g：「不限版」演示快照——深度合作机构三项额度均不限（定制版亦可只设某一项不限，故视图按行判定）。
+// 不限项不设上限、不做超限阻断；配套加油包对不限项无意义，此处仅保留 Token 加油包演示「不限 + 加油包」不叠加。
+/** 0812-g：平台后台「不限版」演示机构（BB 数字出版）——机构详情打开时订阅记录取 MY_ORG_SUBS_UNLIMITED */
+export const UNLIMITED_DEMO_ORG_ID = 'ORG007';
+
+export const MY_ORG_SUBS_UNLIMITED: Subscription[] = [
+  { id: 'SUB202606011200-UNL', orgId: 'xx', orgName: 'XX 出版社', type: '订阅', plan: '不限版', kp: '不限', storage: '不限', token: '不限', kpUsed: '128', storageUsed: '356', tokenUsed: '7.4', startDate: '2026-06-01', endDate: '2027-05-31', owner: '王磊', note: '深度合作 · 三项额度不限', status: '生效', createdAt: '2026-06-01 12:00:00', createdBy: 'wanglei@aba-platform' },
+];
+
 /** 0812：最近一条已过期「订阅」（按到期日取最晚），供空态卡展示「上一套餐 · 到期日」；无过期史返回 null */
 export function lastExpiredSub(subs: Subscription[]): { plan?: string; endDate: string } | null {
   const ex = subs.filter((s) => s.type === '订阅' && subStatus(s) === '已过期');
@@ -62,7 +71,9 @@ export function lastExpiredSub(subs: Subscription[]): { plan?: string; endDate: 
 }
 
 // 当前生效订阅卡视图模型（含其生效加油包累加后的「已用 / 上限」三项）；无生效订阅返回 null
-export interface SubCardRow { k: string; used: number; limit: number; unit: string; kind: 'occupancy' | 'consumption'; info: string }
+// 0812-g：额度支持「不限」（不限版套餐 / 定制版单项不限）——unlimited=true 时 limit 无意义（置 0），
+// 视图不画百分比进度条（无上限就没有「还剩多少」，画一条恒 0% 的条只会误导）。
+export interface SubCardRow { k: string; used: number; limit: number; unit: string; kind: 'occupancy' | 'consumption'; info: string; unlimited?: boolean }
 export interface SubCardVM {
   plan?: string;
   status: string;
@@ -79,14 +90,21 @@ export function currentSubCard(subs: Subscription[]): SubCardVM | null {
   const tidy = (n: number) => Number(n.toFixed(2));
   const sumP = (k: keyof Subscription) => packs.reduce((n, p) => n + (parseFloat((p[k] as string) ?? '0') || 0), 0);
   const row = (k: string, bk: keyof Subscription, uk: keyof Subscription, unit: string, kind: 'occupancy' | 'consumption'): SubCardRow => {
+    // 0812-g：「不限」逐项判定（定制版可只有某一项不限）；不限 + 加油包仍是不限
+    const unlimited = String(base[bk] ?? '').trim() === '不限';
     const b = parseFloat((base[bk] as string) ?? '0') || 0;
     const add = sumP(bk);
-    const limit = tidy(b + add);
+    const limit = unlimited ? 0 : tidy(b + add);
     const used = tidy((parseFloat((base[uk] as string) ?? '0') || 0) + sumP(uk));
     const basis = kind === 'occupancy'
       ? '“当前占用”按机构真实内容实时统计并跨订阅延续；删除可释放。'
       : '“本周期消耗”绑定当前订阅周期且不可回收；新订阅生效时归零，旧额度不结转。';
-    return { k, used, limit, unit, kind, info: `${add > 0 ? `基础 ${b} ${unit} + 生效加油包 ${add} ${unit}，当前上限 ${limit} ${unit}。` : `当前订阅上限 ${b} ${unit}。`}${basis}` };
+    const cap = unlimited
+      ? `本项按当前订阅设为「不限」：不设上限、不做超限阻断，仅统计当前用量；加油包对不限项无意义。`
+      : add > 0
+        ? `基础 ${b} ${unit} + 生效加油包 ${add} ${unit}，当前上限 ${limit} ${unit}。`
+        : `当前订阅上限 ${b} ${unit}。`;
+    return { k, used, limit, unit, kind, unlimited, info: `${cap}${basis}` };
   };
   return {
     plan: base.plan,

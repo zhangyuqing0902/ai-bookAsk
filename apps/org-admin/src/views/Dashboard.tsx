@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot, CurrentSubCard, MultiSelect, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { compareMetric, comparisonPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, currentSubCard, lastExpiredSub, CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
+import { compareMetric, comparisonPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, MY_ORG_SUBS_UNLIMITED, currentSubCard, lastExpiredSub, CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
 import { buildDashboardSpec } from '../exports/dashboard';
 import { useOrgScope } from '../stores/orgScope';
 
-// 0812-e：〔演示〕订阅状态三态——正常 / 全部过期（有过期史）/ 未开通（从未签约，无过期史）
-type SubDemo = 'normal' | 'expired' | 'none';
-const SUB_DEMO_LABEL: Record<SubDemo, string> = { normal: '正常', expired: '全部过期', none: '未开通' };
-const SUB_DEMO_SUBS: Record<SubDemo, typeof MY_ORG_SUBS> = { normal: MY_ORG_SUBS, expired: MY_ORG_SUBS_EXPIRED, none: [] };
+// 0812-e：〔演示〕订阅状态——正常 / 全部过期（有过期史）/ 未开通（从未签约，无过期史）
+// 0812-g：补「不限」态（不限版套餐：三项额度均不设上限）
+type SubDemo = 'normal' | 'unlimited' | 'expired' | 'none';
+const SUB_DEMO_LABEL: Record<SubDemo, string> = { normal: '正常', unlimited: '不限', expired: '全部过期', none: '未开通' };
+const SUB_DEMO_SUBS: Record<SubDemo, typeof MY_ORG_SUBS> = {
+  normal: MY_ORG_SUBS, unlimited: MY_ORG_SUBS_UNLIMITED, expired: MY_ORG_SUBS_EXPIRED, none: [],
+};
 
 // 机构后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
 // 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
@@ -55,7 +58,7 @@ export function Dashboard() {
         </div>
         <div className="pa">
           {/* 0812：〔演示〕订阅状态切换——预览「无生效套餐」空态（样式复用顶栏机构类型 seg）；0812-e 扩为三态 */}
-          <div className="org-type-seg" title="仅用于演示 · 预览订阅正常 / 全部过期 / 未开通三种状态的展示（非上线功能）">
+          <div className="org-type-seg" title="仅用于演示 · 预览订阅正常 / 不限 / 全部过期 / 未开通四种状态的展示（非上线功能）">
             <span className="ots-tag">演示 · 订阅状态</span>
             {(Object.keys(SUB_DEMO_LABEL) as SubDemo[]).map((k) => (
               <b key={k} className={subDemo === k ? 'on' : ''} onClick={() => setSubDemo(k)}>{SUB_DEMO_LABEL[k]}</b>

@@ -10,6 +10,8 @@ export interface CurrentSubRow {
   unit: string;
   kind: 'occupancy' | 'consumption';
   info: string;
+  /** 0812-g：该项额度为「不限」——不画百分比进度条，改渐隐条纹轨道 + 「不限」标 */
+  unlimited?: boolean;
 }
 export interface CurrentSubData {
   plan?: string;
@@ -69,6 +71,28 @@ export function CurrentSubCard({
           <div className="quota-rows cursub-quota">
             {data.rows.map((r) => {
               const pct = r.limit > 0 ? Math.min(100, Math.round((r.used / r.limit) * 100)) : 0;
+              // 0812-g：不限项——「还剩多少」不成立，故不画百分比；只保留有意义的「当前用量」+ 不封口的渐隐轨道
+              if (r.unlimited) {
+                return (
+                  <div className="quota-row" key={r.k}>
+                    <div className="quota-head">
+                      <span className="quota-k">
+                        {r.k}
+                        <span className={'quota-kind ' + r.kind}>{r.kind === 'occupancy' ? '占用量' : '消耗量'}</span>
+                        <InfoDot text={r.info} />
+                      </span>
+                      <span className="quota-v mono">
+                        <small>{r.kind === 'occupancy' ? '当前占用' : '本周期消耗'}</small> {r.used} {r.unit}
+                        <span className="quota-lim">/ {r.kind === 'occupancy' ? '当前上限' : '本周期额度'} <b className="quota-unlim-word">不限</b></span>
+                      </span>
+                    </div>
+                    <div className="quota-track">
+                      <span className="quota-bar"><i className="quota-fill unlim" /></span>
+                      <span className="quota-pct mono unlim">不限</span>
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <div className="quota-row" key={r.k}>
                   <div className="quota-head">

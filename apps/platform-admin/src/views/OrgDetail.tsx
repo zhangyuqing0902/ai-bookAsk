@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Dropdown, Search, TextInput, DomainInput, InfoDot, CurrentSubCard, DateTimeRangeField, RangePicker, Modal, ConfirmDialog, SubPackDrawer, type PackForm, QtyStepper, DataGrid, type Col, pickFile, pickImageColor, ACCEPT, UNIT_NOTE, UploadModal, fileIcon, inferKind } from '@aba/ui-admin';
-import { EXPIRED_DEMO_ORG_ID, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, NEVER_SUB_DEMO_ORG_ID, PLATFORM_ORGS, lastExpiredSub, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, type Subscription, ORG_AGREEMENTS, AGREEMENT_SPEC, AGREEMENT_TYPES, type OrgAgreementFile } from '@aba/mock';
+import { EXPIRED_DEMO_ORG_ID, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, MY_ORG_SUBS_UNLIMITED, NEVER_SUB_DEMO_ORG_ID, UNLIMITED_DEMO_ORG_ID, PLATFORM_ORGS, lastExpiredSub, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, type Subscription, ORG_AGREEMENTS, AGREEMENT_SPEC, AGREEMENT_TYPES, type OrgAgreementFile } from '@aba/mock';
 import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 
 // 0613-2：套餐 / 配额独立成 Tab；用量看板重排（配额进度重点 + 2×2）；微信配置分区卡片
@@ -189,8 +189,12 @@ export function OrgDetail() {
   // 0615-3 / 0615-6：订阅 / 配额 Tab —— 当前生效订阅卡（共享 CurrentSubCard，数据用 currentSubCard 计算）+ 订阅记录 + 加油包右抽屉
   // 0812：EE 美术出版（EXPIRED_DEMO_ORG_ID）取全过期快照、AA 少儿分社（NEVER_SUB_DEMO_ORG_ID）取空集，
   // 分别演示「套餐全部过期」与「从未开通」两种空态；机构切换时重置
+  // 0812-g：BB 数字出版（UNLIMITED_DEMO_ORG_ID）取不限版快照，演示「额度不限」展示
   const subsSeedOf = (orgId?: string) =>
-    orgId === EXPIRED_DEMO_ORG_ID ? MY_ORG_SUBS_EXPIRED : orgId === NEVER_SUB_DEMO_ORG_ID ? [] : MY_ORG_SUBS;
+    orgId === EXPIRED_DEMO_ORG_ID ? MY_ORG_SUBS_EXPIRED
+      : orgId === NEVER_SUB_DEMO_ORG_ID ? []
+        : orgId === UNLIMITED_DEMO_ORG_ID ? MY_ORG_SUBS_UNLIMITED
+          : MY_ORG_SUBS;
   const [subs, setSubs] = useState<Subscription[]>(subsSeedOf(org?.id));
   useEffect(() => { setSubs(subsSeedOf(org?.id)); }, [org?.id]);
   const packsOf = (subId: string) => subs.filter((s) => s.type === '加油包' && s.parentId === subId);
@@ -882,8 +886,9 @@ export function OrgDetail() {
         <div className="usage-board">
           <div className="dash-section-title">实时订阅与资源占用 <span className="dash-realtime-tag">实时</span><span className="dash-section-sub">· 不随时间筛选变化</span></div>
           <CurrentSubCard data={currentSubCard(subs)} lastExpired={lastExpiredSub(subs)} emptyHint="可切换到「订阅配额」Tab 新建订阅为机构开通或续费；历史用量数据仍按下方板块正常展示。" showOwner={false} />
-          {/* 0614：阈值预警短信演示（达 70/80/90/95% 给机构联系人发短信）；0812：无生效订阅时无「本周期」，预警条隐藏 */}
-          {currentSubCard(subs) && (
+          {/* 0614：阈值预警短信演示（达 70/80/90/95% 给机构联系人发短信）；0812：无生效订阅时无「本周期」，预警条隐藏
+              0812-g：Token 额度为「不限」时同样隐藏——无上限即无阈值，不存在 70/80/90/95% 触达 */}
+          {currentSubCard(subs) && !currentSubCard(subs)?.rows.find((r) => r.k === 'Token')?.unlimited && (
             <div className="quota-alert">
               <Icon id="i-warn" w={15} h={15} />
               <span>
