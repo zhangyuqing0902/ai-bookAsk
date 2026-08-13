@@ -81,6 +81,64 @@ test('新订阅保留占用、重置 Token 周期用量并阻止超额新增', (
   JSON.stringify(r.applySubscriptionTransition({ kp: 30, storage: 62, token: 1.76 }, { kp: 10, storage: 20, token: 0.5 })),
   JSON.stringify({ usage: { kp: 30, storage: 62, token: 0 }, blocked: { kp: true, storage: true, token: false } }),
 ));
+// 0813-2：占用型额度超额判定（KP 数 / 存储共用 quotaState）
+test('降档后存量超额：既有保留、冻结新增', () => {
+  const q = r.quotaState(12, 5, false, 'kp');
+  assert.equal(q.over, true);
+  assert.equal(q.overBy, 7);
+  assert.equal(q.canAdd, false);
+  assert.equal(q.level, 'over');
+});
+test('棘轮：删一个不等于能建一个，必须回落到额度以内', () => {
+  // 12 个 KP 降到 5 个额度后，一路删下来只有回到 4 个（< 5）才恢复新建
+  assert.equal(r.quotaState(11, 5, false, 'kp').canAdd, false);
+  assert.equal(r.quotaState(6, 5, false, 'kp').canAdd, false);
+  assert.equal(r.quotaState(5, 5, false, 'kp').canAdd, false, '等于上限即视为已满（>= 而非 >）');
+  assert.equal(r.quotaState(4, 5, false, 'kp').canAdd, true);
+});
+test('不限版不设上限、不做超限阻断', () => {
+  const q = r.quotaState(128, 0, true, 'kp');
+  assert.equal(q.canAdd, true);
+  assert.equal(q.over, false);
+  assert.equal(q.level, 'ok');
+});
+test('存储超额文案引导删除或扩容，且声明既有内容不受影响', () => {
+  const q = r.quotaState(10, 5, false, 'storage');
+  assert.equal(q.overBy, 5);
+  assert.ok(q.reason.includes('既有内容与 C 端权益不受影响'));
+  assert.ok(q.reason.includes('联系平台扩容'));
+});
+test('降档判定：占用型额度低于当前占用即触发必填说明，Token 不触发', () => {
+  const d = r.downgradeCheck({ kp: 12, storage: 10 }, { kp: 5, storage: 5 });
+  assert.equal(d.isDowngrade, true);
+  assert.equal(d.requiresNote, true);
+  assert.equal(d.overText, 'KP 7 个、存储 5 GB');
+  // 额度够用 → 不算降档（Token 每期归零，本就不进这个判定）
+  assert.equal(r.downgradeCheck({ kp: 12, storage: 10 }, { kp: 50, storage: 100 }).isDowngrade, false);
+  // 「不限」永远不构成降档
+  assert.equal(r.downgradeCheck({ kp: 12, storage: 10 }, { kp: '不限', storage: '不限' }).isDowngrade, false);
+});
+
+// 0813-2：区间口径——完整自然日，不含今日
+test('今日对比昨日同已过时长', () => {
+  const now = new Date('2026-06-09T14:37:00');
+  assert.equal(r.comparisonPeriodLabel(1, now), '对比昨日 00:00-14:37');
+});
+test('近 N 天按完整自然日统计，不含今日', () => {
+  const now = new Date('2026-06-09T14:37:00');
+  // 当前区间 = 06-02—06-08（截至昨日的 7 个完整日），对比区间 = 05-26—06-01
+  assert.equal(r.currentPeriodLabel(7, now), '06-02—06-08');
+  assert.equal(r.comparisonPeriodLabel(7, now), '对比 05-26—06-01');
+});
+test('自定义区间结束日最晚昨日、起始日最早近 3 年', () => {
+  const now = new Date('2026-06-09T14:37:00');
+  const b = r.customRangeBounds(now);
+  // 按本地日期比较（bounds 是本地 00:00，toISOString 会转 UTC 差一天）
+  const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  assert.equal(ymd(b.max), '2026-06-08');
+  assert.equal(ymd(b.min), '2023-06-08');
+});
+
 test('兑换码校验生效窗与机构状态', () => {
   const start = new Date('2026-07-01'); const end = new Date('2026-07-31');
   assert.equal(r.isRedeemable(new Date('2026-06-30'), start, end, true).allowed, false);
@@ -96,7 +154,10 @@ test('移动登录采用 7 天滑动有效期', () => {
   assert.equal(r.isSlidingSessionValid(last, new Date('2026-07-08T00:00:01Z')), false);
 });
 test('上一周期灰字给出精确的紧邻等长区间', () => {
-  assert.equal(r.comparisonPeriodLabel(7, new Date('2026-07-11T12:00:00+08:00')), '对比 06-28—07-04');
+  // 0813-2 口径变更：区间不含今日（今天 07-11 未过完）→ 当前区间 07-04—07-10，对比区间 06-27—07-03。
+  // 旧断言是 06-28—07-04（当前区间含今日 07-05—07-11），会拿半天比整天，环比系统性偏负。
+  assert.equal(r.comparisonPeriodLabel(7, new Date('2026-07-11T12:00:00+08:00')), '对比 06-27—07-03');
+  assert.equal(r.currentPeriodLabel(7, new Date('2026-07-11T12:00:00+08:00')), '07-04—07-10');
 });
 test('兑换码未生效提示包含可行动时间', () => {
   const redeem = fs.readFileSync(new URL('../apps/mobile-h5/src/screens/Redeem.tsx', import.meta.url), 'utf8');

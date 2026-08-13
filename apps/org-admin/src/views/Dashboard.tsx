@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot, CurrentSubCard, MultiSelect, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { compareMetric, comparisonPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, MY_ORG_SUBS_UNLIMITED, currentSubCard, lastExpiredSub, CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
+import { compareMetric, comparisonPeriodLabel, metricHelp, orgDaily, orgSnapshot, rangeMetrics, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, MY_ORG_SUBS_UNLIMITED, MY_ORG_SUBS_OVER, currentSubCard, lastExpiredSub, CURRENT_ORG, CHILD_ORGS, orgWeightOf, RANGE_SCOPE_NOTE } from '@aba/mock';
 import { buildDashboardSpec } from '../exports/dashboard';
 import { useOrgScope } from '../stores/orgScope';
+import { useSubDemo, SUB_DEMO_LABEL, SUB_DEMO_SUBS, type SubDemo } from '../stores/subDemo';
 
 // 0812-e：〔演示〕订阅状态——正常 / 全部过期（有过期史）/ 未开通（从未签约，无过期史）
 // 0812-g：补「不限」态（不限版套餐：三项额度均不设上限）
-type SubDemo = 'normal' | 'unlimited' | 'expired' | 'none';
-const SUB_DEMO_LABEL: Record<SubDemo, string> = { normal: '正常', unlimited: '不限', expired: '全部过期', none: '未开通' };
-const SUB_DEMO_SUBS: Record<SubDemo, typeof MY_ORG_SUBS> = {
-  normal: MY_ORG_SUBS, unlimited: MY_ORG_SUBS_UNLIMITED, expired: MY_ORG_SUBS_EXPIRED, none: [],
-};
+// 0813-2：补「降档超额」态，且状态提升到共享 store（stores/subDemo.ts）——
+//   配额是跨页面的机构级事实，这里切了 KP 列表必须同步，否则两个页面显示自相矛盾的额度。
 
 // 机构后台 · 主控台（0609 方案 1：实时总览 + 经营分析 分区）
 // 0614b：数值统一中文万进制（fmtCn），KPI 显单位后缀，页脚加单位规范说明
@@ -25,7 +23,9 @@ export function Dashboard() {
   const [orgs, setOrgs] = useState<string[]>(ALL_ORGS);
   // 0812：〔演示〕订阅状态切换——预览无生效套餐空态（上线后由真实订阅数据决定，非用户可切换项）
   // 0812-e：由两态扩为三态，补「未开通」（从未签过订阅，无过期史）——与「全部过期」的空态文案 / 引导不同
-  const [subDemo, setSubDemo] = useState<SubDemo>('normal');
+  // 0813-2：改用共享 store，五态（补「降档超额」），与 KP 列表联动
+  const subDemo = useSubDemo((s) => s.subDemo);
+  const setSubDemo = useSubDemo((s) => s.setSubDemo);
   const subsInUse = SUB_DEMO_SUBS[subDemo];
   const w = isParent ? orgWeightOf(orgs) : 1;
   const s = (v: number) => Math.round(v * w);
@@ -58,7 +58,7 @@ export function Dashboard() {
         </div>
         <div className="pa">
           {/* 0812：〔演示〕订阅状态切换——预览「无生效套餐」空态（样式复用顶栏机构类型 seg）；0812-e 扩为三态 */}
-          <div className="org-type-seg" title="仅用于演示 · 预览订阅正常 / 不限 / 全部过期 / 未开通四种状态的展示（非上线功能）">
+          <div className="org-type-seg" title="仅用于演示 · 预览订阅正常 / 不限 / 全部过期 / 未开通 / 降档超额五种状态的展示（非上线功能）">
             <span className="ots-tag">演示 · 订阅状态</span>
             {(Object.keys(SUB_DEMO_LABEL) as SubDemo[]).map((k) => (
               <b key={k} className={subDemo === k ? 'on' : ''} onClick={() => setSubDemo(k)}>{SUB_DEMO_LABEL[k]}</b>
@@ -160,7 +160,8 @@ export function Dashboard() {
       <div className="dash-section-head">
         <div className="dash-section-title" style={{ margin: 0 }}>
           经营分析
-          <span className="dash-section-sub">· {rangeLabel}</span>
+          {/* 0813-2：区间口径写进副标题——今日为实时，近 N 天为截至昨日的完整自然日 */}
+          <span className="dash-section-sub">· {rangeLabel} · {days > 1 ? RANGE_SCOPE_NOTE : '今日为 00:00 至当前时刻，对比昨日同时段'}</span>
         </div>
         <RangePicker
           presets={['今日', '近 7 天', '30 天']}

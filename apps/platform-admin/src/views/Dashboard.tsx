@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, MultiSelect, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { compareMetric, comparisonPeriodLabel, metricHelp, PLATFORM_ORGS, platformDaily, platformSnapshot, platformOrgFactor, platformOrgCount, platformOrgRole, rangeMetrics } from '@aba/mock';
+import { compareMetric, comparisonPeriodLabel, metricHelp, PLATFORM_ORGS, platformDaily, platformSnapshot, platformOrgFactor, platformOrgCount, platformOrgRole, rangeMetrics, RANGE_SCOPE_NOTE } from '@aba/mock';
 import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 import { buildDashboardSpec } from '../exports/dashboard';
 
@@ -219,7 +219,8 @@ export function Dashboard() {
       <div className="dash-section-head">
         <div className="dash-section-title" style={{ margin: 0 }}>
           经营分析
-          <span className="dash-section-sub">· {scopeText} · {rangeLabel}</span>
+          {/* 0813-2：区间口径写进副标题——今日为实时，近 N 天为截至昨日的完整自然日 */}
+          <span className="dash-section-sub">· {scopeText} · {rangeLabel} · {days > 1 ? RANGE_SCOPE_NOTE : '今日为 00:00 至当前时刻，对比昨日同时段'}</span>
         </div>
         <RangePicker
           presets={['今日', '近 7 天', '30 天']}

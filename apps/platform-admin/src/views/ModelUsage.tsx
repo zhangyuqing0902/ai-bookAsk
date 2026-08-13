@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, Dropdown, InfoDot, exportWorkbook, UNIT_NOTE } from '@aba/ui-admin';
-import { comparisonPeriodLabel, metricHelp, orgOptionValue, PLATFORM_ORGS, platformOrgRole } from '@aba/mock';
+import { comparisonPeriodLabel, metricHelp, orgOptionValue, PLATFORM_ORGS, platformOrgRole, RANGE_SCOPE_NOTE } from '@aba/mock';
 import { MODEL_USAGE_ORG_BASE, MODEL_USAGE_RANGE, MODEL_USAGE_TOTALS } from '../data/modelUsage';
 import { buildModelUsageSpec } from '../exports/modelUsage';
 import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
@@ -14,6 +14,7 @@ import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 
 export function ModelUsage() {
   const [rangeLabel, setRangeLabel] = useState('近 7 天');
+  const [rangeDays, setRangeDays] = useState(7); // 0813-2：口径说明按真实天数切换（今日 vs 完整自然日）
   const [org, setOrg] = useState('全部');
   const d = MODEL_USAGE_RANGE[rangeLabel] ?? MODEL_USAGE_RANGE['近 7 天'];
   const periodKind = rangeLabel === '今日' ? 'today' as const : 'range' as const;
@@ -83,9 +84,10 @@ export function ModelUsage() {
       <div className="dash-section-head">
         <div className="dash-section-title" style={{ margin: 0 }}>
           经营分析
-          <span className="dash-section-sub">· {rangeLabel}</span>
+          {/* 0813-2：区间口径写进副标题——今日为实时，近 N 天为截至昨日的完整自然日 */}
+          <span className="dash-section-sub">· {rangeLabel} · {rangeDays > 1 ? RANGE_SCOPE_NOTE : '今日为 00:00 至当前时刻，对比昨日同时段'}</span>
         </div>
-        <RangePicker presets={['今日', '近 7 天', '30 天']} defaultActive={1} onChange={(r) => setRangeLabel(r.label)} />
+        <RangePicker presets={['今日', '近 7 天', '30 天']} defaultActive={1} onChange={(r) => { setRangeLabel(r.label); setRangeDays(r.days || 7); }} />
       </div>
       <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
         <div className="kpi">

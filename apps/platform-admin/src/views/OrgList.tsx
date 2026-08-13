@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DomainInput, DataGrid, exportWorkbook, type Col } from '@aba/ui-admin';
+import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DomainInput, DataGrid, InfoDot, exportWorkbook, type Col } from '@aba/ui-admin';
 import { PLATFORM_ORGS, platformOrgRole, secondaryTenantDomain, suspensionImpact, tenantDomainSuffix, validateDomainPrefix, type PlatformOrg } from '@aba/mock';
 import { limitOf } from '../data/orgPlans';
 import { buildOrgListSpec } from '../exports/orgList';
@@ -16,11 +16,19 @@ const PLAN_CLS: Record<string, string> = { 基础版: 'tag-line', 专业版: 'ta
 
 // 配额单元格：已用 / 上限。0615-6：去掉按使用率变色（整列太花）——统一普通文字，
 // 已用黑字、「/ 上限」灰字；用量预警仍由机构详情用量看板进度条体现。
+// 0813-2：唯一例外是「存量超额」（降档后已用 > 上限）——这不是用量预警而是持续的成本事实，
+//   商务需要一眼看到是哪几家、超了多少，作为催收与续费谈判的抓手，故超额时整格标红加「超额」标签。
 function QuotaCell({ used, limit, unit }: { used: number; limit: number; unit?: string }) {
+  const over = limit > 0 && used > limit;
   return (
     <span className="mono" style={{ whiteSpace: 'nowrap' }}>
-      <b style={{ color: 'var(--ink)', fontWeight: 500 }}>{used}</b>
-      <span style={{ color: 'var(--ink-3)' }}> / {limit}{unit}</span>
+      <b style={{ color: over ? 'var(--terra)' : 'var(--ink)', fontWeight: over ? 700 : 500 }}>{used}</b>
+      <span style={{ color: over ? 'var(--terra)' : 'var(--ink-3)' }}> / {limit}{unit}</span>
+      {over && (
+        <span className="tag-s tag-terra" style={{ marginLeft: 6 }} title={`存量已超出订阅额度 ${Number((used - limit).toFixed(2))}${unit ?? ''}。既有内容与 C 端权益不受影响，机构新建 / 上传已冻结；平台不会删除机构数据。`}>
+          超额
+        </span>
+      )}
     </span>
   );
 }
@@ -36,6 +44,8 @@ export function OrgList() {
   const [plan, setPlan] = useState('全部');
   const [confirm, setConfirm] = useState<PlatformOrg | null>(null);
   const [newName, setNewName] = useState('');
+  // 0813-2：机构主体全称（营业执照名称）——注入 C 端四份协议文本的主体变量，创建时即录入
+  const [newEntity, setNewEntity] = useState('');
   const [domainPrefix, setDomainPrefix] = useState('');
   const [newParent, setNewParent] = useState('无（顶级机构）');
   const domainCheck = validateDomainPrefix(domainPrefix, data.map((r) => r.domainPrefix));
@@ -84,7 +94,7 @@ export function OrgList() {
     { header: 'Token 额度', cell: (r) => <QuotaCell used={r.tkUsed} limit={limitOf(r).token} unit=" 亿" />, sortValue: (r) => r.tkUsed / limitOf(r).token },
     { header: '存储空间', cell: (r) => <QuotaCell used={r.stUsed} limit={limitOf(r).storage} unit=" GB" />, sortValue: (r) => r.stUsed / limitOf(r).storage },
     { header: 'LLM 配置', cell: (r) => r.llm, sortValue: (r) => r.llm },
-    { header: '微信配置', cell: (r) => <span className={'tag-s ' + r.payCls}>{r.pay}</span>, sortValue: (r) => r.pay },
+    // 0813-2：「微信配置」列删除（不再在机构列表展示配置状态；配置详情在机构详情 · 机构配置 Tab 内查看）
     {
       header: '操作',
       cell: (r) => (
@@ -136,13 +146,13 @@ export function OrgList() {
             <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>
               取消
             </button>
-            <button className="btn btn-primary btn-sm" disabled={!newName.trim() || !domainCheck.valid} onClick={() => {
-              if (!newName.trim() || !domainCheck.valid) return;
+            <button className="btn btn-primary btn-sm" disabled={!newName.trim() || !newEntity.trim() || !domainCheck.valid} onClick={() => {
+              if (!newName.trim() || !newEntity.trim() || !domainCheck.valid) return;
               const i = Math.max(...data.map((r) => r.i)) + 1;
               const parentName = newParent.replace(/（父机构）$/, '');
               const parentId = newParent === '无（顶级机构）' ? null : data.find((r) => r.name === parentName)?.id ?? null;
-              setData((rows) => [...rows, { i, id: `ORG${String(i).padStart(3, '0')}`, name: newName.trim(), domainPrefix: domainCheck.normalized, status: '正常', statusCls: 'tag-jade', parentId, llm: '平台默认', pay: '未配置', payCls: 'tag-line', plan: '基础版', kpUsed: 0, stUsed: 0, tkUsed: 0 }]);
-              setNewName(''); setDomainPrefix(''); setNewParent('无（顶级机构）'); setOpen(false);
+              setData((rows) => [...rows, { i, id: `ORG${String(i).padStart(3, '0')}`, name: newName.trim(), legalName: newEntity.trim(), domainPrefix: domainCheck.normalized, status: '正常', statusCls: 'tag-jade', parentId, llm: '平台默认', pay: '未配置', payCls: 'tag-line', plan: '基础版', kpUsed: 0, stUsed: 0, tkUsed: 0 }]);
+              setNewName(''); setNewEntity(''); setDomainPrefix(''); setNewParent('无（顶级机构）'); setOpen(false);
             }}>
               创建
             </button>
@@ -152,6 +162,25 @@ export function OrgList() {
         <div className="fm-row" style={{ borderTop: 'none', paddingTop: 4 }}>
           <div className="lab">机构名称<span className="req">*</span></div>
           <div className="ctl"><TextInput placeholder="请输入机构名称" value={newName} onChange={(e) => setNewName(e.target.value)} /></div>
+        </div>
+        {/* 0813-2：机构主体全称（营业执照名称）——与机构详情 · 基本资料同一字段同一规则，
+            创建时即录入，避免机构建完就有一份主体为空的协议文本挂在 C 端 */}
+        <div className="fm-row">
+          <div className="lab">
+            机构主体全称<span className="req">*</span>
+            <InfoDot
+              width={340}
+              lines={[
+                '填写营业执照登记的主体全称',
+                '作为变量注入 C 端《用户协议》《隐私政策》《会员服务协议》《自动续费（扣费）协议》',
+                '可与其他机构重复（同一主体可运营多个机构）',
+              ]}
+            />
+          </div>
+          <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <TextInput placeholder="营业执照名称，如 XX 出版社有限公司" value={newEntity} onChange={(e) => setNewEntity(e.target.value)} />
+            <span style={{ flex: 'none', fontSize: 12, color: 'var(--ink-3)' }}>同步至协议文本</span>
+          </div>
         </div>
         <div className="fm-row">
           <div className="lab">机构域名前缀<span className="req">*</span></div>

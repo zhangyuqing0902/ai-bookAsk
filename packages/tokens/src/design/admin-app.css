@@ -319,6 +319,105 @@ a {
   color: var(--ink);
   font-weight: 500;
 }
+/* 0813-2：订阅详情里的「套餐降档说明」——留痕内容通常是整段话，不能压成一行截断 */
+.pc-row-down {
+  align-items: flex-start;
+}
+.pc-row-down .pc-label {
+  width: 84px;
+  padding-top: 1px;
+  color: var(--terra);
+  font-weight: 600;
+}
+.pc-row-down .pc-value {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+/* 0813-2：新建订阅弹窗的降档预警块（额度低于机构当前占用时出现）。
+   提醒管理员降档会损害机构利益，但不阻碍创建订单——警示色用赭红，不做遮罩、不禁用提交。 */
+.downgrade-warn {
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: rgba(229, 83, 59, 0.06);
+  border: 1px solid rgba(229, 83, 59, 0.2);
+}
+.dw-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--terra);
+  margin-bottom: 7px;
+}
+.dw-list {
+  margin: 0;
+  padding-left: 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dw-list li {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+.dw-list li b {
+  color: var(--ink);
+  font-weight: 600;
+}
+/* 0813-2：「建议下一步」——预警块的落点。只报告问题不给下一步等于没说，
+   两条路径各自讲清代价（清理后再签 = 无成本；坚持签 = 平台承担且无人认领）。 */
+.dw-next {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px dashed rgba(229, 83, 59, 0.28);
+}
+.dw-next-t {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--terra);
+  margin-bottom: 5px;
+}
+.dw-next-list {
+  margin: 0;
+  padding-left: 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.dw-next-list li {
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.dw-next-list li b {
+  color: var(--ink);
+  font-weight: 600;
+}
+/* 0813-2：表单字段脚注（必填未填时转警示色） */
+.fm-hint {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+.fm-hint.is-req {
+  color: var(--terra);
+}
+/* 0813-2：订阅列表「套餐」列——套餐标签 + 降档标签并排 */
+.sub-plan-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+/* 0813-2：总额度列在存量超额时标红 */
+.quota-over-text {
+  color: var(--terra);
+  font-weight: 600;
+}
 .pc-status {
   display: inline-flex;
   align-items: center;
@@ -1855,6 +1954,31 @@ a {
 .quota-fill.ok { background: var(--jade); }
 .quota-fill.warn { background: var(--amber); }
 .quota-fill.bad { background: var(--terra); }
+/* 0813-2：降档后存量超额（如 12 个 KP 落到 5 个额度）——条封顶并加斜纹，
+   与「刚好用满 100%」一眼可辨；数值区仍显示真实的 12 / 5，不截断（截断是撒谎）。 */
+/* 0813-3：超额条视觉重做——弃白色斜纹（与旧「不限」灰绿斜纹同病），改赭红渐变 + 慢速流光扫过，
+   与「不限」的靛蓝流光同一语言、色系相反（靛=无上限的从容，红=超额待清理的紧迫）；
+   右侧「超额 N」升级为软底胶囊，从一行红字变成可扫读的量化标记。 */
+.quota-fill.over {
+  background:
+    linear-gradient(100deg, rgba(255, 255, 255, 0) 20%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 80%) -70px 0 / 70px 100% no-repeat,
+    linear-gradient(90deg, #d9482f 0%, #ef7a5f 100%);
+  animation: unlim-flow 3.2s linear infinite;
+  transition: none;
+}
+/* 超额时文案是「超额 7个」而非百分比，需要比 38px 更宽；0813-3 改软底胶囊 */
+.quota-pct.over {
+  color: var(--terra);
+  min-width: 62px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--terra-soft);
+  border-radius: 999px;
+  padding: 3px 9px;
+  text-align: center;
+}
+.quota-v.is-over { color: var(--terra); }
+.quota-v.is-over .quota-lim { color: var(--terra); opacity: .78; }
 /* 0812-g：「不限」额度——不画百分比填充（无上限就没有「还剩多少」）。
    0813：视觉重做——弃灰绿斜纹（太丑），改电光靛渐隐轨道：右端淡出表达「延伸出去、没有终点」，
    叠一层慢速流光扫过，与有上限的实心条一眼可辨。 */

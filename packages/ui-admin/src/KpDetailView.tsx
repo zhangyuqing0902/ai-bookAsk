@@ -112,7 +112,7 @@ const KP_STATUS_TAG: Record<'draft' | 'published' | 'unlisted' | 'deleted', { la
 //   domainSuffix 由 wrapper 用 @aba/mock 的 tenantDomainSuffix(hostname) 按当前环境算好传入（本地 -aba.localhost）。
 // 0716 #1.1：kpStatus / onKpStatusChange / purchasedUsers 为可选——机构端接 kpLifecycle store 走真状态
 //   （下架↔重新发布、删除后置灰返回列表）；未传时保持旧行为（纯 toast），平台端未接线不受影响。
-export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domainSuffix = '-aba.一级域名.cn', importMode = 'own', consumerReadonly = true, shareOrgName = 'YY 教育', kpName = '心血管分册 · 第4版', kpStatus, onKpStatusChange, purchasedUsers, bookUsers, kpRelations, readonlyBanner }: {
+export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domainSuffix = '-aba.一级域名.cn', importMode = 'own', consumerReadonly = true, shareOrgName = 'YY 教育', kpName = '心血管分册 · 第4版', kpStatus, onKpStatusChange, purchasedUsers, bookUsers, kpRelations, readonlyBanner, storageBlocked }: {
   listBase?: string;
   orgPrefix?: string;
   domainSuffix?: string;
@@ -132,6 +132,9 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
   // 0717 #1.5：KP 的业务关系计数——只影响删除弹窗是否展示影响声明（删除一律逻辑删除）。
   // 默认按有关系处理（{orders:1}），平台端未接线不受影响。
   kpRelations?: { orders?: number; grants?: number; shares?: number; imports?: number };
+  // 0813-2：存储额度已满 / 降档后存量超额时传入原因文案——冻结「上传知识文件」，保证超额量只减不增。
+  //   既有文件、向量与 C 端问答完全不受影响，这里只挡新增。传 undefined 即不冻结。
+  storageBlocked?: string;
 }) {
   const nav = useNavigate();
   // 未传 kpStatus（平台端等未接线场景）按已发布渲染，交互与旧版一致。
@@ -638,8 +641,13 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
             <div className="grow" />
             {/* 6.5:文案 */}
             <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>上传即向量化，发布知识 KP 需至少一份已向量化完成的知识内容</span>
-            {/* 4.5:打开上传知识文件弹窗；0716 二批 #5.3 实时同步置灰但可点击提示无权限 */}
-            <button className={'btn btn-primary btn-sm' + (isRealtime ? ' off' : '')} onClick={isRealtime ? deny : () => setUploadOpen(true)}>
+            {/* 4.5:打开上传知识文件弹窗；0716 二批 #5.3 实时同步置灰但可点击提示无权限
+                0813-2：存储超额时同样置灰——冻结增量保证超额量只减不增，既有文件与 C 端问答不受影响 */}
+            <button
+              className={'btn btn-primary btn-sm' + (isRealtime || storageBlocked ? ' off' : '')}
+              title={storageBlocked}
+              onClick={isRealtime ? deny : storageBlocked ? () => toast(storageBlocked) : () => setUploadOpen(true)}
+            >
               <Icon id="i-up" w={14} h={14} />
               上传知识文件
             </button>

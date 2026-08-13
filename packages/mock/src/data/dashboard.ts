@@ -121,6 +121,8 @@ export function rangeMetrics(series: DailyPoint[], days: number, offset = 0): Ra
   const sum = (k: 'dau' | 'newMembers' | 'gmv' | 'questions' | 'expired' | 'renewed' | 'reflow') => slice.reduce((a, b) => a + b[k], 0);
   const dauSum = sum('dau');
   // 区间去重活跃用户近似：今日＝当日 DAU；跨度越大去重后高于日均、低于简单累加
+  // mock-only：0.62 / 0.42 是原型演示用的近似系数，上线口径以功能清单附表一「通用精确性」为准
+  //   ——必须按用户 ID 在区间内真去重，禁止用经验系数估算。研发请勿照抄这两个数。
   const dedup = days <= 1 ? 1 : days <= 7 ? 0.62 : 0.42;
   const activeUsers = days <= 1 ? (slice[slice.length - 1]?.dau ?? 0) : Math.round(dauSum * dedup);
   const expiredSum = sum('expired');

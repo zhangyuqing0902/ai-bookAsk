@@ -2,18 +2,19 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, Modal, TextInput, EmptyState, Pager } from '@aba/ui-admin';
-import { KP_SOURCE_LABEL, ORG_FILTER_ALL, orgScopeOptions, orgScopeValue, visibleOrgs, CURRENT_ORG } from '@aba/mock';
+import { KP_SOURCE_LABEL, ORG_FILTER_ALL, orgScopeOptions, orgScopeValue, visibleOrgs, CURRENT_ORG, currentSubCard, quotaState } from '@aba/mock';
 import { useKpLifecycle } from '../stores/kpLifecycle';
 import { useOrgScope } from '../stores/orgScope';
+import { useSubDemo, SUB_DEMO_SUBS } from '../stores/subDemo';
 import { ORG_KPS, ORG_KP_STATUS_META, type OrgKp } from '../data/kps';
 
 // 机构后台 · 知识产品 KP 列表（搜索 + 状态/来源筛选 + 空态 + 新建/导入弹窗）
 // 0717 #2.3：列表与详情同源（../data/kps.ts），每个状态各留一条演示数据 + 实时分享双视角。
 // 0717 #2.4：状态命名两后台统一为「草稿 / 已发布 / 已下架」。
 // 0718 #7：来源标签三态统一（自建 / 分享导入·实时 / 分享导入·快照，统一灰色），两后台列表/详情一致。
-// 0614：机构 KP / 存储配额（demo，与平台用量看板一致）；超限时阻断并提示联系平台扩容
-const KP_USED = 30, KP_LIMIT = 50;
-const STORE_USED = 62, STORE_LIMIT = 100;
+// 0813-2：删掉写死的 KP_USED/KP_LIMIT/STORE_USED/STORE_LIMIT 四个常量，改接真实生效订阅（currentSubCard）。
+//   额度基数＝所有未删除的 KP（草稿 + 已发布 + 已下架都占，只有删除释放）。
+//   超额＝棘轮冻结新建（quotaState 用 >=）：12 个降到 5 个额度后，删到 6 个仍继续阻断，回落到 4 个才能再建。
 
 // 来源标签 = shareMode 映射（自建 / 分享导入·实时 / 分享导入·快照）
 const sourceLabel = (kp: OrgKp) => KP_SOURCE_LABEL[kp.shareMode ?? 'own'];
@@ -40,11 +41,30 @@ export function KpList() {
   const [status, setStatus] = useState('全部');
   const [source, setSource] = useState('全部');
   const [page, setPage] = useState(1);
-  // 0614：KP 数达上限 → 阻断新建并提示
-  const overKp = KP_USED >= KP_LIMIT;
+
+  // 0813-2：配额接真实生效订阅。额度基数＝所有未删除的 KP（草稿 / 已发布 / 已下架都占，只有删除释放）。
+  const subDemo = useSubDemo((s) => s.subDemo);
+  const sub = currentSubCard(SUB_DEMO_SUBS[subDemo]);
+  const kpRow = sub?.rows.find((r) => r.k === 'KP 数');
+  const stRow = sub?.rows.find((r) => r.k === '存储');
+  // 占用量取当前生效订阅记录（与主控台订阅卡、平台机构列表同源），两个页面不可能显示不一致的额度。
+  // 上线口径：KP 占用＝该机构所有未删除的 KP（草稿 + 已发布 + 已下架都占，只有删除释放），实时统计。
+  const kpAlive = kpRow?.used ?? 0;
+  const kpQ = quotaState(kpAlive, kpRow?.limit ?? 0, kpRow?.unlimited, 'kp');
+  const stQ = quotaState(stRow?.used ?? 0, stRow?.limit ?? 0, stRow?.unlimited, 'storage');
+  // 无生效订阅（全部过期 / 从未开通）同样不能新建，但文案走「续费后恢复」而非「删到额度内」
+  const noSub = !sub;
+  const canCreate = !noSub && kpQ.canAdd;
+  const blockReason = noSub
+    ? '订阅套餐已过期或尚未开通，机构既有内容与数据完整保留；续费后即可恢复新建 KP。'
+    : kpQ.reason;
   const newKp = () => {
-    if (overKp) return toast(`已达 KP 数量上限（${KP_LIMIT} 个），请联系平台扩容`);
+    if (!canCreate) return toast(blockReason);
     setCreate(true);
+  };
+  const importKp = () => {
+    if (!canCreate) return toast(blockReason);
+    setImp(true);
   };
 
   // 0714 #18：状态筛选按叠加覆盖后的「有效状态」匹配；
@@ -70,23 +90,44 @@ export function KpList() {
           <div className="pt">知识产品 KP</div>
         </div>
         <div className="pa">
-          {/* 0614：机构配额用量提示（超限将阻断新建 / 上传，提示联系平台扩容） */}
-          <span
-            className={'quota-chip' + (KP_USED / KP_LIMIT >= 0.9 || STORE_USED / STORE_LIMIT >= 0.9 ? ' bad' : KP_USED / KP_LIMIT >= 0.7 || STORE_USED / STORE_LIMIT >= 0.7 ? ' warn' : '')}
-            title="机构配额：KP 数 / 存储空间。达上限将无法新建 KP 或上传文件，请联系平台扩容。"
-          >
-            KP {KP_USED}/{KP_LIMIT} · 存储 {STORE_USED}/{STORE_LIMIT}GB
-          </span>
-          <button className="btn btn-ghost btn-sm" onClick={() => setImp(true)}>
+          {/* 0813-2：配额 chip 接真实订阅——超额时显示真实占用与超出量（不截断），
+              tooltip 给出「删到额度内 / 联系平台扩容」两条路，而不是「请联系平台扩容」这种死路 */}
+          {noSub ? (
+            <span className="quota-chip bad" title={blockReason}>无生效订阅</span>
+          ) : (
+            <span
+              className={'quota-chip' + (kpQ.level === 'over' || stQ.level === 'over' ? ' bad' : kpQ.level === 'near' || stQ.level === 'near' ? ' bad' : kpQ.level === 'warn' || stQ.level === 'warn' ? ' warn' : '')}
+              title={[kpQ.reason, stQ.reason].filter(Boolean).join('\n') || '机构配额：KP 数 / 存储空间。达上限将无法新建 KP 或上传文件，可删除释放或联系平台扩容。'}
+            >
+              KP {kpQ.unlimited ? `${kpAlive}/不限` : `${kpAlive}/${kpQ.limit}`}
+              {kpQ.over && <b className="quota-chip-over">超额 {kpQ.overBy}</b>}
+              {' · '}存储 {stQ.unlimited ? `${stQ.used}/不限` : `${stQ.used}/${stQ.limit}GB`}
+              {stQ.over && <b className="quota-chip-over">超额 {stQ.overBy}GB</b>}
+            </span>
+          )}
+          <button className="btn btn-ghost btn-sm" onClick={importKp} disabled={!canCreate} title={canCreate ? undefined : blockReason}>
             <Icon id="i-dl" w={14} h={14} />
             导入分享 KP
           </button>
-          <button className="btn btn-primary btn-sm" onClick={newKp}>
+          <button className="btn btn-primary btn-sm" onClick={newKp} disabled={!canCreate} title={canCreate ? undefined : blockReason}>
             <Icon id="i-plus" w={14} h={14} />
             新建 KP
           </button>
         </div>
       </div>
+      {/* 0813-2：超额告警条——降档后存量超额是持续状态，不能只藏在 tooltip 里。
+          明确三件事：既有内容不受影响（安抚）、当前被冻结了什么（后果）、怎么解除（两条路）。 */}
+      {(kpQ.over || stQ.over || noSub) && (
+        <div className="quota-alert">
+          <Icon id="i-warn" w={16} h={16} />
+          <div className="quota-alert-body">
+            <b>{noSub ? '当前无生效订阅' : '订阅额度已超出'}</b>
+            <span>{blockReason || stQ.reason}</span>
+            {!noSub && stQ.over && <span>存储已超出 {stQ.overBy} GB，文件上传同步冻结；既有文件与 C 端问答不受影响。</span>}
+            <span className="quota-alert-safe">机构既有内容、数据与 C 端读者已购权益完整保留，平台不会删除任何机构数据。</span>
+          </div>
+        </div>
+      )}
       <div className="filter">
         <Search placeholder="搜索 KP 名称" minWidth={220} value={q} onChange={setQ} />
         {/* 0806：父机构视角——机构单选筛选（全部机构 / 本机构（父机构）/ 各子机构） */}
@@ -97,7 +138,7 @@ export function KpList() {
 
       {list.length === 0 ? (
         <div className="card card-pad">
-          <EmptyState icon="i-cube" title="没有匹配的 KP" sub="换个名称或筛选条件,或新建一个 KP" action={<button className="btn btn-primary btn-sm" onClick={() => setCreate(true)}><Icon id="i-plus" w={14} h={14} />新建 KP</button>} />
+          <EmptyState icon="i-cube" title="没有匹配的 KP" sub="换个名称或筛选条件,或新建一个 KP" action={<button className="btn btn-primary btn-sm" onClick={newKp} disabled={!canCreate} title={canCreate ? undefined : blockReason}><Icon id="i-plus" w={14} h={14} />新建 KP</button>} />
         </div>
       ) : (
         <div className="kp-grid">

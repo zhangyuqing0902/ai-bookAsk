@@ -93,6 +93,10 @@ export function CurrentSubCard({
                   </div>
                 );
               }
+              // 0813-2：降档后存量超额（如 12 个 KP 落到 5 个额度）——进度条封顶但数值显示真实的 12 / 5。
+              //   刻意不把 used 截断到 limit：截断是撒谎，管理员必须看到真实超出多少才知道要清理多少。
+              const over = r.used > r.limit;
+              const overBy = over ? Number((r.used - r.limit).toFixed(2)) : 0;
               return (
                 <div className="quota-row" key={r.k}>
                   <div className="quota-head">
@@ -101,11 +105,13 @@ export function CurrentSubCard({
                       <span className={'quota-kind ' + r.kind}>{r.kind === 'occupancy' ? '占用量' : '消耗量'}</span>
                       <InfoDot text={r.info} />
                     </span>
-                    <span className="quota-v mono"><small>{r.kind === 'occupancy' ? '当前占用' : '本周期消耗'}</small> {r.used} <span className="quota-lim">/ {r.kind === 'occupancy' ? '当前上限' : '本周期额度'} {r.limit} {r.unit}</span></span>
+                    <span className={'quota-v mono' + (over ? ' is-over' : '')}><small>{r.kind === 'occupancy' ? '当前占用' : '本周期消耗'}</small> {r.used} <span className="quota-lim">/ {r.kind === 'occupancy' ? '当前上限' : '本周期额度'} {r.limit} {r.unit}</span></span>
                   </div>
                   <div className="quota-track">
-                    <span className="quota-bar"><i className={'quota-fill ' + tone(pct)} style={{ width: pct + '%' }} /></span>
-                    <span className={'quota-pct mono ' + tone(pct)}>{pct}%</span>
+                    <span className="quota-bar"><i className={'quota-fill ' + (over ? 'over' : tone(pct))} style={{ width: (over ? 100 : pct) + '%' }} /></span>
+                    {/* 超额时把百分比换成「超额 N」——超过 100% 的百分比没有信息量，
+                        「还要清理多少」才是管理员唯一需要的数字 */}
+                    <span className={'quota-pct mono ' + (over ? 'over' : tone(pct))}>{over ? `超额 ${overBy}${r.unit}` : `${pct}%`}</span>
                   </div>
                 </div>
               );

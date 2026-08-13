@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE, Calendar, fmtD } from '@aba/ui-admin';
-import { comparisonPeriodLabel, metricHelp } from '@aba/mock';
+import { comparisonPeriodLabel, metricHelp, RANGE_SCOPE_NOTE } from '@aba/mock';
 import { ACTIVE_SNAPSHOT, RANGE, retentionFor, scaleActiveSnapshot, scaleRangeData, TOPKP, type Bar, type KW, type RetentionNode } from '../data/dataBoard';
 import { CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
 import { MultiSelect } from '@aba/ui-admin';
@@ -147,7 +147,12 @@ export function DataBoard() {
     const t = Number(new URLSearchParams(window.location.search).get('tab'));
     return t >= 0 && t < TABS.length ? t : 0;
   });
-  const [rangeLabel, setRangeLabel] = useState('7 日');
+  // 0813-2：区间 state 由单一 label 改为完整载荷。
+  //   旧写法只存 r.label，选「自定义」会拿到 "2026-06-01 至 2026-06-07" 这种字符串，
+  //   落不到 RANGE 字典上 → 静默回落成 7 日数据与 7 日环比口径，用户完全无感（真 bug）。
+  //   现按真实 days 就近取档并显式标注实际落用的档位。
+  const [range, setRange] = useState<{ label: string; days: number; custom: boolean }>({ label: '7 日', days: 7, custom: false });
+  const rangeLabel = range.label;
   // 0716 #15：留存按「注册时间」筛选（口径即注册日），与区间分析是两套口径：切区间不动留存，切注册时间只动留存段
   const [retentionBatch, setRetentionBatch] = useState('最新可统计');
   // 0716 #15：自定义注册时间——具体某一天（单日日期面板）
@@ -160,10 +165,13 @@ export function DataBoard() {
   const [orgs, setOrgs] = useState<string[]>(ALL_ORGS);
   const w = isParent ? orgWeightOf(orgs) : 1;
   const active = scaleActiveSnapshot(w);
-  const d = scaleRangeData(RANGE[rangeLabel] ?? RANGE['7 日'], w);
+  // 0813-2：按真实天数就近取档（原型只有三张 mock 表，自定义区间落到最接近的一档，并在界面标明）
+  const bucketLabel = range.days <= 1 ? '今日' : range.days <= 7 ? '7 日' : '30 日';
+  const d = scaleRangeData(RANGE[bucketLabel], w);
   // 0718 #6：留存按真实日期联动推算——自定义注册日驱动节点状态/样本/截止文案，不再是写死的假数据
   const retention = retentionFor(retentionBatch, retDay);
-  const periodDays = rangeLabel === '今日' ? 1 : rangeLabel === '30 日' ? 30 : 7;
+  // 环比对比窗按真实天数算（自定义 3 天就对比前 3 天，不再固定按 7 天）
+  const periodDays = range.days;
   // 0718 #5：留存筛选改「区间分析」同款分段控件；0724：批次精简为 最新可统计 + 自定义（删近 7 / 近 30 个注册日）
   const RETENTION_PRESETS = ['最新可统计'];
   const retLabel = retentionBatch === '自定义日期' && retDay ? fmtD(retDay) : retentionBatch;
@@ -203,8 +211,11 @@ export function DataBoard() {
       </div>
       <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
         <Kpi lab="日活（DAU）" val={active.dau} suf="人" deltaPct={active.dauDelta} periodDays={1} info="" infoRaw="今日 00:00 至当前时刻的活跃用户，实时滚动快照。去重：单日内按用户 ID 去重。环比对比昨日同时段。不随下方时间筛选联动。" />
-        <Kpi lab="周活（WAU）" val={active.wau} suf="人" deltaPct={active.wauDelta} periodDays={7} info="" infoRaw="截至今日的近 7 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 7 日窗口。不随下方时间筛选联动。" />
-        <Kpi lab="月活（MAU）" val={active.mau} suf="人" deltaPct={active.mauDelta} periodDays={30} info="" infoRaw="截至今日的近 30 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 30 日窗口。不随下方时间筛选联动。" />
+        {/* 0813-2：WAU/MAU 是「含今日」的实时滚动窗口，下方区间档是「截至昨日」的完整自然日——
+            两者数值天然对不齐（一个问活跃规模的实时脉搏，一个问一段时间的经营结果），必须在 tooltip 里讲明，
+            否则评审一定追问「为什么 WAU 和近 7 天活跃用户不一样」。 */}
+        <Kpi lab="周活（WAU）" val={active.wau} suf="人" deltaPct={active.wauDelta} periodDays={7} info="" infoRaw="截至今日的近 7 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 7 日窗口。不随下方时间筛选联动。本卡为含今日的实时滚动窗口，与下方「7 日」区间（截至昨日 24:00 的完整自然日）口径不同，数值不可直接对齐。" />
+        <Kpi lab="月活（MAU）" val={active.mau} suf="人" deltaPct={active.mauDelta} periodDays={30} info="" infoRaw="截至今日的近 30 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 30 日窗口。不随下方时间筛选联动。本卡为含今日的实时滚动窗口，与下方「30 日」区间（截至昨日 24:00 的完整自然日）口径不同，数值不可直接对齐。" />
       </div>
 
       {/* 0717 二批 #8.1：用户留存页级常驻,一行三张等宽指标卡（按注册时间,独立于下方区间筛选） */}
@@ -258,9 +269,13 @@ export function DataBoard() {
       <div className="board-rangebar">
         <div className="dash-section-title" style={{ margin: 0 }}>
           区间分析
-          <span className="dash-section-sub">· {rangeLabel} · 下方各主题 Tab 指标随右侧时间筛选联动</span>
+          {/* 0813-2：区间口径写进区块副标题（只写一遍，不逐个 label 加长）；自定义时显式说明落到了哪一档 */}
+          <span className="dash-section-sub">
+            · {rangeLabel} · 下方各主题 Tab 指标随右侧时间筛选联动 · {range.days > 1 ? RANGE_SCOPE_NOTE : '今日为 00:00 至当前时刻'}
+            {range.custom && <>（自定义 {range.days} 天，演示数据按「{bucketLabel}」档展示，环比按 {range.days} 天算）</>}
+          </span>
         </div>
-        <RangePicker presets={['今日', '7 日', '30 日']} defaultActive={1} onChange={(r) => setRangeLabel(r.label)} />
+        <RangePicker presets={['今日', '7 日', '30 日']} defaultActive={1} onChange={(r) => setRange({ label: r.label, days: r.days || 7, custom: !['今日', '7 日', '30 日'].includes(r.label) })} />
       </div>
 
       {/* 四个主题 Tab */}

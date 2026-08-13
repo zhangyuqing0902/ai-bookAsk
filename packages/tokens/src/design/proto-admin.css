@@ -128,6 +128,15 @@
   background:var(--surface-warm);border:1px solid var(--line-2);border-radius:8px;padding:5px 10px;white-space:nowrap;cursor:help;}
 .quota-chip.warn{color:var(--amber-ink);background:var(--amber-soft);border-color:transparent;}
 .quota-chip.bad{color:var(--terra);background:rgba(229,83,59,.1);border-color:transparent;}
+/* 0813-2：配额 chip 内的超额徽标 + 页级超额告警条（降档后存量超额是持续状态，不能只藏在 tooltip 里） */
+.quota-chip-over{margin-left:5px;padding:1px 6px;border-radius:5px;background:var(--terra);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.02em;}
+.quota-alert{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:12px;
+  background:rgba(229,83,59,.07);border:1px solid rgba(229,83,59,.22);color:var(--terra);}
+.quota-alert > svg{flex:none;margin-top:1px;}
+.quota-alert-body{display:flex;flex-direction:column;gap:3px;font-size:12.5px;line-height:1.6;}
+.quota-alert-body b{font-size:13px;font-weight:700;}
+.quota-alert-body span{color:var(--ink-2);}
+.quota-alert-safe{color:var(--ink-3) !important;font-size:11.5px;}
 
 /* 0613-2：答案反馈工作台 */
 .fb-q{color:var(--ink);font-weight:500;}
@@ -512,6 +521,10 @@
 .cal-d.sel.start{border-radius:8px 0 0 8px;}
 .cal-d.sel.end{border-radius:0 8px 8px 0;}
 .cal-d.sel.start.end{border-radius:8px;}
+/* 0813-2：越界日格（今天及以后 / 近 3 年以前）置灰不可选 */
+.cal-d.off,.cal-d.off:hover{color:var(--ink-3);opacity:.38;cursor:not-allowed;background:none;}
+/* 0813-2：自定义面板口径脚注 —— 不只是禁掉，还要告诉用户今天的数在哪 */
+.cal-note{display:block;margin-top:10px;padding-top:9px;border-top:1px solid var(--line-2);font-size:11px;line-height:1.55;color:var(--ink-3);}
 .cal-f{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:11px;border-top:1px solid var(--line-2);}
 .cal-range{font-family:var(--mono);font-size:11px;color:var(--ink-2);}
 /* 0614c：日历标题可点（日→月→年下钻）+ 月 / 年九宫格 */

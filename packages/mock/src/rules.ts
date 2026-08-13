@@ -49,10 +49,14 @@ export function buildTenantUrls(prefix: string, kpId = ':id', rootDomain = '一�
 export type PeriodKind = 'snapshot' | 'today' | 'range';
 export type MetricUnit = 'count' | 'money' | 'rate' | 'duration';
 
+// 0813-2：区间口径定版——「等长」不够，必须「等长且等完整度」。
+//   旧口径把近 N 天的终点设成今天 23:59:59（含今日一整天），而对比区间是 N 个完整日，
+//   今日只跑了半天 → 环比系统性偏负，且同一天早晚看到的数不一样、截图对不上账。
+//   现统一为：区间只统计完整自然日（截至昨日 24:00，不含今日），今日单独成档。
 export const PERIOD_RULE_HELP: Record<PeriodKind, string> = {
   snapshot: '累计/存量指标为截至当前的实时快照，不与上一周期比较。',
   today: '今日按 00:00 至当前时刻统计，并与昨日相同已过时长比较；趋势按小时展示。',
-  range: '近 7 天、近 30 天和自定义区间，与紧邻此前的等长区间比较；趋势按自然日展示。',
+  range: '近 7 天、近 30 天和自定义区间按完整自然日统计（截至昨日 24:00，不含今日，避免用未过完的今天拉低对比），与紧邻此前的等长完整日区间比较；趋势按自然日展示。今日数据见「今日」档。',
 };
 
 export function metricHelp(definition: string, kind: PeriodKind, unit: MetricUnit = 'count') {
@@ -91,13 +95,16 @@ export function compareMetric(current: number, previous: number, unit: MetricUni
 
 const dateLabel = (d: Date) => `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+/** 0813-2：区间统计终点＝昨日（今日未过完不参与区间统计） */
+const rangeEnd = (now: Date) => new Date(now.getTime() - 86400000);
+
 export function comparisonPeriodLabel(days: number, now = new Date()) {
-  const end = new Date(now);
   if (days <= 1) {
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     return `对比昨日 00:00-${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   }
-  const currentStart = new Date(end.getTime() - (days - 1) * 86400000);
+  // 当前区间 = [T-days, T-1]，对比区间 = [T-2*days, T-days-1]，两段均为完整自然日且等长
+  const currentEnd = rangeEnd(now);
+  const currentStart = new Date(currentEnd.getTime() - (days - 1) * 86400000);
   const previousEnd = new Date(currentStart.getTime() - 86400000);
   const previousStart = new Date(previousEnd.getTime() - (days - 1) * 86400000);
   return `对比 ${dateLabel(previousStart)}—${dateLabel(previousEnd)}`;
@@ -105,8 +112,20 @@ export function comparisonPeriodLabel(days: number, now = new Date()) {
 
 export function currentPeriodLabel(days: number, now = new Date()) {
   if (days <= 1) return `今日 00:00-${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const start = new Date(now.getTime() - (days - 1) * 86400000);
-  return `${dateLabel(start)}—${dateLabel(now)}`;
+  const end = rangeEnd(now);
+  const start = new Date(end.getTime() - (days - 1) * 86400000);
+  return `${dateLabel(start)}—${dateLabel(end)}`;
+}
+
+/** 0813-2：区间统计说明——四处看板区块副标题与自定义面板共用，口径只写一遍 */
+export const RANGE_SCOPE_NOTE = '统计截至昨日 24:00（不含今日），今日数据见「今日」档';
+
+/** 0813-2：自定义区间可选范围——结束日最晚昨日，起始日最早近 3 年 */
+export const CUSTOM_RANGE_YEARS = 3;
+export function customRangeBounds(now = new Date()) {
+  const max = rangeEnd(now); max.setHours(0, 0, 0, 0);
+  const min = new Date(max); min.setFullYear(min.getFullYear() - CUSTOM_RANGE_YEARS);
+  return { min, max };
 }
 
 export interface OrgNode { id: string; parentId?: string | null }
@@ -173,6 +192,10 @@ export function refundEntitlementDecision(kind: 'full' | 'partial', orderIsOnlyS
   return kind === 'full' && orderIsOnlySource ? 'revoke' as const : 'retain' as const;
 }
 
+// 0813-2：降档超额沿用「既存不适格」（城市规划 legal nonconforming use）——
+//   既有存量永久有效（不删机构资产、C 端完全无感）、超额期间冻结增量、只能向合规方向回落。
+//   注意 blocked 用的是 >= 而非 >，这是刻意的「棘轮」：12 个 KP 降到 5 个额度后，
+//   删到 6 个仍 6>=5 继续阻断，必须回落到 4 个才能再建到 5 —— 删一个 ≠ 能建一个。请勿「修正」成 >。
 export function applySubscriptionTransition(
   usage: { kp: number; storage: number; token: number },
   nextLimits: { kp: number; storage: number; token: number },
@@ -180,6 +203,59 @@ export function applySubscriptionTransition(
   return {
     usage: { kp: usage.kp, storage: usage.storage, token: 0 },
     blocked: { kp: usage.kp >= nextLimits.kp, storage: usage.storage >= nextLimits.storage, token: false },
+  };
+}
+
+// 0813-2：占用型额度统一判定（KP 数 / 存储共用；三端替代各页硬编码常量）。
+//   三个额度性质不同，只有占用型才会有「超额存量」：
+//     KP 数 —— 占用型，超额无额外硬成本（只是商务分档标尺）→ 棘轮冻结新建即可
+//     存储  —— 占用型，超额是平台持续掏钱 → 棘轮冻结上传 + 降档必填说明 + 平台侧可见可催收
+//     Token —— 消耗型，每期归零，不存在超额存量 → 沿用阈值预警，不进本函数
+export type QuotaLevel = 'ok' | 'warn' | 'near' | 'over';
+export interface QuotaState {
+  unlimited: boolean; used: number; limit: number;
+  over: boolean; overBy: number; canAdd: boolean; level: QuotaLevel; reason: string;
+}
+export function quotaState(used: number, limit: number, unlimited = false, kind: 'kp' | 'storage' = 'kp'): QuotaState {
+  const unit = kind === 'kp' ? '个' : 'GB';
+  const noun = kind === 'kp' ? 'KP' : '存储';
+  // 不限版 / 定制版单项不限：不设上限、不做超限阻断（与 0812-g 一致）
+  if (unlimited) {
+    return { unlimited: true, used, limit: 0, over: false, overBy: 0, canAdd: true, level: 'ok', reason: '' };
+  }
+  const over = used >= limit; // 棘轮：等于上限即视为已满，不可再增
+  const overBy = Math.max(0, Number((used - limit).toFixed(2)));
+  const pct = limit > 0 ? (used / limit) * 100 : 100;
+  const level: QuotaLevel = over ? 'over' : pct >= 90 ? 'near' : pct >= 70 ? 'warn' : 'ok';
+  const action = kind === 'kp'
+    ? `需删除至 ${limit} ${unit}以内、或联系平台扩容后才能新建 KP。`
+    : `需删除文件至 ${limit} ${unit} 以内、或联系平台扩容后才能上传。`;
+  const reason = over
+    ? `${noun}已用 ${used} ${unit}，当前订阅上限 ${limit} ${unit}${overBy > 0 ? `（超额 ${overBy} ${unit}）` : ''}。既有内容与 C 端权益不受影响；${action}`
+    : '';
+  return { unlimited: false, used, limit, over, overBy, canAdd: !over, level, reason };
+}
+
+/** 0813-2：新订阅是否构成「降档」——任一占用型额度低于机构当前实际占用即触发（Token 每期归零，不触发） */
+export function downgradeCheck(
+  usage: { kp: number; storage: number },
+  nextLimits: { kp: number | '不限'; storage: number | '不限' },
+) {
+  const under = (limit: number | '不限', used: number) => limit !== '不限' && limit < used;
+  const kp = under(nextLimits.kp, usage.kp);
+  const storage = under(nextLimits.storage, usage.storage);
+  const kpOver = kp ? usage.kp - (nextLimits.kp as number) : 0;
+  const storageOver = storage ? Number((usage.storage - (nextLimits.storage as number)).toFixed(2)) : 0;
+  const parts: string[] = [];
+  if (kp) parts.push(`KP ${kpOver} 个`);
+  if (storage) parts.push(`存储 ${storageOver} GB`);
+  return {
+    isDowngrade: kp || storage,
+    kp, storage,
+    // 分项超出量：文案里直接给数字，不让填写人自己去减
+    kpOver, storageOver,
+    overText: parts.join('、'),
+    requiresNote: kp || storage,
   };
 }
 

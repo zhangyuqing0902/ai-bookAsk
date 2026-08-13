@@ -21,6 +21,9 @@ export interface PlatformOrg {
   tkUsed: number; // 当前订阅周期 Token，单位亿
   /** 定制版上限（其余套餐由 PLAN_Q 推断） */
   custom?: { kp: number; storage: number; token: number };
+  /** 0813-2：机构主体全称（营业执照名称）——创建机构时录入，注入 C 端四份协议文本的主体变量；
+   *  可与其他机构重复（同一主体可运营多个机构）。未录入时详情页回落为「{机构名}有限公司」演示值。 */
+  legalName?: string;
 }
 
 export const PLATFORM_ORGS: PlatformOrg[] = [
@@ -35,7 +38,9 @@ export const PLATFORM_ORGS: PlatformOrg[] = [
   { i: 9, id: 'ORG009', name: 'CC 科技出版', domainPrefix: 'cc-tech', status: '正常', statusCls: 'tag-jade', parentId: null, llm: '自配 · 通义', pay: '未配置', payCls: 'tag-line', plan: '定制版', kpUsed: 60, stUsed: 250, tkUsed: 3.6, custom: { kp: 80, storage: 300, token: 5 } },
   { i: 10, id: 'ORG010', name: 'CC 医学分社', domainPrefix: 'cc-med', status: '正常', statusCls: 'tag-jade', parentId: 'ORG009', llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '专业版', kpUsed: 44, stUsed: 88, tkUsed: 1.9 },
   { i: 11, id: 'ORG011', name: 'DD 教育研究院', domainPrefix: 'dd-research', status: '停用', statusCls: 'tag-terra', parentId: null, llm: '平台默认', pay: '未配置', payCls: 'tag-line', plan: '基础版', kpUsed: 5, stUsed: 10, tkUsed: 0.2 },
-  { i: 12, id: 'ORG012', name: 'DD 考试中心', domainPrefix: 'dd-exam', status: '正常', statusCls: 'tag-jade', parentId: 'ORG011', llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '专业版', kpUsed: 28, stUsed: 55, tkUsed: 1.3 },
+  // 0813-2：「降档超额」演示机构（OVER_QUOTA_DEMO_ORG_ID）——上一期 10 KP + 加油包 2 用满 12 个，
+  //   本期降到定制版 5 KP / 5 GB，存量超 7 个 KP、5 GB。列表两列均标红「超额」，供商务催收与续费谈判。
+  { i: 12, id: 'ORG012', name: 'DD 考试中心', domainPrefix: 'dd-exam', status: '正常', statusCls: 'tag-jade', parentId: 'ORG011', llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '定制版', kpUsed: 12, stUsed: 10, tkUsed: 0.21, custom: { kp: 5, storage: 5, token: 0.5 } },
   { i: 13, id: 'ORG013', name: 'EE 美术出版', domainPrefix: 'ee-art', status: '正常', statusCls: 'tag-jade', parentId: null, llm: '平台默认', pay: '已配置', payCls: 'tag-indigo', plan: '旗舰版', kpUsed: 75, stUsed: 180, tkUsed: 3.2 },
 ];
 

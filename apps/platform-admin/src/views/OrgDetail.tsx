@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Dropdown, Search, TextInput, DomainInput, InfoDot, CurrentSubCard, DateTimeRangeField, RangePicker, Modal, ConfirmDialog, SubPackDrawer, type PackForm, QtyStepper, DataGrid, type Col, pickFile, pickImageColor, ACCEPT, UNIT_NOTE, UploadModal, fileIcon, inferKind } from '@aba/ui-admin';
-import { EXPIRED_DEMO_ORG_ID, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, MY_ORG_SUBS_UNLIMITED, NEVER_SUB_DEMO_ORG_ID, UNLIMITED_DEMO_ORG_ID, PLATFORM_ORGS, lastExpiredSub, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, type Subscription, ORG_AGREEMENTS, AGREEMENT_SPEC, AGREEMENT_TYPES, type OrgAgreementFile } from '@aba/mock';
+import { EXPIRED_DEMO_ORG_ID, MY_ORG_SUBS, MY_ORG_SUBS_EXPIRED, MY_ORG_SUBS_UNLIMITED, MY_ORG_SUBS_OVER, NEVER_SUB_DEMO_ORG_ID, UNLIMITED_DEMO_ORG_ID, OVER_QUOTA_DEMO_ORG_ID, PLATFORM_ORGS, lastExpiredSub, platformOrgRole, comparisonPeriodLabel, currentSubCard, metricHelp, subStatus, tenantDomainSuffix, validateDomainPrefix, downgradeCheck, RANGE_SCOPE_NOTE, type Subscription, ORG_AGREEMENTS, AGREEMENT_SPEC, AGREEMENT_TYPES, type OrgAgreementFile } from '@aba/mock';
 import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 
 // 0613-2：套餐 / 配额独立成 Tab；用量看板重排（配额进度重点 + 2×2）；微信配置分区卡片
@@ -190,11 +190,13 @@ export function OrgDetail() {
   // 0812：EE 美术出版（EXPIRED_DEMO_ORG_ID）取全过期快照、AA 少儿分社（NEVER_SUB_DEMO_ORG_ID）取空集，
   // 分别演示「套餐全部过期」与「从未开通」两种空态；机构切换时重置
   // 0812-g：BB 数字出版（UNLIMITED_DEMO_ORG_ID）取不限版快照，演示「额度不限」展示
+  // 0813-2：CC 教育出版（OVER_QUOTA_DEMO_ORG_ID）取降档超额快照，演示「既存不适格」处理
   const subsSeedOf = (orgId?: string) =>
     orgId === EXPIRED_DEMO_ORG_ID ? MY_ORG_SUBS_EXPIRED
       : orgId === NEVER_SUB_DEMO_ORG_ID ? []
         : orgId === UNLIMITED_DEMO_ORG_ID ? MY_ORG_SUBS_UNLIMITED
-          : MY_ORG_SUBS;
+          : orgId === OVER_QUOTA_DEMO_ORG_ID ? MY_ORG_SUBS_OVER
+            : MY_ORG_SUBS;
   const [subs, setSubs] = useState<Subscription[]>(subsSeedOf(org?.id));
   useEffect(() => { setSubs(subsSeedOf(org?.id)); }, [org?.id]);
   const packsOf = (subId: string) => subs.filter((s) => s.type === '加油包' && s.parentId === subId);
@@ -214,6 +216,8 @@ export function OrgDetail() {
   const [subModal, setSubModal] = useState(false);
   const [owner, setOwner] = useState('');
   const [note, setNote] = useState('');
+  // 0813-2：套餐降档说明（与上面的通用「备注」是两个字段，不混用）——仅降档时出现且必填
+  const [downNote, setDownNote] = useState('');
   const [newStart, setNewStart] = useState(defStart);
   const [newEnd, setNewEnd] = useState(defEnd);
   const [detail, setDetail] = useState<Subscription | null>(null);
@@ -273,7 +277,20 @@ export function OrgDetail() {
     setNewEnd(defEnd);
     setSubModal(true);
   };
+  // 0813-2：降档判定——新订阅的 KP 数 / 存储低于机构当前实际占用即触发（Token 每期归零，不触发）。
+  //   占用型额度跨订阅延续，故取当前生效订阅的占用值；无生效订阅时取最近一条订阅的占用（内容还在，占用就还在）。
+  const liveSub = subs.find((s) => s.type === '订阅' && subStatus(s) === '生效') ?? orderSubs[0];
+  const curUsage = { kp: parseFloat(liveSub?.kpUsed ?? '0') || 0, storage: parseFloat(liveSub?.storageUsed ?? '0') || 0 };
+  const numOrUnl = (v: string) => (String(v).trim() === '不限' ? ('不限' as const) : parseFloat(v) || 0);
+  const down = downgradeCheck(curUsage, { kp: numOrUnl(quota.kp), storage: numOrUnl(quota.storage) });
+
   const confirmSub = () => {
+    // 0813-2：降档不阻断创建（客户预算变了是常态，硬阻断只会卡住签约丢单），但必须填降档说明——
+    //   超出的存储是平台在持续掏钱，这笔成本要有人签字承认，不能被系统默默吞掉。
+    if (down.requiresNote && !downNote.trim()) {
+      toast('本次为套餐降档，请先填写「套餐降档说明」');
+      return;
+    }
     // 0615-6 A+C 生效规则校验
     if (orderSubs.some((s) => s.startDate > todayStr)) {
       toast('已有 1 期未生效订阅，最多只能预建一期续约');
@@ -301,13 +318,17 @@ export function OrgDetail() {
       endDate: newEnd,
       owner: owner.trim() || undefined,
       note: note.trim() || undefined,
+      downgradeNote: down.requiresNote ? downNote.trim() : undefined,
       status: autoStatus, // 由有效期自动判定（起始 > 今天 = 未生效，到期自动生效）
       createdAt: '2026-06-15 14:30:00',
       createdBy: 'superadmin',
     };
     setSubs((arr) => [newSub, ...arr]);
     setSubModal(false);
-    toast(autoStatus === '未生效' ? '已创建订阅（未生效，到生效日期自动生效）' : '已创建订阅');
+    setDownNote('');
+    toast(down.requiresNote
+      ? '已创建订阅（本次为降档，机构既有内容完整保留，新建 / 上传将受额度限制）'
+      : autoStatus === '未生效' ? '已创建订阅（未生效，到生效日期自动生效）' : '已创建订阅');
   };
   const addPack = (form: PackForm) => {
     if (!drawerSub) return;
@@ -343,10 +364,23 @@ export function OrgDetail() {
     return `${t(s.kpUsed, 'kpUsed')}/${t(s.kp, 'kp')} 个 · ${t(s.storageUsed, 'storageUsed')}/${t(s.storage, 'storage')} GB · ${t(s.tokenUsed, 'tokenUsed')}/${t(s.token, 'token')} 亿`;
   };
 
+  // 0813-2：该订阅的占用型额度（KP / 存储，含加油包）是否已被存量超出；「不限」项永不超额
+  const subOverQuota = (s: Subscription) => {
+    const ps = packsOf(s.id).filter((p) => p.status === '生效');
+    const add = (k: 'kp' | 'storage') => ps.reduce((n, p) => n + (parseFloat((p[k] as string) ?? '0') || 0), 0);
+    const over = (k: 'kp' | 'storage', uk: 'kpUsed' | 'storageUsed') => {
+      if (String(s[k]).trim() === '不限') return false;
+      return (parseFloat(s[uk] ?? '0') || 0) > (parseFloat(s[k]) || 0) + add(k);
+    };
+    return over('kp', 'kpUsed') || over('storage', 'storageUsed');
+  };
+
   const subCols: Col<Subscription>[] = [
     { header: '订阅订单 ID', className: 'mono', cell: (s) => s.id, sortValue: (s) => s.id },
-    { header: '套餐', cell: (s) => (s.plan ? <span className={'tag-s ' + (PLAN_CLS_D[s.plan] ?? 'tag-line')}>{s.plan}</span> : <span className="muted">—</span>), sortValue: (s) => s.plan ?? '' },
-    { header: '总额度（已用 / 上限，含加油包）', className: 'mono', cell: (s) => totalQuotaText(s) },
+    // 0813-2：降档订阅带「降档」标签，hover 看说明全文（成本承担关系要一眼可查）
+    { header: '套餐', cell: (s) => (s.plan ? <span className="sub-plan-cell"><span className={'tag-s ' + (PLAN_CLS_D[s.plan] ?? 'tag-line')}>{s.plan}</span>{s.downgradeNote && <span className="tag-s tag-terra" title={`套餐降档说明：${s.downgradeNote}`}>降档</span>}</span> : <span className="muted">—</span>), sortValue: (s) => s.plan ?? '' },
+    // 0813-2：占用型额度超出上限时标红（存量超额是持续状态，列表要能一眼看到）
+    { header: '总额度（已用 / 上限，含加油包）', className: 'mono', cell: (s) => <span className={subOverQuota(s) ? 'quota-over-text' : undefined}>{totalQuotaText(s)}</span> },
     { header: '有效期', className: 'mono', cell: (s) => `${s.startDate} ~ ${s.endDate}`, sortValue: (s) => s.endDate },
     { header: '商务负责人', cell: (s) => (s.owner ? s.owner : <span className="muted">—</span>), sortValue: (s) => s.owner ?? '' },
     { header: '状态', sortValue: (s) => subStatus(s), cell: (s) => { const st = subStatus(s); return <span className={'fstat ' + (SUB_ST_CLS[st] ?? 'none')}><span className="dt" />{st}</span>; } },
@@ -403,7 +437,8 @@ export function OrgDetail() {
               />
             </div>
             <div className="ctl" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <TextInput key={`entity-${org.id}`} defaultValue={`${org.name}有限公司`} style={{ maxWidth: 360 }} placeholder="营业执照名称" />
+              {/* 0813-2：优先取创建机构时录入的主体全称；老演示机构无该字段时回落为「{机构名}有限公司」 */}
+              <TextInput key={`entity-${org.id}`} defaultValue={org.legalName ?? `${org.name}有限公司`} style={{ maxWidth: 360 }} placeholder="营业执照名称" />
               <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>同步至协议文本</span>
             </div>
           </div>
@@ -584,6 +619,61 @@ export function OrgDetail() {
                 <div className="quota-note">占用量（KP · 存储）随内容删除可释放；消耗量（Token）只增不退、订阅周期结束清零重计</div>
               </div>
             </div>
+            {/* 0813-2：降档预警——额度低于机构当前实际占用时实时出现。
+                原则：提醒管理员降档会损害机构利益，但不阻碍创建订阅订单，平台也永不自动删除机构数据。 */}
+            {down.isDowngrade && (
+              <div className="fm-row">
+                <div className="lab" />
+                <div className="ctl">
+                  <div className="downgrade-warn">
+                    <div className="dw-head"><Icon id="i-warn" w={15} h={15} />本次为套餐降档，新额度低于机构当前占用</div>
+                    <ul className="dw-list">
+                      <li>该机构当前占用：KP <b>{curUsage.kp}</b> 个 · 存储 <b>{curUsage.storage}</b> GB；新额度：KP <b>{quota.kp}</b> · 存储 <b>{quota.storage}</b> GB，超出 <b>{down.overText}</b>。</li>
+                      <li><b>不受影响：</b>机构既有 KP、文件与数据完整保留，C 端读者问答与已购权益完全无感，平台不会删除任何机构数据。</li>
+                      <li><b>会受限：</b>生效后机构{[down.kp && '无法新建 KP', down.storage && '无法上传知识库文件'].filter(Boolean).join('、')}，直到占用回落到新额度以内。</li>
+                    </ul>
+                    {/* 只报告问题不引导行动等于没说——给商务两条明确可选的下一步，并讲清各自代价 */}
+                    <div className="dw-next">
+                      <div className="dw-next-t">建议下一步</div>
+                      <ol className="dw-next-list">
+                        <li>
+                          <b>优先：</b>先与机构商定清理范围——删除不再运营的 KP 与知识库文件，待占用回落到
+                          {down.kp && <> KP <b>{quota.kp}</b> 个</>}{down.kp && down.storage && ' /'}{down.storage && <> 存储 <b>{quota.storage}</b> GB</>}
+                          {' 以内后再签本单。机构签约即可正常使用，也不产生超额成本。'}
+                          若机构确实需要这些容量，改为按实际占用调高本单额度、或先签本单再补加油包。
+                        </li>
+                        <li>
+                          <b>或：</b>按此额度签约——
+                          {down.storage
+                            ? <>超出的 <b>{down.storageOver} GB</b> 存储将暂由平台承担，建议后续与机构沟通清理，或在下次续费时按实际占用调整额度；</>
+                            : <>机构在清理到额度内之前无法新建 KP，可能影响其正常上新；</>}
+                          请在下方「套餐降档说明」简要填写本次降档原因。
+                        </li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {down.requiresNote && (
+              <div className="fm-row">
+                <div className="lab">套餐降档说明<span className="req">*</span></div>
+                <div className="ctl">
+                  {/* 0813-2：只收「降档原因」——清理时限 / 责任人属于线下商务约定，不塞进这个字段 */}
+                  <TextInput
+                    value={downNote}
+                    onChange={(e) => setDownNote(e.target.value)}
+                    placeholder="必填 · 简要填写本次降档原因，如客户预算调整、业务收缩等"
+                    style={{ maxWidth: 520 }}
+                  />
+                  <div className={'fm-hint' + (downNote.trim() ? '' : ' is-req')}>
+                    {downNote.trim()
+                      ? '该说明将随订阅记录留存，可在订阅详情中查阅。'
+                      : '本次降档会使机构超出额度，请简要说明原因；内容将随订阅记录留存备查。'}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="fm-row">
               <div className="lab">有效期<span className="req">*</span></div>
               <div className="ctl"><DateTimeRangeField key={subModal ? 'open' : 'closed'} defaultStart={newStart} defaultEnd={newEnd} onChange={(s, e) => { setNewStart(s); setNewEnd(e); }} /></div>
@@ -628,6 +718,13 @@ export function OrgDetail() {
                 <div className="pc-row"><span className="pc-label">创建时间</span><span className="pc-value mono">{detail.createdAt}</span></div>
                 <div className="pc-row"><span className="pc-label">创建人</span><span className="pc-value mono">{detail.createdBy}</span></div>
                 <div className="pc-row"><span className="pc-label">备注</span><span className="pc-value">{detail.note || '—'}</span></div>
+                {/* 0813-2：套餐降档说明独立成行（不与通用备注混排）——这是成本承担关系的留痕，须显眼可查 */}
+                {detail.downgradeNote && (
+                  <div className="pc-row pc-row-down">
+                    <span className="pc-label">套餐降档说明</span>
+                    <span className="pc-value">{detail.downgradeNote}</span>
+                  </div>
+                )}
               </div>
             )}
           </Modal>
@@ -738,7 +835,7 @@ export function OrgDetail() {
                   <div className="fh">
                     微信公众号<span className="req">*</span>
                     <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 12, marginLeft: 8 }}>用于微信登录 / 网页授权（自动带回头像 · 昵称 · 性别 · 地区），必填</span>
-                    <span className="tag-s tag-indigo" style={{ marginLeft: 8 }}>已配置</span>
+                    {/* 0813-2：版块级「已配置」状态标签删除——各字段自身已有状态行，版块级重复且易与字段状态冲突 */}
                   </div>
                   {/* 0812：新增公众号名称（必填）与备注（选填）；非敏感项，正常回显
                       0812-e：备注移至卡片末位（域名校验文件之下）——备注是整卡的补充说明，不该插在接入参数序列中间 */}
@@ -784,7 +881,7 @@ export function OrgDetail() {
                   <div className="fh">
                     微信开放平台<span className="req">*</span>
                     <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 12, marginLeft: 8 }}>用于非微信浏览器的扫码登录与 PC 扫码支付，必填（外部浏览器打开时依赖）</span>
-                    <span className="tag-s tag-indigo" style={{ marginLeft: 8 }}>已配置</span>
+                    {/* 0813-2：版块级「已配置」状态标签删除 */}
                   </div>
                   <div className="fm-row">
                     <div className="lab">网站应用 AppID</div>
@@ -814,7 +911,7 @@ export function OrgDetail() {
                   <div className="fh">
                     微信支付<span className="req">*</span>
                     <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 12, marginLeft: 8 }}>用于支付 / 退款 / 自动续费，必填（未配置前台无法下单）</span>
-                    <span className="tag-s tag-indigo" style={{ marginLeft: 8 }}>已配置</span>
+                    {/* 0813-2：版块级「已配置」状态标签删除 */}
                   </div>
                   <div className="fm-row">
                     <div className="lab">商户号 MchID</div>
@@ -913,7 +1010,8 @@ export function OrgDetail() {
             </div>
           </div>
           <div className="dash-section-head" style={{ marginTop: 24 }}>
-            <div className="dash-section-title" style={{ margin: 0 }}>区间运营分析 <span className="dash-section-sub">· {usageRange} · 指标随筛选联动</span></div>
+            {/* 0813-2：区间口径写进副标题——今日为实时，近 N 天为截至昨日的完整自然日 */}
+            <div className="dash-section-title" style={{ margin: 0 }}>区间运营分析 <span className="dash-section-sub">· {usageRange} · 指标随筛选联动 · {usagePeriodDays > 1 ? RANGE_SCOPE_NOTE : '今日为 00:00 至当前时刻，对比昨日同时段'}</span></div>
             <RangePicker presets={['今日', '近 7 天', '30 天']} defaultActive={1} onChange={(r) => setUsageRange(r.label)} />
           </div>
           {/* 0722：商业化与 LLM 拆卡——商业化 7 项横跨整行，活跃 / LLM 两张等高卡并排 */}

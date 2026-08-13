@@ -164,6 +164,11 @@ export interface Subscription {
   endDate: string; // 有效期止
   owner?: string; // 商务负责人（选填）
   note?: string; // 备注（选填，新建订阅时填，详情页展示）
+  // 0813-2：套餐降档说明（与上面的通用「备注」是两个字段，不混用）。
+  //   仅当新订阅的 KP 数 / 存储额度低于机构当前实际占用时出现，且为必填——
+  //   降档后超出的存储是平台在持续掏钱，这笔成本必须有人签字承认，不能被系统默默吞掉。
+  //   注意：它不阻碍创建订阅订单，只要求填写；平台永不自动删除机构数据。
+  downgradeNote?: string;
   status: SubStatus; // 生效 / 未生效（默认新建即生效）
   createdAt: string; // 创建时间（年月日时分秒）
   createdBy: string; // 创建人账户

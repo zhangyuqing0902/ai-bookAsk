@@ -1,7 +1,8 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { KpDetailView } from '@aba/ui-admin';
-import { tenantDomainSuffix } from '@aba/mock';
+import { tenantDomainSuffix, currentSubCard, quotaState } from '@aba/mock';
 import { useKpLifecycle } from '../stores/kpLifecycle';
+import { useSubDemo, SUB_DEMO_SUBS } from '../stores/subDemo';
 import { ORG_KPS } from '../data/kps';
 
 // 机构后台 · KP 详情（复用共享 KpDetailView）
@@ -18,6 +19,15 @@ export function KpDetail() {
   const importMode = entry.shareMode ?? 'own';
   const kpStatus = useKpLifecycle((s) => s.overrides[id]) ?? entry.status;
   const setStatus = useKpLifecycle((s) => s.setStatus);
+  // 0813-2：存储额度已满 / 降档后存量超额 → 冻结「上传知识文件」（既有文件与 C 端问答不受影响）。
+  //   与 KP 列表的新建阻断同源（currentSubCard + quotaState），两处口径不可能不一致。
+  const subDemo = useSubDemo((s) => s.subDemo);
+  const sub = currentSubCard(SUB_DEMO_SUBS[subDemo]);
+  const stRow = sub?.rows.find((r) => r.k === '存储');
+  const stQ = quotaState(stRow?.used ?? 0, stRow?.limit ?? 0, stRow?.unlimited, 'storage');
+  const storageBlocked = !sub
+    ? '订阅套餐已过期或尚未开通，既有文件与数据完整保留；续费后即可恢复上传。'
+    : stQ.canAdd ? undefined : stQ.reason;
   return (
     <KpDetailView
       listBase="/kps"
@@ -32,6 +42,7 @@ export function KpDetail() {
       purchasedUsers={entry.purchasedUsers}
       bookUsers={entry.bookUsers}
       kpRelations={entry.relations}
+      storageBlocked={storageBlocked}
     />
   );
 }

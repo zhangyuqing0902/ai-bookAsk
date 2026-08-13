@@ -6,16 +6,24 @@ const MN = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 const pad = (n: number) => String(n).padStart(2, '0');
 export const fmtD = (d: Date | null) => (d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : '');
 
+// 0813-2：新增可选上下界 min / max（默认不传＝行为完全不变，留存单日面板与订阅有效期表单不受影响）。
+//   看板自定义区间用它把「今天及以后」和「近 3 年以前」置灰不可选。
 export function Calendar({
   start = null,
   end = null,
   onPick,
   initialView,
+  min = null,
+  max = null,
 }: {
   start?: Date | null;
   end?: Date | null;
   onPick: (d: Date) => void;
   initialView?: Date | null;
+  /** 可选最早日期（含），早于它的日格置灰不可点 */
+  min?: Date | null;
+  /** 可选最晚日期（含），晚于它的日格置灰不可点 */
+  max?: Date | null;
 }) {
   const [view, setView] = useState(() => {
     const base = initialView || start || new Date();
@@ -36,12 +44,15 @@ export function Calendar({
     for (let i = 0; i < wd; i++) dayCells.push(<span key={'e' + i} className="cal-d empty" />);
     for (let d = 1; d <= days; d++) {
       const dt = new Date(y, m, d);
+      // 0813-2：越界日格置灰且不响应点击（min / max 未传时恒为 false，行为同旧版）
+      const off = (min != null && fmtD(dt) < fmtD(min)) || (max != null && fmtD(dt) > fmtD(max));
       let c = 'cal-d';
-      if (start && fmtD(dt) === fmtD(start)) c += ' sel start';
-      if (end && fmtD(dt) === fmtD(end)) c += ' sel end';
-      if (start && end && dt > start && dt < end) c += ' inrange';
+      if (off) c += ' off';
+      if (!off && start && fmtD(dt) === fmtD(start)) c += ' sel start';
+      if (!off && end && fmtD(dt) === fmtD(end)) c += ' sel end';
+      if (!off && start && end && dt > start && dt < end) c += ' inrange';
       dayCells.push(
-        <span key={d} className={c} onClick={() => onPick(dt)}>
+        <span key={d} className={c} onClick={off ? undefined : () => onPick(dt)}>
           {d}
         </span>,
       );

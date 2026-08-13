@@ -62,6 +62,24 @@ export const MY_ORG_SUBS_UNLIMITED: Subscription[] = [
   { id: 'SUB202606011200-UNL', orgId: 'xx', orgName: 'XX 出版社', type: '订阅', plan: '不限版', kp: '不限', storage: '不限', token: '不限', kpUsed: '128', storageUsed: '356', tokenUsed: '7.4', startDate: '2026-06-01', endDate: '2027-05-31', owner: '王磊', note: '深度合作 · 三项额度不限', status: '生效', createdAt: '2026-06-01 12:00:00', createdBy: 'wanglei@aba-platform' },
 ];
 
+// 0813-2：「降档超额」演示快照——精确复刻真实场景：
+//   上一期基础版 10 个 KP 全部建满，期中买加油包 +2 → 12 个；到期续约时降到 5 个 KP / 5 GB，存量双双超额。
+//   处理原则（既存不适格，取自城市规划的 legal nonconforming use —— 容积率调低后不拆既有楼）：
+//     ① 既有 12 个 KP 与全部文件永久有效，C 端读者问答与已购权益完全无感，平台永不删除机构数据；
+//     ② 超额期间冻结增量（新建 KP / 上传文件），保证超额量只减不增；
+//     ③ 棘轮：删到 6 个仍 6>=5 继续阻断，必须回落到 4 个才能再建到 5 —— 删一个 ≠ 能建一个；
+//     ④ 存储超出的部分是平台在持续掏钱，故降档时「套餐降档说明」必填，成本承担关系落到白纸黑字。
+/** 0813-2：平台后台「降档超额」演示机构（DD 考试中心）——机构详情打开时订阅记录取 MY_ORG_SUBS_OVER */
+export const OVER_QUOTA_DEMO_ORG_ID = 'ORG012';
+
+export const MY_ORG_SUBS_OVER: Subscription[] = [
+  // 上一期：基础版 10 个 KP，期中加油包 +2 → 合计 12 个额度，全部用满（加油包不结转，随父订阅一起到期）
+  { id: 'SUB202505200938-OVR', orgId: 'xx', orgName: 'XX 出版社', type: '订阅', plan: '基础版', kp: '10', storage: '20', token: '0.5', kpUsed: '12', storageUsed: '10', tokenUsed: '0.48', startDate: '2025-06-01', endDate: '2026-05-31', owner: '王磊', note: '首年签约', status: '生效', createdAt: '2025-05-20 09:38:12', createdBy: 'wanglei@aba-platform' },
+  { id: 'PKG202511140930-OVR', orgId: 'xx', orgName: 'XX 出版社', type: '加油包', parentId: 'SUB202505200938-OVR', kp: '2', storage: '0', token: '0', kpUsed: '2', storageUsed: '0', tokenUsed: '0', startDate: '2025-11-14', endDate: '2026-05-31', owner: '王磊', note: 'KP 数不够，加 2 个', status: '生效', createdAt: '2025-11-14 09:30:11', createdBy: 'wanglei@aba-platform' },
+  // 本期：预算缩减降到 5 个 KP / 5 GB —— 存量 12 个 KP、10 GB 双双超额（超 7 个、超 5 GB）
+  { id: 'SUB202605281430-OVR', orgId: 'xx', orgName: 'XX 出版社', type: '订阅', plan: '定制版', kp: '5', storage: '5', token: '0.5', kpUsed: '12', storageUsed: '10', tokenUsed: '0.21', startDate: '2026-06-01', endDate: '2027-05-31', owner: '王磊', note: '续约一年', downgradeNote: '客户 2026 年预算缩减，本期主动降至 5 个 KP / 5 GB。', status: '生效', createdAt: '2026-05-28 14:30:07', createdBy: 'wanglei@aba-platform' },
+];
+
 /** 0812：最近一条已过期「订阅」（按到期日取最晚），供空态卡展示「上一套餐 · 到期日」；无过期史返回 null */
 export function lastExpiredSub(subs: Subscription[]): { plan?: string; endDate: string } | null {
   const ex = subs.filter((s) => s.type === '订阅' && subStatus(s) === '已过期');
