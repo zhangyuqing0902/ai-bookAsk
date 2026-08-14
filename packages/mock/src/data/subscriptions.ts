@@ -122,7 +122,15 @@ export function currentSubCard(subs: Subscription[]): SubCardVM | null {
       : add > 0
         ? `基础 ${b} ${unit} + 生效加油包 ${add} ${unit}，当前上限 ${limit} ${unit}。`
         : `当前订阅上限 ${b} ${unit}。`;
-    return { k, used, limit, unit, kind, unlimited, info: `${cap}${basis}` };
+    // 0814：tooltip 补「着色阈值 + 超限处理」——原先只讲上限怎么算、不讲到线了会发生什么，
+    //   而这两件事恰恰是机构最需要提前知道的（进度条变红意味着什么、还能不能继续建 / 传）。
+    //   不限项没有阈值也没有阻断，因此不拼这段。
+    const threshold = unlimited
+      ? ''
+      : kind === 'occupancy'
+        ? `进度条着色：＜70% 青 / 70%~90% 橙 / ≥90% 珊瑚红。已用 ≥ 上限时冻结${k === 'KP 数' ? '新建与导入 KP' : '知识文件上传'}，既有内容永久保留、C 端读者完全无感；回落到上限以内即自动恢复。`
+        : `进度条着色：＜70% 青 / 70%~90% 橙 / ≥90% 珊瑚红。本周期消耗率达 70% / 80% / 90% / 95% 各向机构联系人发一次短信预警（同周期同阈值不重复）；达上限后 C 端问答被拦截，需扩容或等下一周期归零。`;
+    return { k, used, limit, unit, kind, unlimited, info: `${cap}${basis}${threshold}` };
   };
   return {
     plan: base.plan,

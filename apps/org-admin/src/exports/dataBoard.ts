@@ -27,20 +27,21 @@ const u = (val: string | number, unit: string) => `${val} ${unit}`;
 export function buildDataBoardSpec(input: DataBoardExportInput): ExportSpec {
   const { rangeLabel, periodDays, d, retentionRange, retention, active, topkp, orgs } = input;
   const isParentScope = !!orgs && orgs.length > 0;
-  // 0724：活跃概览定稿为固定滚动窗口实时快照（不随区间联动），去重规则独立标注
-  const dauNote = '今日截至当前时刻快照；去重：单日内按用户 ID 去重；环比昨日同时段；不随区间联动';
-  const windowNote = (w: string) => `截至今日${w}滚动窗口快照；去重：窗口内按用户 ID 去重（跨天只计 1 人）；环比上一个等长窗口；不随区间联动`;
+  // 0724：活跃概览为页级常驻区块，不随区间联动，去重规则独立标注
+  // 0814：WAU/MAU 改为「截至昨日的完整自然日」，与区间档同口径；DAU 保持今日实时（唯一含今日的口径）
+  const dauNote = '今日 00:00 至当前时刻，实时统计；去重：单日内按用户 ID 去重；环比昨日同已过时长；不随区间联动';
+  const windowNote = (n: number) => `截至昨日 24:00 的 ${n} 个完整自然日（不含今日）；去重：窗口内按用户 ID 去重（跨天只计 1 人）；环比紧邻此前的 ${n} 个完整自然日；不随区间联动`;
 
-  // Sheet 1 · 活跃概览（页级常驻区块，固定滚动窗口实时快照）
+  // Sheet 1 · 活跃概览（页级常驻区块）
   const activeSheet: ExportSheet = {
     name: '活跃概览',
-    title: '机构数据看板 · 活跃概览（实时滚动窗口快照）',
-    subtitle: '页级常驻区块 · 不随时间区间筛选联动',
+    title: '机构数据看板 · 活跃概览',
+    subtitle: '页级常驻区块 · 日活实时 / 周活月活按完整自然日（不含今日）· 不随时间区间筛选联动',
     headers: ['指标', '数值', '统计说明'],
     rows: [
       ['DAU（日活跃用户）', u(active.dau, '人'), dauNote],
-      ['WAU（周活跃用户）', u(active.wau, '人'), windowNote('近 7 日')],
-      ['MAU（月活跃用户）', u(active.mau, '人'), windowNote('近 30 日')],
+      ['WAU（周活跃用户）', u(active.wau, '人'), windowNote(7)],
+      ['MAU（月活跃用户）', u(active.mau, '人'), windowNote(30)],
     ],
     widths: [24, 16, 56],
   };

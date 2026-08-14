@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE, Calendar, fmtD } from '@aba/ui-admin';
-import { comparisonPeriodLabel, metricHelp, RANGE_SCOPE_NOTE } from '@aba/mock';
+import { comparisonPeriodLabel, metricHelp, RANGE_SCOPE_NOTE, ACTIVE_WINDOW_NOTE } from '@aba/mock';
 import { ACTIVE_SNAPSHOT, RANGE, retentionFor, scaleActiveSnapshot, scaleRangeData, TOPKP, type Bar, type KW, type RetentionNode } from '../data/dataBoard';
 import { CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
 import { MultiSelect } from '@aba/ui-admin';
@@ -11,7 +11,8 @@ import { buildDataBoardSpec } from '../exports/dataBoard';
 
 // 0614 指标体系重划：去掉「总览」Tab（职责交主控台），数据看板专做分主题深钻。
 // 四个主题域：用户分析 / 提问分析 / 营收分析 / 热门 KP（钱归钱、用户归用户、提问归提问、KP 归 KP）。
-// 所有非实时指标按 今日 / 7 日 / 30 日 真联动；DAU/WAU/MAU 为固定窗口快照（tooltip 注明）。
+// 所有非实时指标按 今日 / 7 日 / 30 日 真联动；DAU/WAU/MAU 为页级常驻、不随区间筛选（tooltip 注明）。
+// 0814：WAU/MAU 口径改为「截至昨日的完整自然日」，与区间档一致；DAU 保持今日实时。
 // 0714：mock 数据下移 data/dataBoard.ts；导出走 spec 纯函数（exports/dataBoard.ts，7 Sheet 全量口径）。
 const TABS = ['用户分析', '提问分析', '营收分析', '热门 KP'];
 
@@ -207,15 +208,15 @@ export function DataBoard() {
           原因：WAU/MAU 定义自带固定窗口，与任意区间绑定无法自洽（选 30 天时「对应的 7 日窗口」没有唯一答案）。 */}
       <div className="dash-section-title" style={{ marginTop: 4, marginBottom: 10 }}>
         活跃概览
-        <span className="dash-section-sub">· 实时滚动窗口快照 · 不随下方时间筛选联动</span>
+        <span className="dash-section-sub">· 日活实时 · 周活 / 月活按完整自然日（不含今日）· 不随下方时间筛选联动</span>
       </div>
       <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-        <Kpi lab="日活（DAU）" val={active.dau} suf="人" deltaPct={active.dauDelta} periodDays={1} info="" infoRaw="今日 00:00 至当前时刻的活跃用户，实时滚动快照。去重：单日内按用户 ID 去重。环比对比昨日同时段。不随下方时间筛选联动。" />
-        {/* 0813-2：WAU/MAU 是「含今日」的实时滚动窗口，下方区间档是「截至昨日」的完整自然日——
-            两者数值天然对不齐（一个问活跃规模的实时脉搏，一个问一段时间的经营结果），必须在 tooltip 里讲明，
-            否则评审一定追问「为什么 WAU 和近 7 天活跃用户不一样」。 */}
-        <Kpi lab="周活（WAU）" val={active.wau} suf="人" deltaPct={active.wauDelta} periodDays={7} info="" infoRaw="截至今日的近 7 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 7 日窗口。不随下方时间筛选联动。本卡为含今日的实时滚动窗口，与下方「7 日」区间（截至昨日 24:00 的完整自然日）口径不同，数值不可直接对齐。" />
-        <Kpi lab="月活（MAU）" val={active.mau} suf="人" deltaPct={active.mauDelta} periodDays={30} info="" infoRaw="截至今日的近 30 日滚动窗口活跃用户。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比上一个 30 日窗口。不随下方时间筛选联动。本卡为含今日的实时滚动窗口，与下方「30 日」区间（截至昨日 24:00 的完整自然日）口径不同，数值不可直接对齐。" />
+        {/* 0814：周活 / 月活由「含今日的滚动窗口」改为「截至昨日的完整自然日」，与区间档同口径。
+            理由与 0813-2 改区间档一致——今天没过完，上午看和下午看不是一个数，截图对不上账。
+            日活保持含今日（唯一实时口径）。周活与「近 7 天活跃用户」自此数值重合，是口径统一的必然结果。 */}
+        <Kpi lab="日活（DAU）" val={active.dau} suf="人" deltaPct={active.dauDelta} periodDays={1} info="" infoRaw={`今日 00:00 至当前时刻的活跃用户，实时统计。去重：单日内按用户 ID 去重。环比对比昨日同已过时长。${ACTIVE_WINDOW_NOTE.dau}`} />
+        <Kpi lab="周活（WAU）" val={active.wau} suf="人" deltaPct={active.wauDelta} periodDays={7} info="" infoRaw={`截至昨日 24:00 的 7 个完整自然日内的活跃用户（不含今日）。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比紧邻此前的 7 个完整自然日。${ACTIVE_WINDOW_NOTE.wau}`} />
+        <Kpi lab="月活（MAU）" val={active.mau} suf="人" deltaPct={active.mauDelta} periodDays={30} info="" infoRaw={`截至昨日 24:00 的 30 个完整自然日内的活跃用户（不含今日）。去重：窗口内按用户 ID 去重，跨天重复只计 1 人。环比对比紧邻此前的 30 个完整自然日。${ACTIVE_WINDOW_NOTE.mau}`} />
       </div>
 
       {/* 0717 二批 #8.1：用户留存页级常驻,一行三张等宽指标卡（按注册时间,独立于下方区间筛选） */}
@@ -320,7 +321,7 @@ export function DataBoard() {
               </div>
             </div>
             <div className="chart-card" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
-              <CardTitle t="来源分布" info="C 端用户进入渠道占比(扫码进入 / 直接访问)，图例含人数；占比环比为百分点变化。" periodDays={periodDays} />
+              <CardTitle t="来源分布" info="C 端用户进入渠道占比：扫码进入＝链接带 KP 二维码参数，直接访问＝直链或无码进入。图例含人数；占比环比为百分点变化。" periodDays={periodDays} />
               <div className="donut-wrap" style={{ flex: 1 }}>
                 {/* 0717 美化：SVG 圆头分段环形图（替代 conic-gradient 直角拼接），中心直接显示主渠道占比 */}
                 <div className="db-donut">
@@ -370,7 +371,7 @@ export function DataBoard() {
           </div>
           <div className="grid2" style={{ marginTop: 16, gridTemplateColumns: '1fr 1fr' }}>
             <div className="chart-card" style={{ margin: 0 }}>
-              <CardTitle t="地区分布" info="C 端用户按地区（省 / 市）分组占比。" periodDays={periodDays} />
+              <CardTitle t="地区分布" info="C 端用户按地区（省 / 市）分组占比（微信授权带回，未授权归为「未知」）。" periodDays={periodDays} />
               <Bars data={d.region} />
             </div>
             <div className="chart-card" style={{ margin: 0 }}>
@@ -416,7 +417,7 @@ export function DataBoard() {
           </div>
           {/* 提问关键词云：hover 显示当前区间该词提问数量 */}
           <div className="chart-card">
-            <CardTitle t="提问关键词云" info="提问文本高频关键词，字号随出现频次；悬浮显示当前区间提问量。" periodDays={periodDays} />
+            <CardTitle t="提问关键词云" info="提问文本高频关键词，字号与色深随出现频次变化；悬浮显示当前区间提问量。" periodDays={periodDays} />
             <KwCloud data={d.keywords} mult={d.kwMult} />
           </div>
         </>
@@ -433,7 +434,7 @@ export function DataBoard() {
           {/* 0722：补「回流会员」，行改 3 列两行避免 6 卡挤一行 */}
           <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
             <Kpi lab="区间 GMV" val={d.gmv} deltaPct={d.gmvDelta} info="所选区间内已支付订单金额合计（会员 + 永享）；待支付、已失效订单不计入。" periodDays={periodDays} />
-            <Kpi lab="付费用户" val={d.payUsers} suf="人" deltaPct={d.payUsersDelta} info="所选区间内产生有效支付的用户数。去重：按用户 ID 去重，跨天重复只计 1 人。" periodDays={periodDays} />
+            <Kpi lab="付费用户" val={d.payUsers} suf="人" deltaPct={d.payUsersDelta} info="所选区间内产生有效支付（已支付且金额 > 0）的用户数。去重：按用户 ID 去重，跨天重复只计 1 人。" periodDays={periodDays} />
             <Kpi lab="付费转化率" val={d.payRate} deltaPct={d.payRateDelta} info="区间付费用户 ÷ 区间活跃用户。去重：分子分母均按用户 ID 去重。" periodDays={periodDays} />
             <Kpi lab="ARPPU（每付费用户均收入）" val={d.arppu} deltaPct={d.arppuDelta} info="区间支付收入 ÷ 区间付费用户数。" periodDays={periodDays} />
             <Kpi lab="续费率" val={d.renew} deltaPct={d.renewDelta} info="所选区间内到期且完成续费的会员数 ÷ 同区间到期会员数。去重：分子分母均按会员（用户 ID）去重。" periodDays={periodDays} />

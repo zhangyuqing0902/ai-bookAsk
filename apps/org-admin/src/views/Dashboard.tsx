@@ -97,7 +97,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             累计 GMV（成交总额）
-            <InfoDot text={metricHelp('历史累计已支付订单金额合计（会员 + 永享；兑换码计 0）。', 'snapshot', 'money')} />
+            <InfoDot text={metricHelp('历史累计已支付订单实付金额合计（会员 + 永享；兑换码计 0）；待支付、已失效订单不计入。', 'snapshot', 'money')} />
           </div>
           <div className="val">
             <span className="u">¥</span>
@@ -137,7 +137,7 @@ export function Dashboard() {
         <div className="kpi">
           <div className="lab">
             当前会员数
-            <InfoDot text={metricHelp('当前拥有有效会员权益的用户数，实时快照。去重：按用户 ID 去重。', 'snapshot')} />
+            <InfoDot text={metricHelp('当前处于付费期或赠送 72 小时缓冲使用期的会员人数，实时快照；缓冲期内权益仍生效，故计入。去重：按用户 ID 去重。', 'snapshot')} />
           </div>
           <div className="val">{n(s(orgSnapshot.currentMembers))}<span className="uu">人</span></div>
           <div className="ic" style={{ background: 'var(--amber-soft)', color: 'var(--amber-ink)' }}>

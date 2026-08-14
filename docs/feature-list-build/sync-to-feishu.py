@@ -27,9 +27,10 @@ NUM_PREFIX = re.compile(r"^\d+\.\s*")
 # (本地 xlsx 路径, sheet 名, 线上 spreadsheet token, 线上 sheet_id, 列数)
 TARGETS = [
     (f"{ROOT}/feature-list.xlsx", "功能清单",     "Jfl2sKqqmhYrxftHSlAcPzNvn5Q", "0rMuqv", 5),
-    # 0724：两张附表新增「去重规则」列，列数 4→5 / 3→4
-    (f"{ROOT}/feature-list.xlsx", "数据看板指标", "Jfl2sKqqmhYrxftHSlAcPzNvn5Q", "1BjMEB", 5),
-    (f"{ROOT}/feature-list.xlsx", "用量看板指标", "Jfl2sKqqmhYrxftHSlAcPzNvn5Q", "2WEPcW", 4),
+    # 0814：原「数据看板指标」「用量看板指标」两张附表合并为一张「指标口径」（7 列、98 条）。
+    #   线上沿用原「数据看板指标」的 sheet_id（1BjMEB，重命名不改 id）承载合并后的表；
+    #   「用量看板指标」（2WEPcW）内容已并入，该 Tab 需在飞书手动删除——本脚本只增不删，删不掉 Tab。
+    (f"{ROOT}/feature-list.xlsx", "指标口径", "Jfl2sKqqmhYrxftHSlAcPzNvn5Q", "1BjMEB", 6),
     (f"{ROOT}/brand-color-impact.xlsx", "品牌色影响清单", "FneDsve4thptfTtMUKjc1uV7n07", "0otikK", 8),
 ]
 

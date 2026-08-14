@@ -130,6 +130,25 @@ test('近 N 天按完整自然日统计，不含今日', () => {
   assert.equal(r.currentPeriodLabel(7, now), '06-02—06-08');
   assert.equal(r.comparisonPeriodLabel(7, now), '对比 05-26—06-01');
 });
+// 0814：周活 / 月活口径反转——与区间档统一为「截至昨日的完整自然日」，日活保持今日实时
+test('周活 / 月活按完整自然日不含今日，日活仍为今日实时', () => {
+  const board = read('../apps/org-admin/src/views/DataBoard.tsx');
+  const rules = read('../packages/mock/src/rules.ts');
+  // 周活 / 月活 tooltip 必须写明完整自然日且不含今日
+  for (const t of ['截至昨日 24:00 的 7 个完整自然日内的活跃用户（不含今日）', '截至昨日 24:00 的 30 个完整自然日内的活跃用户（不含今日）'])
+    assert.ok(board.includes(t), `DataBoard 周活/月活 tooltip 缺「${t}」`);
+  // 0813-2 的「口径不同、不可对齐」免责说明必须删净——现在两者本就同口径
+  for (const t of ['数值不可直接对齐', '含今日的实时滚动窗口', '滚动窗口活跃用户'])
+    assert.ok(!board.includes(t), `DataBoard 残留旧口径文案「${t}」`);
+  // 日活是三卡里唯一含今日的实时口径，不能被一起改掉
+  assert.ok(board.includes('今日 00:00 至当前时刻的活跃用户，实时统计'), '日活 tooltip 不应改为完整自然日');
+  assert.ok(rules.includes('ACTIVE_WINDOW_NOTE'), 'rules 缺活跃窗口口径常量');
+  assert.ok(/dau:.*唯一含今日/.test(rules), 'ACTIVE_WINDOW_NOTE.dau 未点明唯一含今日');
+  // 导出样张口径同步，避免文档/导出/界面三处漂移
+  const exp = read('../apps/org-admin/src/exports/dataBoard.ts');
+  assert.ok(exp.includes('个完整自然日（不含今日）'), '导出 spec 活跃概览口径未同步');
+  assert.ok(!exp.includes('滚动窗口快照'), '导出 spec 残留旧口径文案');
+});
 test('自定义区间结束日最晚昨日、起始日最早近 3 年', () => {
   const now = new Date('2026-06-09T14:37:00');
   const b = r.customRangeBounds(now);
@@ -937,7 +956,91 @@ test('0806 文档同步：清单 ≥v2.9 + PRD ≥v1.12 五项全落', () => {
   const prdVer = (prd.match(/版本 v([\d.]+)　/) || [])[1];
   assert.ok(prdVer && geVer(prdVer, '1.12'), `PRD 版本 ${prdVer} 应 ≥ v1.12`);
   for (const t2 of ['宽限期（待续费）', 'TTS 参考音文本', '支付公钥 ID', '机构资料', '父子机构数据范围']) assert.ok(prd.includes(t2), `PRD 缺 ${t2}`);
-  assert.ok(prd.includes('固定滚动窗口快照'), 'PRD 未补 0724 DAU 口径');
+  // 0814：原断言查「固定滚动窗口快照」已成旧账——该口径被本批推翻，且字样只剩历史增量摘要里，
+  // 断言会被历史文本喂饱而永远为真。改查第 6 章正文的现行口径。
+  assert.ok(prd.includes('周活 / 月活按完整自然日（不含今日）'), 'PRD 第 6 章活跃概览未同步 0814 口径');
+});
+
+test('0814 用量看板区间指标补环比：13 项全接、存量卡不接、时长类走绝对差', () => {
+  const view = read('../apps/platform-admin/src/views/OrgDetail.tsx');
+  // 三档区间的环比数据齐备（每档 12 个百分比 + 1 个时长文案）
+  // 只在 USAGE_BY_RANGE 数据块内计数——interface UsageRange 里也有同名字段声明，别把它算进来
+  const dataBlock = view.slice(view.indexOf('const USAGE_BY_RANGE'), view.indexOf('// 0722：累计 GMV'));
+  for (const k of ['activeD', 'addedD', 'questionsD', 'gmvD', 'netGmvD', 'payUsersD', 'payRateD', 'yxOrdersD', 'refundAmtD', 'refundRateD', 'tokenD', 'callsD', 'responseD'])
+    assert.equal((dataBlock.match(new RegExp(`\\b${k}:`, 'g')) || []).length, 3, `${k} 应在今日/近7天/30天三档各出现一次`);
+  // 13 个区间指标行必须都把环比传进 UsageCard
+  const wired = (view.match(/`, usage\.\w+D\]/g) || []).length;
+  assert.equal(wired, 13, `区间指标应有 13 行接环比，实际 ${wired}`);
+  // 存量卡（累计 C 端 / 当前会员 / 累计 GMV）不得有环比——累计快照不与上一周期比较
+  const stock = view.slice(view.indexOf("title=\"用户与营收存量\""), view.indexOf("区间运营分析"));
+  assert.ok(!/usage\.\w+D/.test(stock), '存量卡不得出现环比');
+  assert.ok(!/periodDays/.test(stock), '存量卡不得传 periodDays');
+  // 退款金额 / 退款率给负值（负面指标下降是好事，配色只反映方向）
+  assert.ok(/refundAmtD: -/.test(view) && /refundRateD: -/.test(view), '退款类环比应为负值');
+  // 平均响应是时长类，走绝对时长差文案而非百分比
+  assert.ok(/responseD: '缩短 0\.\d 秒'/.test(view), '平均响应环比应为时长绝对差文案');
+  // tile 内环比换行，避免一行 7 项时把栅格顶乱
+  const css = read('../packages/tokens/src/design/admin-app.css');
+  const i = css.indexOf('.usage-board .uc-tile .delta {');
+  assert.ok(i > 0, 'CSS 缺 usage tile 环比样式');
+  assert.ok(/flex-wrap: wrap/.test(css.slice(i, i + 260)), 'usage tile 环比未允许换行');
+  assert.ok(css.includes('minmax(168px, 1fr)'), 'uc-tiles 最小宽未随环比行放宽');
+  // 0814 补：环比胶囊配色三个看板作用域共用一份，别再各抄一份（用量看板就是因为漏抄，
+  // 「↑」没绿色规则落回深色、「↓」却被基础 .delta.down 染红，半边生效最难查）
+  for (const sel of ['.usage-board .delta.up .delta-pill', '.dboard .delta.up .delta-pill', '.pf-dash .delta.up .delta-pill'])
+    assert.ok(css.includes(sel), `环比胶囊上涨态缺 ${sel}`);
+  const upRule = css.slice(css.indexOf('.usage-board .delta.up .delta-pill'));
+  assert.ok(/^[^}]*\{[^}]*jade-soft/.test(upRule), '上涨胶囊未用 jade-soft 绿底');
+  // 三个 scope 必须在同一条规则里，出现两次即说明又抄了一份
+  assert.equal((css.match(/\.delta\.up \.delta-pill \{ background: var\(--jade-soft\)/g) || []).length, 1, '环比胶囊配色规则被重复定义');
+});
+
+test('0814 文档收敛：PRD 第 7 章只留索引与两项配套规则 + 功能清单指标表合并', () => {
+  const prd = read('../docs/prd-build/build-prd.js');
+  // 第 7 章指标正文六节整体删除，只留 7.1 索引 + 7.2 短信预警 + 7.3 导出规则
+  assert.ok(prd.includes("H1('第 7 章　数据指标索引与配套规则')"), 'PRD 第 7 章未更名');
+  assert.ok(prd.includes("H2('7.1 指标口径索引')"), 'PRD 缺 7.1 指标口径索引');
+  assert.ok(prd.includes("H2('7.2 配额阈值短信预警（机构联系人）')"), '7.7 短信预警未顺延为 7.2');
+  assert.ok(prd.includes("H2('7.3 列表导出规则（两后台通用）')"), '7.8 导出规则未顺延为 7.3');
+  for (const t of ["H2('7.1 通用计算口径')", "H2('7.4 平台超管 · 主控台')", "H2('7.6 平台超管 · 机构用量看板（单机构）')"])
+    assert.ok(!prd.includes(t), `PRD 残留已删除的指标正文 ${t}`);
+  // 交叉引用不得再指向第 7 章（口径已迁至功能清单）
+  assert.ok(!/见第 7 章|遵循第 7 章/.test(prd), 'PRD 残留指向第 7 章的指标口径交叉引用');
+
+  // 功能清单：两张附表合并为一张 7 列指标表，统计规则用有序序号
+  const feature = read('../docs/feature-list-build/gen.py');
+  for (const t of ['METRIC_HEADER', '"端", "模块", "分区", "指标", "统计规则", "去重规则"', 'add_sheet("指标口径"'])
+    assert.ok(feature.includes(t), `gen.py 缺 ${t}`);
+  for (const t of ['BOARD_HEADER', 'USAGE_HEADER', 'add_sheet("数据看板指标"', 'add_sheet("用量看板指标"'])
+    assert.ok(!feature.includes(t), `gen.py 残留旧附表 ${t}`);
+  // 文档缺失指标已补齐（平台净 GMV / 模型用量 / 订阅订单）
+  for (const t of ['净 GMV（0814 补入文档）', '累计调用次数', '90 天内到期', '答案反馈率'])
+    assert.ok(feature.includes(t), `指标表缺 ${t}`);
+  // 0814-2 核对结论：两端「当前会员数」必须同口径（含 72 小时缓冲期），否则同一家机构两处数字对不上
+  assert.equal((feature.match(/两端数值必须一致/g) || []).length, 2, '当前会员数未在两端各注明同口径');
+  const orgDash = read('../apps/org-admin/src/views/Dashboard.tsx');
+  const orgDetail = read('../apps/platform-admin/src/views/OrgDetail.tsx');
+  for (const [f, name] of [[orgDash, '机构后台主控台'], [orgDetail, '平台用量看板']])
+    assert.ok(f.includes('付费期或赠送 72 小时缓冲使用期'), `${name}「当前会员数」未含缓冲期口径`);
+  assert.ok(!orgDash.includes('当前拥有有效会员权益的用户数'), '机构后台残留旧的不含缓冲期口径');
+  // 界面补齐的 6 处说明，缺一即回归
+  const dataBoard = read('../apps/org-admin/src/views/DataBoard.tsx');
+  for (const t of ['扫码进入＝链接带 KP 二维码参数', '按地区（省 / 市）分组占比（微信授权带回', '已支付且金额 > 0', '字号与色深随出现频次变化'])
+    assert.ok(dataBoard.includes(t), `数据看板 tooltip 缺「${t}」`);
+  assert.ok(orgDash.includes('待支付、已失效订单不计入'), '累计 GMV tooltip 未补排除项');
+  const subs = read('../packages/mock/src/data/subscriptions.ts');
+  for (const t of ['进度条着色：＜70% 青', '回落到上限以内即自动恢复', '70% / 80% / 90% / 95% 各向机构联系人发一次短信'])
+    assert.ok(subs.includes(t), `配额 tooltip 缺「${t}」`);
+  // 付费转化率分母以原型为准（区间活跃用户，不是累计用户）
+  assert.ok(feature.includes('区间付费用户数 ÷ 同区间活跃用户数'), '付费转化率分母未按原型口径');
+  // 统计规则列一律有序序号
+  const md = read('../docs/feature-list.md');
+  assert.ok(md.includes('## 附表 · 指标口径全集（两个后台）'), 'md 附表未合并');
+  assert.ok(!md.includes('附表一 · 数据看板指标体系'), 'md 残留旧附表一');
+  const rows = md.split('\n').filter((l) => /^\| (通用|机构后台|平台后台) \|/.test(l));
+  // 0814-2：「新增用户趋势」并入「新增用户数（含趋势）」——界面共用一个问号，独立成行会让人按表找不到
+  assert.equal(rows.length, 97, `指标表应 97 条，实际 ${rows.length}`);
+  for (const r of rows) assert.ok(r.includes('1）'), `指标行缺有序序号：${r.slice(0, 60)}`);
 });
 
 

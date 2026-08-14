@@ -2511,17 +2511,25 @@ a {
 .dboard .kpi .lab { letter-spacing: 0.01em; }
 .dboard .kpi .val { font-size: 34px; margin-top: 13px; letter-spacing: -0.02em; }
 
-/* —— 环比：箭头+数值做成胶囊，说明文字降灰（Kpi / 新增用户 / 来源分布共用结构） —— */
-.dboard .delta {
+/* —— 环比：箭头+数值做成胶囊，说明文字降灰（Kpi / 新增用户 / 来源分布共用结构） ——
+   0814：原先这套规则在 .dboard 与 .pf-dash 下各抄了一份，用量看板补环比时没份，
+   于是「↑」没有绿色规则、落回默认深色，「↓」却被基础 .delta.down 染红——半边生效最难查。
+   现三个看板作用域共用一份，新增看板只要挂上其中一个 scope 就自动继承，不会再漏。 */
+.dboard .delta,
+.pf-dash .delta,
+.usage-board .delta {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 3px 8px;
   white-space: nowrap;
 }
-.dboard .delta.up,
-.dboard .delta.down { color: var(--ink-2); }
-.dboard .delta-pill {
+.dboard .delta.up, .dboard .delta.down,
+.pf-dash .delta.up, .pf-dash .delta.down,
+.usage-board .delta.up, .usage-board .delta.down { color: var(--ink-2); }
+.dboard .delta-pill,
+.pf-dash .delta-pill,
+.usage-board .delta-pill {
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -2532,10 +2540,18 @@ a {
   font-weight: 700;
   line-height: 1.4;
 }
-.dboard .delta.up .delta-pill { background: var(--jade-soft); color: #0d9463; }
-.dboard .delta.down .delta-pill { background: var(--terra-soft); color: var(--terra); }
-.dboard .delta-arrow { display: inline-flex; }
-.dboard .delta .delta-txt { color: var(--ink-3); font-size: 11px; font-weight: 400; }
+.dboard .delta.up .delta-pill,
+.pf-dash .delta.up .delta-pill,
+.usage-board .delta.up .delta-pill { background: var(--jade-soft); color: #0d9463; }
+.dboard .delta.down .delta-pill,
+.pf-dash .delta.down .delta-pill,
+.usage-board .delta.down .delta-pill { background: var(--terra-soft); color: var(--terra); }
+.dboard .delta-arrow,
+.pf-dash .delta-arrow,
+.usage-board .delta-arrow { display: inline-flex; }
+.dboard .delta .delta-txt,
+.pf-dash .delta .delta-txt,
+.usage-board .delta .delta-txt { color: var(--ink-3); font-size: 11px; font-weight: 400; }
 
 /* —— 段标题：左侧渐变竖条锚点 —— */
 .dboard .dash-section-title {
@@ -2750,7 +2766,8 @@ a {
 }
 .usage-board .uc-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  /* 0814：tile 补环比后内容变高，最小宽由 150 提到 168——给「较上一周期」留出不折行的宽度 */
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
   gap: 12px;
   padding: 12px 18px 18px;
 }
@@ -2786,6 +2803,24 @@ a {
 .usage-board .uc-tile .period-compare {
   flex-basis: auto;
   margin-top: 0;
+}
+/* 0814：tile 补环比后，一行放不下「↑x.x% 较上一周期 对比 07-31—08-06」——
+   商业化卡一行 7 项、每项仅约 150px，硬挤会把文字折成两行并顶乱栅格。
+   改为环比行自己换行：第一行＝变化值 + 较上一周期，第二行＝对比区间日期。 */
+.usage-board .uc-tile .delta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+  font-size: 11px;
+}
+.usage-board .uc-tile .delta .delta-txt {
+  white-space: nowrap;
+}
+.usage-board .uc-tile .delta .period-compare {
+  flex-basis: 100%;
+  margin-top: 1px;
 }
 /* 右缘 tile 的指标说明气泡向左展开，避免溢出页面右缘 */
 .usage-board .uc-tile:last-child .info-pop {
@@ -2893,15 +2928,7 @@ a {
 .pf-dash .kpi:hover::after{opacity:1;}
 .pf-dash .kpi .lab{letter-spacing:.01em;}
 .pf-dash .kpi .val{font-size:34px;margin-top:13px;letter-spacing:-.02em;}
-/* 环比：箭头+数值胶囊，说明文字降灰（与 dboard 同结构同语言） */
-.pf-dash .delta{display:inline-flex;align-items:center;flex-wrap:wrap;gap:3px 8px;white-space:nowrap;}
-.pf-dash .delta.up,.pf-dash .delta.down{color:var(--ink-2);}
-.pf-dash .delta-pill{display:inline-flex;align-items:center;gap:3px;padding:2.5px 9px;border-radius:999px;
-  font-family:var(--mono);font-size:11px;font-weight:700;line-height:1.4;}
-.pf-dash .delta.up .delta-pill{background:var(--jade-soft);color:#0d9463;}
-.pf-dash .delta.down .delta-pill{background:var(--terra-soft);color:var(--terra);}
-.pf-dash .delta-arrow{display:inline-flex;}
-.pf-dash .delta .delta-txt{color:var(--ink-3);font-size:11px;font-weight:400;}
+/* 环比胶囊规则已与 .dboard / .usage-board 合并到上方共用块（0814 去重），此处不再重复 */
 /* 段标题：左侧渐变竖条锚点 */
 .pf-dash .dash-section-title{position:relative;padding-left:13px;font-size:15px;}
 .pf-dash .dash-section-title::before{content:"";position:absolute;left:0;top:3px;bottom:3px;width:4px;border-radius:2px;

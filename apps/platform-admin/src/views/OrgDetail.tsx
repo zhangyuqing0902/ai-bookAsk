@@ -24,16 +24,40 @@ const PLANS: Record<string, { kp: string; storage: string; token: string }> = {
 const PLAN_CLS_D: Record<string, string> = { 体验版: 'tag-line', 基础版: 'tag-line', 专业版: 'tag-indigo', 旗舰版: 'tag-amber', 不限版: 'tag-jade', 定制版: 'tag-jade' };
 const SUB_ST_CLS: Record<string, string> = { 生效: 'ok', 未生效: 'none', 已过期: 'expired' };
 // 0722：商业化区间指标扩充（净GMV/付费转化/永享订单/退款），数值与机构后台数据看板营收分析同源对齐
-const USAGE_BY_RANGE: Record<string, { active: string; added: string; questions: string; gmv: string; netGmv: string; payUsers: string; payRate: string; yxOrders: string; refundAmt: string; refundRate: string; token: string; calls: string; response: string }> = {
-  今日: { active: '1,240 人', added: '48 人', questions: '1,180 条', gmv: '¥1.1万', netGmv: '¥9,860', payUsers: '32 人', payRate: '5.8%', yxOrders: '5 单', refundAmt: '¥1,240', refundRate: '1.6%', token: '62万 token', calls: '1.8万 次', response: '1.7s' },
-  '近 7 天': { active: '5,600 人', added: '320 人', questions: '3.2万 条', gmv: '¥25.6万', netGmv: '¥24.7万', payUsers: '210 人', payRate: '6.6%', yxOrders: '38 单', refundAmt: '¥8,600', refundRate: '2.1%', token: '860万 token', calls: '24万 次', response: '1.8s' },
-  '30 天': { active: '1.2万 人', added: '1,280 人', questions: '12.8万 条', gmv: '¥104.7万', netGmv: '¥101.3万', payUsers: '860 人', payRate: '6.9%', yxOrders: '152 单', refundAmt: '¥3.4万', refundRate: '2.4%', token: '3,620万 token', calls: '102万 次', response: '1.9s' },
+// 0814：补每项环比（xxxD）。取值与机构后台数据看板营收分析的 RANGE 环比同源，避免同一指标两端数不一样；
+//   退款金额 / 退款率给负值——负面指标下降是好事，但配色只反映方向不反映好坏（全站统一，勿改）。
+//   平均响应是时长类，环比按「时长绝对差」给文案而非百分比（与模型用量页 respNote 同款）。
+interface UsageRange {
+  active: string; added: string; questions: string; gmv: string; netGmv: string; payUsers: string; payRate: string;
+  yxOrders: string; refundAmt: string; refundRate: string; token: string; calls: string; response: string;
+  activeD: number; addedD: number; questionsD: number; gmvD: number; netGmvD: number; payUsersD: number; payRateD: number;
+  yxOrdersD: number; refundAmtD: number; refundRateD: number; tokenD: number; callsD: number; responseD: string;
+}
+const USAGE_BY_RANGE: Record<string, UsageRange> = {
+  今日: {
+    active: '1,240 人', added: '48 人', questions: '1,180 条', gmv: '¥1.1万', netGmv: '¥9,860', payUsers: '32 人', payRate: '5.8%', yxOrders: '5 单', refundAmt: '¥1,240', refundRate: '1.6%', token: '62万 token', calls: '1.8万 次', response: '1.7s',
+    activeD: 2.4, addedD: 4.0, questionsD: 3.2, gmvD: 5.2, netGmvD: 5.6, payUsersD: 4.1, payRateD: 0.9, yxOrdersD: 3.6, refundAmtD: -3.5, refundRateD: -0.8, tokenD: 6.1, callsD: 4.8, responseD: '缩短 0.3 秒',
+  },
+  '近 7 天': {
+    active: '5,600 人', added: '320 人', questions: '3.2万 条', gmv: '¥25.6万', netGmv: '¥24.7万', payUsers: '210 人', payRate: '6.6%', yxOrders: '38 单', refundAmt: '¥8,600', refundRate: '2.1%', token: '860万 token', calls: '24万 次', response: '1.8s',
+    activeD: 4.6, addedD: 6.0, questionsD: 6.4, gmvD: 7.8, netGmvD: 8.1, payUsersD: 6.6, payRateD: 1.3, yxOrdersD: 5.4, refundAmtD: -4.2, refundRateD: -1.5, tokenD: 9.2, callsD: 6.1, responseD: '缩短 0.2 秒',
+  },
+  '30 天': {
+    active: '1.2万 人', added: '1,280 人', questions: '12.8万 条', gmv: '¥104.7万', netGmv: '¥101.3万', payUsers: '860 人', payRate: '6.9%', yxOrders: '152 单', refundAmt: '¥3.4万', refundRate: '2.4%', token: '3,620万 token', calls: '102万 次', response: '1.9s',
+    activeD: 7.2, addedD: 9.0, questionsD: 9.2, gmvD: 11.4, netGmvD: 11.9, payUsersD: 9.1, payRateD: 1.7, yxOrdersD: 8.3, refundAmtD: -5.6, refundRateD: -2.1, tokenD: 12.5, callsD: 8.7, responseD: '缩短 0.1 秒',
+  },
 };
 // 0722：累计 GMV 为开通至今存量快照，随实时板块展示、不随区间筛选变化
 const CUM_GMV = '¥1,208.6万';
 
 // 用量看板卡片（0724-2 精修：标题渐变图标章 + 指标 tile 栅格；hover 仅抬升放大、不变色；tone 分组主题色，仅视觉）
-function UsageCard({ title, icon, rows, periodDays, tone }: { title: string; icon: string; rows: [string, string, string][]; periodDays?: number; tone?: 'amber' | 'jade' }) {
+// 0814：区间运营分析补环比——原先只给「对比 07-31—08-06」这个区间标签，却不给变化值，
+//   等于告诉用户「拿谁比」却不告诉「比出什么」，与主控台 / 数据看板的指标卡不一致。
+//   第 4 位是环比：number ＝ 计数 / 金额 / 率类，按 ↑x.x% 渲染（率类差值口径为百分点，见 tooltip）；
+//   string ＝ 时长类（平均响应），按「时长绝对差」原文渲染（与模型用量页 respNote 同款）。
+//   存量卡不传 periodDays，因此不显示环比——累计 / 快照本就不与上一周期比较。
+type UsageRow = [string, string, string, (number | string)?];
+function UsageCard({ title, icon, rows, periodDays, tone }: { title: string; icon: string; rows: UsageRow[]; periodDays?: number; tone?: 'amber' | 'jade' }) {
   return (
     <div className={'usage-card' + (tone ? ' tone-' + tone : '')}>
       <div className="uc-title">
@@ -41,16 +65,34 @@ function UsageCard({ title, icon, rows, periodDays, tone }: { title: string; ico
         {title}
       </div>
       <div className="uc-tiles">
-        {rows.map(([k, v, info]) => (
-          <div className="uc-tile" key={k}>
-            <span className="uc-tile-k">
-              {k}
-              <InfoDot text={metricHelp(info, periodDays ? (periodDays === 1 ? 'today' : 'range') : 'snapshot', k.includes('率') ? 'rate' : k.includes('响应') ? 'duration' : 'count')} />
-            </span>
-            <span className="uc-tile-v mono">{v}</span>
-            {periodDays && <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>}
-          </div>
-        ))}
+        {rows.map(([k, v, info, delta]) => {
+          const up = typeof delta === 'number' ? delta >= 0 : true;
+          return (
+            <div className="uc-tile" key={k}>
+              <span className="uc-tile-k">
+                {k}
+                <InfoDot text={metricHelp(info, periodDays ? (periodDays === 1 ? 'today' : 'range') : 'snapshot', k.includes('率') ? 'rate' : k.includes('响应') ? 'duration' : 'count')} />
+              </span>
+              <span className="uc-tile-v mono">{v}</span>
+              {periodDays && delta !== undefined ? (
+                <div className={'delta ' + (up ? 'up' : 'down')}>
+                  <span className="delta-pill">
+                    {typeof delta === 'number' && (
+                      <span className="delta-arrow" style={up ? undefined : { display: 'inline-flex', transform: 'rotate(180deg)' }}>
+                        <Icon id="i-up" w={10} h={10} />
+                      </span>
+                    )}
+                    {typeof delta === 'number' ? `${Math.abs(delta).toFixed(1)}%` : delta}
+                  </span>
+                  <span className="delta-txt">较上一周期</span>
+                  <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
+                </div>
+              ) : (
+                periodDays && <span className="period-compare">{comparisonPeriodLabel(periodDays)}</span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1023,13 +1065,13 @@ export function OrgDetail() {
                 tone="amber"
                 periodDays={usagePeriodDays}
                 rows={[
-                  ['区间 GMV', usage.gmv, `所选${usageRange}内已支付会员与永享订单金额；待支付、已失效订单不计入。`],
-                  ['净 GMV（扣退款）', usage.netGmv, `所选${usageRange}内区间 GMV 减去同区间成功退款金额。`],
-                  ['付费用户', usage.payUsers, `所选${usageRange}内产生有效支付的用户数。去重：按用户 ID 去重，跨天重复只计 1 人。`],
-                  ['付费转化率', usage.payRate, `所选${usageRange}内付费用户 ÷ 同区间活跃用户。去重：分子分母均按用户 ID 去重。`],
-                  ['永享订单', usage.yxOrders, `所选${usageRange}内已支付的单本永享订单数。`],
-                  ['退款金额', usage.refundAmt, `所选${usageRange}内退款成功的金额，含部分退款。`],
-                  ['退款率', usage.refundRate, `所选${usageRange}内退款成功金额 ÷ 同区间区间 GMV。`],
+                  ['区间 GMV', usage.gmv, `所选${usageRange}内已支付会员与永享订单金额；待支付、已失效订单不计入。`, usage.gmvD],
+                  ['净 GMV（扣退款）', usage.netGmv, `所选${usageRange}内区间 GMV 减去同区间成功退款金额。`, usage.netGmvD],
+                  ['付费用户', usage.payUsers, `所选${usageRange}内产生有效支付的用户数。去重：按用户 ID 去重，跨天重复只计 1 人。`, usage.payUsersD],
+                  ['付费转化率', usage.payRate, `所选${usageRange}内付费用户 ÷ 同区间活跃用户。去重：分子分母均按用户 ID 去重。`, usage.payRateD],
+                  ['永享订单', usage.yxOrders, `所选${usageRange}内已支付的单本永享订单数。`, usage.yxOrdersD],
+                  ['退款金额', usage.refundAmt, `所选${usageRange}内退款成功的金额，含部分退款。`, usage.refundAmtD],
+                  ['退款率', usage.refundRate, `所选${usageRange}内退款成功金额 ÷ 同区间区间 GMV。`, usage.refundRateD],
                 ]}
               />
             </div>
@@ -1039,9 +1081,9 @@ export function OrgDetail() {
               tone="jade"
               periodDays={usagePeriodDays}
               rows={[
-                ['活跃用户', usage.active, `所选${usageRange}内登录或提问的用户数。去重：按用户 ID 去重，跨天重复只计 1 人。`],
-                ['新增 C 端', usage.added, `所选${usageRange}内首次注册的用户数。去重：按用户 ID 去重。`],
-                ['区间提问', usage.questions, `所选${usageRange}内新增提问条数，包含追问。去重：按条累计，不去重。`],
+                ['活跃用户', usage.active, `所选${usageRange}内登录或提问的用户数。去重：按用户 ID 去重，跨天重复只计 1 人。`, usage.activeD],
+                ['新增 C 端', usage.added, `所选${usageRange}内首次注册的用户数。去重：按用户 ID 去重。`, usage.addedD],
+                ['区间提问', usage.questions, `所选${usageRange}内新增提问条数，包含追问。去重：按条累计，不去重。`, usage.questionsD],
               ]}
             />
             <UsageCard
@@ -1049,9 +1091,9 @@ export function OrgDetail() {
               icon="i-chip"
               periodDays={usagePeriodDays}
               rows={[
-                ['Token 消耗量', usage.token, `所选${usageRange}内平台默认 LLM 输入与输出 token 消耗；属于不可回收消耗量。`],
-                ['调用次数', usage.calls, `所选${usageRange}内模型请求次数。`],
-                ['平均响应', usage.response, `所选${usageRange}内从请求到首字返回的平均耗时。`],
+                ['Token 消耗量', usage.token, `所选${usageRange}内平台默认 LLM 输入与输出 token 消耗；属于不可回收消耗量。`, usage.tokenD],
+                ['调用次数', usage.calls, `所选${usageRange}内模型请求次数。`, usage.callsD],
+                ['平均响应', usage.response, `所选${usageRange}内从请求到首字返回的平均耗时。`, usage.responseD],
               ]}
             />
           </div>
