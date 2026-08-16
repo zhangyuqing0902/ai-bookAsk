@@ -176,7 +176,10 @@
 .sec-lab{font-size:11px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
   padding:14px 16px 6px;}
 
-.mc-card{margin:16px;border-radius:22px;padding:22px;color:var(--ink);position:relative;overflow:hidden;
+/* 0814-3：显式左对齐。卡片原先继承了页面的 text-align:center，只因每个盒子宽度恰好等于自身文字宽度
+   才看不出来；一旦某行变宽（如加「已到期」角标、倒计时字号变大），同列较窄的文字就会居中偏移，
+   表现为「AI 问书」「权益还可使用」左边空一块、且只在部分会员状态下出现。 */
+.mc-card{margin:16px;border-radius:22px;padding:22px;color:var(--ink);position:relative;overflow:hidden;text-align:left;
   min-height:150px;display:flex;flex-direction:column;justify-content:space-between;
   background:linear-gradient(140deg,#FFFFFF 0%,#F4F4FE 52%,#EEEBFC 100%);
   border:1px solid rgba(75,87,232,.15);
@@ -195,6 +198,36 @@
 .mc-auto{font-size:11.5px;color:var(--ink-2);display:flex;align-items:center;gap:6px;white-space:nowrap;}
 .mc-auto::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--jade);}
 .mc-emblem{position:relative;z-index:1;}
+/* 0814-2：会员中心非有效态卡面。grace＝琥珀(权益还在但需行动)，off＝灰(权益已停/未开通)；
+   与两个后台四态标签色同源：琥珀=待行动、灰=空。 */
+.mc-tier-row{display:flex;align-items:center;gap:8px;margin-top:10px;}
+.mc-tier-row .mc-tier{margin-top:0;}
+.mc-flag{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;letter-spacing:.02em;
+  padding:2.5px 8px;border-radius:20px;background:var(--amber-soft);color:var(--amber-ink);white-space:nowrap;}
+/* 0814-3：宽限期卡面「不变脸」——卡底仍是有效会员的靛紫。宽限期内权益一样都没少，
+   整卡转暖等于暗示身份降级，是不准确的；且暖卡配靛紫知识球必然撞色。
+   警示色只给真正需要行动的那一个元素＝倒计时（外加「已到期」角标），「会员」二字保持品牌渐变。 */
+/* 倒计时比有效期日期字号大（21 vs 16），会把下半区顶高、挤掉与「会员」之间的呼吸；补足卡高 */
+.mc-card.grace{min-height:172px;}
+/* 倒计时是中文短语不是日期，沿用 mono + letter-spacing 会把「剩 56 小时」拉出突兀的字距 */
+.mc-card.grace .mc-valid .date{color:var(--amber-ink);font-size:21px;font-weight:700;
+  font-family:inherit;letter-spacing:0;margin-top:3px;}
+.mc-card.grace .mc-auto::before{background:var(--amber);}
+/* 卡外的「为什么到期了还能用？」——规则说明按需展开，不常驻卡面（渐进式展示） */
+.mc-explain{margin:-4px 16px 0;display:inline-flex;align-items:center;gap:4px;
+  font-size:12px;color:var(--indigo-ink);cursor:pointer;padding:6px 2px;}
+.mc-explain::after{content:"›";font-size:14px;line-height:1;opacity:.7;}
+/* 说明类 sheet 正文左对齐（.pw-h .s 默认居中，只适合一行确认副标题） */
+.pw-h .s.pw-s-left{text-align:left;}
+.mc-card.off{background:linear-gradient(140deg,#FFFFFF 0%,#F7F7F9 52%,#EFEFF2 100%);
+  border-color:var(--line);
+  box-shadow:0 16px 36px -26px rgba(20,20,30,.24), inset 0 1px 0 rgba(255,255,255,.9);}
+.mc-card.off::after{background:radial-gradient(circle at 42% 42%, rgba(20,20,30,.07), transparent 70%);}
+.mc-card.off .mc-tier{background-image:none;background-color:transparent;color:var(--ink-3);-webkit-text-fill-color:var(--ink-3);}
+.mc-card.off .mc-flag{background:var(--line-2);color:var(--ink-3);}
+.mc-card.off .mc-valid .date{color:var(--ink-2);}
+.mc-card.off .mc-auto::before{background:var(--ink-3);}
+.mc-card.off .orb{filter:grayscale(1);opacity:.5;}
 .mc-card .vip{display:inline-flex;align-items:center;gap:6px;background:var(--amber);color:#fff;
   font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;position:relative;}
 .mc-card .ex{font-size:13px;margin-top:16px;color:var(--ink-2);position:relative;}

@@ -1580,6 +1580,13 @@ body,
 .mb-perk svg{width:13px;height:13px;display:block;}
 /* ② 套餐卡：卡名 + 续费语义 pill + 一行说明 + 右侧大价签；选中＝对勾圆点(琥珀填充) + 琥珀描边淡底 */
 .mb-plans{display:flex;flex-direction:column;gap:12px;margin:16px 22px 0;}
+/* 0814-2：缓冲期安心提示——兜底承诺而非卖点，用中性灰底细条，不与琥珀套餐卡抢注意力 */
+.mb-assure{display:flex;align-items:flex-start;gap:8px;margin:14px 22px 0;padding:10px 12px;border-radius:12px;
+  background:rgba(20,20,30,.035);border:1px solid var(--line-2);font-size:11.5px;line-height:1.6;color:var(--ink-2);}
+.mb-assure svg{flex:none;width:14px;height:14px;margin-top:1px;color:var(--jade);}
+.mb-assure b{color:var(--ink);font-weight:600;}
+/* 0814-3：套餐卡说明里的次月起价格加重——长期实付价不该淹没在小字里 */
+.mb-plan-d .mb-plan-em{font-weight:700;color:var(--ink);}
 .mb-plan{position:relative;display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:16px 14px;cursor:pointer;transition:border-color .16s,box-shadow .18s,background .16s;}
 .mb-plan.sel{border-color:var(--amber);background:linear-gradient(110deg,#fff,var(--amber-soft));box-shadow:0 12px 30px -16px color-mix(in srgb,var(--amber) 55%,transparent);}
 .mb-plan-badge{position:absolute;top:-9px;left:16px;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,#FF9879,#F2563B);padding:2px 9px;border-radius:8px;letter-spacing:.03em;box-shadow:0 2px 8px -2px rgba(240,90,60,.5);}

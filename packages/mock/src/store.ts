@@ -3,6 +3,14 @@ import { persist } from 'zustand/middleware';
 import type { Conversation, Order, Role, User } from './types';
 import { DEFAULT_ORG_ID, ORGS, KPS, SEED_CONVERSATIONS, SEED_ORDERS } from './data';
 
+// 0814-2：会员到期日改相对当天推算。会员中心接了真实 store 后，写死的 2026 日期会随时间
+// 变成「有效期在过去」的自相矛盾态，宽限期倒计时也会恒为 0——演示态必须永远自洽。
+const dayOffset = (n: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
 const buildUser = (orgId: string, role: Role, phoneBound = true): User => {
   const base: User = {
     id: 'user_demo',
@@ -31,7 +39,7 @@ const buildUser = (orgId: string, role: Role, phoneBound = true): User => {
       userId: 'user_demo',
       orgId,
       state: 'active',
-      expiresAt: '2026-08-12',
+      expiresAt: dayOffset(30),
       autoRenew: true,
     };
   }
@@ -84,7 +92,8 @@ interface DemoStore {
   updateMessage: (convId: string, msgId: string, patch: Partial<Conversation['messages'][number]>) => void;
   addOrder: (o: Order) => void;
   grantMembership: () => void;
-  cancelMembershipRenewal: () => void;
+  /** 0814-2：会员中心接入 store，取消/开启自动续费统一走这一个动作（原 cancelMembershipRenewal 只能单向关） */
+  setMembershipRenewal: (on: boolean) => void;
   grantPermanent: (kpId: string) => void;
   revokeAllGrants: () => void;
 }
@@ -132,6 +141,7 @@ export const useDemoStore = create<DemoStore>()(
       setWechatEnv: (v) => set({ wechatEnv: v }),
       // 0806-2：演示直接切会员四态（有效/宽限/过期/未开通），配合到期时间演示 C 端四态展示；
       // 注意 setRole 会重建 user 覆盖本状态——演示时先选角色再切会员态
+      // 0814-2：到期日改相对当天推算——grace 取昨天到期，倒计时恒落在 48~72h 区间，演示永不失效
       setMemberState: (st) =>
         set((s) => ({
           user: {
@@ -139,7 +149,8 @@ export const useDemoStore = create<DemoStore>()(
             membership: {
               ...s.user.membership,
               state: st,
-              expiresAt: st === 'active' ? '2026-09-12' : st === 'grace' ? '2026-08-01' : st === 'expired' ? '2026-06-10' : undefined,
+              expiresAt:
+                st === 'active' ? dayOffset(30) : st === 'grace' ? dayOffset(-1) : st === 'expired' ? dayOffset(-65) : undefined,
               autoRenew: st === 'active',
             },
           },
@@ -194,13 +205,13 @@ export const useDemoStore = create<DemoStore>()(
         const role = get().role === 'permanent_only' ? 'member_permanent' : 'member';
         get().setRole(role);
       },
-      cancelMembershipRenewal: () =>
+      setMembershipRenewal: (on) =>
         set({
           user: {
             ...get().user,
             membership: {
               ...get().user.membership,
-              autoRenew: false,
+              autoRenew: on,
             },
           },
         }),

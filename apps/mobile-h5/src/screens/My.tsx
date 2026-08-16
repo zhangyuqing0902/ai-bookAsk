@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
-import { useDemoStore } from '@aba/mock';
+import { useDemoStore, graceRemainHours, graceRemainText } from '@aba/mock';
 import { ServiceSheet } from '../ServiceSheet';
 
 // 13 我的主页（设置式分组白卡 + 灰色线性图标）+ 联系客服 sheet
@@ -12,11 +12,15 @@ export function My() {
   const user = useDemoStore((s) => s.user);
   const phoneBound = useDemoStore((s) => s.phoneBound);
 
-  // 0806-3：C 端会员标简化为二分展示（运营四态语义只在后台）——active/grace 权益在＝「会员」，expired/none＝无标；
-  // 「会员中心」右值同理：已开通 / 未开通
+  // 0806-3：C 端会员标简化为二分展示（运营四态语义只在后台）——active/grace 权益在＝「会员」，expired/none＝无标。
+  // 0814-2：用户卡会员标维持二分（宽限期内权益确实还在，标「会员」不算撒谎）；
+  //   但「会员中心」右值原先 grace 也显示「已开通」，等于对用户隐瞒 72 小时后即将断服——
+  //   改为琥珀色倒计时。72 小时很短，用户不主动进会员中心就完全不知情，入口必须自己说话。
   const mState = user.membership.state;
   const memberBadge = mState === 'active' || mState === 'grace' ? '会员' : null;
-  const MEMBER_VAL: Record<string, string> = { active: '已开通', grace: '已开通', expired: '未开通', none: '未开通' };
+  const isGrace = mState === 'grace';
+  const graceLeft = isGrace && user.membership.expiresAt ? graceRemainText(graceRemainHours(user.membership.expiresAt)) : '';
+  const MEMBER_VAL: Record<string, string> = { active: '已开通', grace: graceLeft, expired: '未开通', none: '未开通' };
   const bookCount = user.bookGrants?.length ?? 0;
 
   return (
@@ -60,7 +64,9 @@ export function My() {
                 <Icon id="i-crownO" />
               </span>
               <span className="ml">会员中心</span>
-              <span className="mv">{MEMBER_VAL[mState] ?? '未开通'}</span>
+              <span className="mv" style={isGrace ? { color: 'var(--amber-ink)', fontWeight: 600 } : undefined}>
+                {MEMBER_VAL[mState] ?? '未开通'}
+              </span>
               <span className="mc">
                 <Icon id="i-chevR" />
               </span>

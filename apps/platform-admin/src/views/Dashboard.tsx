@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, MultiSelect, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE } from '@aba/ui-admin';
-import { compareMetric, comparisonPeriodLabel, metricHelp, PLATFORM_ORGS, platformDaily, platformSnapshot, platformOrgFactor, platformOrgCount, platformOrgRole, rangeMetrics, RANGE_SCOPE_NOTE } from '@aba/mock';
+import { compareMetric, comparisonPeriodLabel, metricHelp, PLATFORM_ORGS, platformDaily, platformSnapshot, platformChildrenOf, platformOrgFactorExact, platformOrgCountExact, platformOrgRole, rangeMetrics, RANGE_SCOPE_NOTE } from '@aba/mock';
 import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
 import { buildDashboardSpec } from '../exports/dashboard';
 
@@ -24,12 +24,16 @@ export function Dashboard() {
     return o && platformOrgRole(o, orgs) === 'parent' ? `${name}（父机构）` : name;
   };
   // 0806-3：机构筛选单选改多选（默认全选＝全平台口径，与原「全部机构」一致）；选中项回填触发器、超宽省略
+  // 0814-4：机构筛选升级为层级多选——父机构成组、子机构缩进；勾父＝其自身与全部子机构一并勾上，
+  //   子也可单独勾（父呈半选）。系数改用 Exact 版按选中集合精确求和：界面已显式勾选子机构，
+  //   若仍做父→子展开，「勾父后取消某个子」（＝只看本部 / 本部+部分分社）会被强行加回来，用户表达不出来。
   const ALL_ORG_NAMES = orgs.map((o) => o.name);
+  const childrenOf = platformChildrenOf(orgs);
   const [selOrgs, setSelOrgs] = useState<string[]>(ALL_ORG_NAMES);
   const allSelected = selOrgs.length === ALL_ORG_NAMES.length;
   // 0806-4：联动系数与缩放助手（全选 = 1，数值与此前全平台口径完全一致）
-  const factor = allSelected ? 1 : platformOrgFactor(selOrgs, orgs);
-  const orgCount = allSelected ? platformSnapshot.orgs : platformOrgCount(selOrgs, orgs);
+  const factor = allSelected ? 1 : platformOrgFactorExact(selOrgs, orgs);
+  const orgCount = allSelected ? platformSnapshot.orgs : platformOrgCountExact(selOrgs, orgs);
   const sc = (v: number) => Math.round(v * factor);
   // 区段副标题的机构范围：超过 3 家收敛为「A、B、C 等 N 家」，避免一长串挤压标题行
   const scopeText = allSelected ? '全平台' : selOrgs.length <= 3 ? selOrgs.join('、') : `${selOrgs.slice(0, 3).join('、')} 等 ${selOrgs.length} 家`;
@@ -88,8 +92,8 @@ export function Dashboard() {
           <div className="pt">主控台</div>
         </div>
         <div className="pa">
-          {/* 0806-3：机构筛选单选改多选——默认全选回填「全部机构」，部分选中顿号拼接回填、超宽省略 */}
-          <MultiSelect label="机构" options={ALL_ORG_NAMES.map(orgLabel)} value={selOrgs} onChange={setSelOrgs} style={{ width: 240 }} />
+          {/* 0814-4：层级多选——父机构成组、子机构缩进；勾父＝整组一并勾上，子可单独勾（父呈半选） */}
+          <MultiSelect label="机构" options={ALL_ORG_NAMES.map(orgLabel)} value={selOrgs} onChange={setSelOrgs} childrenOf={childrenOf} style={{ width: 240 }} />
           <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildDashboardSpec({ org: orgFilterLabel, days, rangeLabel, start: range.start, end: range.end, factor, orgCount })); toast('正在导出 报表'); }}>
             <Icon id="i-dl" w={14} h={14} />
             导出

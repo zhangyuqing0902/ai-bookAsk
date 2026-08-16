@@ -106,3 +106,38 @@ export function platformOrgFactor(selected: string[], all: PlatformOrg[] = PLATF
 export function platformOrgCount(selected: string[], all: PlatformOrg[] = PLATFORM_ORGS): number {
   return expandOrgIds(selected, all).size;
 }
+
+/** 0814-3：展开所选机构为机构「名称」集（父机构含全部子机构、去重）——供按机构名过滤的榜单类模块使用。 */
+export function platformOrgNames(selected: string[], all: PlatformOrg[] = PLATFORM_ORGS): Set<string> {
+  const ids = expandOrgIds(selected, all);
+  return new Set(all.filter((o) => ids.has(o.id)).map((o) => o.name));
+}
+
+// ---- 0814-4：层级多选（父 → 缩进子）配套口径 ----
+// 界面上子机构已显式勾选，选中集合即真实集合，**不再做父→子展开**——
+// 否则「勾了父、再取消某个子」（＝只看本部 / 本部+部分分社）这类选择会被展开逻辑强行加回来，用户表达不出来。
+
+/** 父机构名 → 其子机构名数组（无子机构的父不出现在 map 里） */
+export function platformChildrenOf(all: PlatformOrg[] = PLATFORM_ORGS): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const o of all) {
+    if (!o.parentId) continue;
+    const p = all.find((x) => x.id === o.parentId);
+    if (p) (map[p.name] ??= []).push(o.name);
+  }
+  return map;
+}
+
+/** 层级多选系数（0~1]：所选机构 tkUsed 占全平台之比，按选中集合精确求和、不展开 */
+export function platformOrgFactorExact(selected: string[], all: PlatformOrg[] = PLATFORM_ORGS): number {
+  const total = all.reduce((s, o) => s + o.tkUsed, 0);
+  if (!total) return 1;
+  const set = new Set(selected);
+  return all.filter((o) => set.has(o.name)).reduce((s, o) => s + o.tkUsed, 0) / total;
+}
+
+/** 层级多选下的机构数＝选中项本身（已显式含子机构） */
+export function platformOrgCountExact(selected: string[], all: PlatformOrg[] = PLATFORM_ORGS): number {
+  const valid = new Set(all.map((o) => o.name));
+  return new Set(selected.filter((n) => valid.has(n))).size;
+}

@@ -2904,6 +2904,16 @@ a {
 .ms-opt:hover .ms-box:not(.on){border-color:var(--ink-3);}
 .ms-name{display:inline-flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ms-tag{margin-left:6px;flex:none;}
+/* 0814-4：层级多选（平台主控台 / 全域模型用量）——父机构成组，子机构缩进 + 归属竖线。
+   只有 2 层、13 家机构，不做展开/收起：全展开的滚动成本远低于折叠后找不到某家分社的成本。 */
+.ms-group{position:relative;}
+.ms-group .ms-child{margin-left:22px;padding-left:12px;}
+/* 归属竖线：贯穿该父机构名下全部子机构行 */
+.ms-group::before{content:"";position:absolute;left:29px;top:36px;bottom:6px;width:1px;background:var(--line);}
+.ms-group:last-child::before{bottom:6px;}
+/* 半选＝组内部分选中：靛蓝描边 + 一横，与全选的实心勾明确区分 */
+.ms-box.half{background:var(--surface);border-color:var(--indigo);position:relative;}
+.ms-box.half::after{content:"";width:7px;height:2px;border-radius:1px;background:var(--indigo);}
 
 /* 0806-4：KPI 分布副行小磁贴（平台主控台内容供给三卡）——替代原「A x（p%） · B y（p%）」长文行，
    标签 / 数值 / 占比三段式网格，信息不变、扫读更轻；列数由行内 gridTemplateColumns 定（3 / 4 / 2） */

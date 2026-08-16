@@ -75,7 +75,8 @@ export function Member() {
                     连续包月
                     <span className="mb-plan-renew">自动续费 · 可随时取消</span>
                   </div>
-                  <div className="mb-plan-d">首月 ¥9.9（原价 ¥19.9），次月起 ¥19.9/月 自动续费；退订后当期仍可用至期满</div>
+                  {/* 0814-3：次月起价格标粗——首月特惠是钩子，次月价才是用户长期实际支付的钱，不该被淹没在一行小字里 */}
+                  <div className="mb-plan-d">首月 ¥9.9（原价 ¥19.9），次月起 <b className="mb-plan-em">¥19.9/月</b> 自动续费；退订后当期仍可用至期满</div>
                 </div>
                 <div className="mb-plan-price">
                   <div className="mb-plan-now">¥9.9</div>
@@ -89,13 +90,22 @@ export function Member() {
                     单月会员
                     <span className="mb-plan-renew gray">一次性购买 · 不自动续费</span>
                   </div>
-                  <div className="mb-plan-d">¥19.9 / 1 个月，到期自动失效不扣款，适合先体验一个月</div>
+                  {/* 0814-2：原文案「到期自动失效不扣款」与「到期赠 72h 缓冲」相矛盾——
+                      缓冲期是防服务突然中断，与是否自动续费无关，两档都有，故改为「到期不扣款」 */}
+                  <div className="mb-plan-d">¥19.9 / 1 个月，到期不扣款、不自动续期，适合先体验一个月</div>
                 </div>
                 <div className="mb-plan-price">
                   <div className="mb-plan-now">¥19.9</div>
                   <div className="mb-plan-old">/ 1 个月</div>
                 </div>
               </div>
+            </div>
+            {/* 0814-2：缓冲期安心提示。刻意不放进上方权益速览——缓冲期不是卖点、是兜底承诺，
+                放在套餐与协议之间的「安心区」，降低「怕买了到期就断」的决策焦虑，
+                同时让 72 小时缓冲在付费前就完成告知，而非到期后才第一次看到。 */}
+            <div className="mb-assure">
+              <Icon id="i-shield" w={14} h={14} />
+              <span>会员到期附赠 <b>72 小时</b> 缓冲期，权益持续可用，缓冲期不计会员时长。</span>
             </div>
             <div className="member-foot">
               {/* 0718 #8③：协议勾选真实可点；协议随方式联动——连续包月多一份《自动续费协议》 */}

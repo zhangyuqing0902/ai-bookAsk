@@ -39,6 +39,38 @@ export function memberStateByLabel(label: string): MemberState | null {
   return hit ?? null;
 }
 
+// ── 0814-2：宽限期（＝到期后 72 小时会员缓冲使用期）时长口径 ──────────────────
+// 口径定版见 PRD 4.4.5 与交接说明 3.10：缓冲期不计入付费时长，也不参与续订顺延起点计算；
+// 缓冲期内权益仍生效，故 grace 计入「当前会员数」。原「到期前 72 小时宽限期」口径已废弃。
+export const GRACE_HOURS = 72;
+
+// 缓冲期截止时刻＝到期时刻 + 72h。expiresAt 为日期串（YYYY-MM-DD）时按当日 23:59:59 到期计。
+export function graceEndAt(expiresAt: string): Date {
+  const base =
+    expiresAt.length <= 10
+      ? new Date(`${expiresAt}T23:59:59`)
+      : new Date(expiresAt.replace(' ', 'T'));
+  return new Date(base.getTime() + GRACE_HOURS * 3600 * 1000);
+}
+
+// 缓冲期剩余小时（向上取整；已出窗口返回 0）。
+// 上限钳到 GRACE_HOURS：若后端在到期时刻之前就下发了 grace，向上取整会算出 73，
+// 界面显示「剩 73 小时」与对外承诺的 72 小时自相矛盾——展示值不应超过承诺窗口。
+export function graceRemainHours(expiresAt: string, now: Date = new Date()): number {
+  const ms = graceEndAt(expiresAt).getTime() - now.getTime();
+  if (ms <= 0) return 0;
+  return Math.min(GRACE_HOURS, Math.ceil(ms / 3600000));
+}
+
+// C 端倒计时文案。C 端刻意不出现「宽限期」这一状态名词——不让用户先理解一个状态再推断后果，
+// 直接讲他能感知的事实「还能用多久」。运营四态语义只在两个后台使用。
+// 全程小时制：72h 尺度下换算成「2 天 23 小时」会读成「还早」，反而削弱紧迫感。
+export function graceRemainText(hours: number): string {
+  if (hours <= 0) return '缓冲期已结束';
+  if (hours <= 1) return '不足 1 小时';
+  return `剩 ${hours} 小时`;
+}
+
 // 详情页会员有效期文案：active＝有效期至；grace＝已到期·宽限期内；expired＝已到期；none＝无
 export function memberExpireText(state: MemberState, expire?: string): string {
   if (state === 'active' && expire) return `有效期至 ${expire}`;
