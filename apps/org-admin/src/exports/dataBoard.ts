@@ -116,7 +116,7 @@ export function buildDataBoardSpec(input: DataBoardExportInput): ExportSpec {
         '营收分析',
         '转化漏斗 · 会员（按用户去重）',
         ft.lab,
-        (ft.scale ? fmtCnLite(ft.val) : String(ft.val)) + ft.suf,
+        fmtCnLite(ft.val) + ft.suf,
         '',
       ] as Array<string | number>),
       ...d.yxFunnel.steps.map((st, i) => [
@@ -133,8 +133,8 @@ export function buildDataBoardSpec(input: DataBoardExportInput): ExportSpec {
         '营收分析',
         '转化漏斗 · 永享（按用户 × KP 去重）',
         ft.lab,
-        (ft.scale ? fmtCnLite(ft.val) : String(ft.val)) + ft.suf,
-        ft.lab === '人均购买' ? '完成支付对数 ÷ 购买人数' : '按用户 ID 去重',
+        fmtCnLite(ft.val) + ft.suf,
+        '按用户 ID 去重',
       ] as Array<string | number>),
       // —— 热门 KP Tab ——
       ...topkp.flatMap((board) =>

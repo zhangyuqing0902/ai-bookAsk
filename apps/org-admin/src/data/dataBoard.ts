@@ -22,8 +22,10 @@ export type FunnelStep = {
   cum: string;      // 累计转化率 = 本步 ÷ 第一步；同时用作条宽
   color: string;
 };
-// foot：卡底副指标。scale=true 的随机构集合缩放，false 的是比值/人均不缩放。
-export type FunnelFoot = { lab: string; val: number; suf: string; scale: boolean };
+// foot：卡底副指标，均为绝对量、随机构集合缩放。
+// （0819 二版删去「人均购买」后不再有比值型副指标，原区分缩放与否的 scale 字段随之移除——
+//   留一个恒为 true 的字段和一条永不执行的分支只会误导后来人。）
+export type FunnelFoot = { lab: string; val: number; suf: string };
 export type Funnel = {
   unit: string;     // 统计单元后缀：'人' / '对'
   steps: FunnelStep[];
@@ -94,12 +96,12 @@ export function scaleCnNum(v: string, w: number): string {
   return m[1] + fmt;
 }
 
-/** 0819：漏斗缩放——绝对量（步骤人数/对数、foot 中 scale=true 项）×w；转化率是比值，不缩放。 */
+/** 0819：漏斗缩放——绝对量（步骤人数/对数、foot 各项）×w；转化率是比值，不缩放。 */
 function scaleFunnel(f: Funnel, w: number): Funnel {
   return {
     ...f,
     steps: f.steps.map((st) => ({ ...st, cnt: Math.max(0, Math.round(st.cnt * w)) })),
-    foot: f.foot.map((ft) => (ft.scale ? { ...ft, val: Math.max(0, Math.round(ft.val * w)) } : ft)),
+    foot: f.foot.map((ft) => ({ ...ft, val: Math.max(0, Math.round(ft.val * w)) })),
   };
 }
 
@@ -169,8 +171,8 @@ export const RANGE: Record<string, RangeData> = {
       ],
       overall: '3.4%',
       foot: [
-        { lab: '区间活跃用户', val: 1240, suf: '人', scale: true },
-        { lab: '已排除全程有效会员', val: 480, suf: '人', scale: true },
+        { lab: '区间活跃用户', val: 1240, suf: '人' },
+        { lab: '已排除全程有效会员', val: 480, suf: '人' },
       ],
     },
     yxFunnel: {
@@ -182,9 +184,8 @@ export const RANGE: Record<string, RangeData> = {
       ],
       overall: '14.1%',
       foot: [
-        { lab: '触发人数', val: 41, suf: '人', scale: true },
-        { lab: '购买人数', val: 8, suf: '人', scale: true },
-        { lab: '人均购买', val: 1.3, suf: '本', scale: false },
+        { lab: '触发人数', val: 41, suf: '人' },
+        { lab: '购买人数', val: 8, suf: '人' },
       ],
     },
     refundAmt: '¥1,240', refundRate: '1.6%', refundOrders: '12', netGmv: '¥9,860',
@@ -219,8 +220,8 @@ export const RANGE: Record<string, RangeData> = {
       ],
       overall: '4.6%',
       foot: [
-        { lab: '区间活跃用户', val: 5600, suf: '人', scale: true },
-        { lab: '已排除全程有效会员', val: 1700, suf: '人', scale: true },
+        { lab: '区间活跃用户', val: 5600, suf: '人' },
+        { lab: '已排除全程有效会员', val: 1700, suf: '人' },
       ],
     },
     yxFunnel: {
@@ -232,9 +233,8 @@ export const RANGE: Record<string, RangeData> = {
       ],
       overall: '14.9%',
       foot: [
-        { lab: '触发人数', val: 205, suf: '人', scale: true },
-        { lab: '购买人数', val: 42, suf: '人', scale: true },
-        { lab: '人均购买', val: 1.3, suf: '本', scale: false },
+        { lab: '触发人数', val: 205, suf: '人' },
+        { lab: '购买人数', val: 42, suf: '人' },
       ],
     },
     refundAmt: '¥8,600', refundRate: '2.1%', refundOrders: '86', netGmv: '¥24.7万',
@@ -269,8 +269,8 @@ export const RANGE: Record<string, RangeData> = {
       ],
       overall: '5.5%',
       foot: [
-        { lab: '区间活跃用户', val: 12000, suf: '人', scale: true },
-        { lab: '已排除全程有效会员', val: 1900, suf: '人', scale: true },
+        { lab: '区间活跃用户', val: 12000, suf: '人' },
+        { lab: '已排除全程有效会员', val: 1900, suf: '人' },
       ],
     },
     yxFunnel: {
@@ -282,9 +282,8 @@ export const RANGE: Record<string, RangeData> = {
       ],
       overall: '16.0%',
       foot: [
-        { lab: '触发人数', val: 1450, suf: '人', scale: true },
-        { lab: '购买人数', val: 320, suf: '人', scale: true },
-        { lab: '人均购买', val: 1.3, suf: '本', scale: false },
+        { lab: '触发人数', val: 1450, suf: '人' },
+        { lab: '购买人数', val: 320, suf: '人' },
       ],
     },
     refundAmt: '¥3.4万', refundRate: '2.4%', refundOrders: '342', netGmv: '¥101.3万',

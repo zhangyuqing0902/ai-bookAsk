@@ -127,7 +127,7 @@ function FunnelChart({ f }: { f: Funnel }) {
           <span key={ft.lab}>
             {ft.lab}
             <b className="mono">
-              {ft.scale ? fmtExact(ft.val) : ft.val}
+              {fmtExact(ft.val)}
               {ft.suf}
             </b>
           </span>
