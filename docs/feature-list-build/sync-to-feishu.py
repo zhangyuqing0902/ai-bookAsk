@@ -8,9 +8,14 @@
 - **只增不删**：线上有、本地没有的行一律保留，只做「改」和「追加」。
 
 用法：
-    python sync-to-feishu.py --dry-run     # 只打印计划，不写（默认）
-    python sync-to-feishu.py --apply       # 真正写入
+    python sync-to-feishu.py                             # 只打印计划，不写（默认 dry-run）
+    python sync-to-feishu.py --apply --batch 0819        # 真正写入，写完自动刷新基线快照
     python sync-to-feishu.py --apply --skip-baseline-check   # 已人工确认过线上差异时使用
+    python sync-to-feishu.py --refresh-snapshot          # 只重建基线快照（首次建基线 / 人工合并后）
+
+安全闸报警怎么办（0819 教训）：
+    报「线上第 N 行已被改动」时，先确认那行内容是不是上一轮同步自己写进去的。
+    早期脚本写入后不刷新快照，必然产生这种误报；现已在 --apply 末尾自动刷新。
 
 依赖：openpyxl；已登录的 lark-cli（需 user 身份，bot 无写权限）。
 """
@@ -35,6 +40,41 @@ TARGETS = [
 ]
 
 COL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+SNAP_DIR = f"{os.path.dirname(os.path.abspath(__file__))}/.feishu-snapshot"
+SNAP_PATH = f"{SNAP_DIR}/baseline.json"
+
+
+def refresh_snapshot(batch=""):
+    """把三张线上表回读一遍，重写基线快照。
+
+    为什么必须在 --apply 之后自动跑（0819 教训）：
+    脚本原先只在人工记得时才刷快照，于是每同步一次，下一次安全闸必然把
+    「上一轮自己写进去的内容」误报成他人并发改动，中止并要求人工确认——
+    久而久之只会训练出「见到报警就 --skip-baseline-check」的习惯，
+    安全闸也就形同虚设了。
+
+    为什么回读线上而不是直接拿本地 local 当快照：
+    快照的用途是回答「线上现在是不是我上次留下的样子」。飞书对写入内容
+    可能做规范化（空白、数字/文本类型等），若把「我们发出去的值」当快照，
+    下次读回来仍可能对不上。只有回读才能记录线上真实落地的形态。
+    """
+    if os.path.exists(SNAP_PATH) and batch:
+        bak = f"{SNAP_PATH}.bak-pre{batch}"
+        if not os.path.exists(bak):
+            import shutil
+            shutil.copy(SNAP_PATH, bak)
+            print(f"  · 旧快照已备份 → {os.path.basename(bak)}")
+    os.makedirs(SNAP_DIR, exist_ok=True)
+    snap = {}
+    for _path, sheet, token, sheet_id, ncols in TARGETS:
+        rows = read_online(token, sheet_id, ncols)
+        snap[sheet_id] = {"rows": rows, "count": len(rows)}
+        print(f"  · 快照刷新 {sheet}：{len(rows)} 行")
+    with open(SNAP_PATH, "w", encoding="utf-8") as f:
+        json.dump(snap, f, ensure_ascii=False, indent=1)
+    print(f"✓ 基线快照已更新 → {os.path.relpath(SNAP_PATH)}")
 
 
 def sh(cmd):
@@ -87,9 +127,20 @@ def main():
     ap.add_argument("--apply", action="store_true", help="真正写入（默认只做 dry-run）")
     ap.add_argument("--skip-baseline-check", action="store_true")
     ap.add_argument("--baseline-dir", default="", help="基线 tsv 目录（可选，用于安全闸）")
+    ap.add_argument("--refresh-snapshot", action="store_true",
+                    help="只回读线上、重建基线快照，不做任何比对与写入（首次建基线 / 人工合并后重建用）")
+    ap.add_argument("--batch", default="",
+                    help="批次号（如 0819）。写入前把旧快照备份为 baseline.json.bak-pre<批次>")
+    ap.add_argument("--no-refresh", action="store_true",
+                    help="写入后不自动刷新快照（不建议；仅在需要保留旧基线做人工比对时使用）")
     args = ap.parse_args()
 
+    if args.refresh_snapshot:
+        refresh_snapshot(args.batch)
+        return
+
     total_upd = total_add = 0
+    wrote_any = False
     for path, sheet, token, sheet_id, ncols in TARGETS:
         if not os.path.exists(path):
             print(f"⚠ 跳过 {sheet}：本地文件不存在 {path}")
@@ -133,13 +184,12 @@ def main():
                 continue
             # 安全闸：写之前确认线上仍与分析时的快照一致，避免覆盖他人并发改动
             if not args.skip_baseline_check:
-                snap_path = f"{os.path.dirname(os.path.abspath(__file__))}/.feishu-snapshot/baseline.json"
-                if not os.path.exists(snap_path):
+                if not os.path.exists(SNAP_PATH):
                     sys.exit(
-                        f"✗ 找不到基线快照 {snap_path}——安全闸无法生效。\n"
-                        "  请先跑一次 --dry-run 并保存快照，或确认要跳过时显式加 --skip-baseline-check。"
+                        f"✗ 找不到基线快照 {SNAP_PATH}——安全闸无法生效。\n"
+                        "  请先跑 --refresh-snapshot 建立基线，或确认要跳过时显式加 --skip-baseline-check。"
                     )
-                snap = json.load(open(snap_path)).get(sheet_id)
+                snap = json.load(open(SNAP_PATH, encoding="utf-8")).get(sheet_id)
                 if not snap:
                     sys.exit(f"✗ [{sheet}] 快照里没有 {sheet_id} 的基线，安全闸无法生效，已中止。")
                 # 0724：快照可能是旧列数（附表加列前），比对前统一补齐到当前 ncols
@@ -156,7 +206,8 @@ def main():
                             f"✗ [{sheet}] 线上第 {idx + 1} 行已被改动，已中止。\n"
                             f"   快照：{' | '.join(e[:3])[:100]}\n"
                             f"   现在：{' | '.join(g[:3])[:100]}\n"
-                            f"   请人工确认后加 --skip-baseline-check 重跑。"
+                            f"   自查：若该行内容正是上一轮同步写进去的（快照未及时刷新所致），"
+                            f"加 --skip-baseline-check 重跑即可；否则说明确有他人改动，先人工合并。"
                         )
                 print(f"  ✓ 安全闸通过：线上与快照一致（{len(got)} 行）")
 
@@ -184,11 +235,22 @@ def main():
                     sys.exit(1)
                 written += len(block)
             print(f"  ✓ 已写入 {written} 行（{(len(local) + CHUNK - 1) // CHUNK} 次批量调用）")
+            wrote_any = True
 
     print(f"\n{'=' * 68}")
     print(f"合计：更新 {total_upd} 行 · 追加 {total_add} 行")
     if not args.apply:
         print("（当前是 dry-run。确认无误后加 --apply 真正写入）")
+        return
+
+    # 0819 修复：写入后自动刷新基线快照。
+    # 不刷新的话，下次同步安全闸必然把「本轮自己写进去的内容」误报为他人改动，
+    # 进而把人训练成「见报警就 --skip-baseline-check」，安全闸随之失效。
+    if wrote_any and not args.no_refresh:
+        print("\n—— 写入完成，刷新基线快照 ——")
+        refresh_snapshot(args.batch)
+    elif not wrote_any:
+        print("（三张表均无差异，未写入，快照无需刷新）")
 
 
 if __name__ == "__main__":
