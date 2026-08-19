@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { LineChart, RangePicker, InfoDot, exportWorkbook, fmtCn, UNIT_NOTE, Calendar, fmtD } from '@aba/ui-admin';
 import { comparisonPeriodLabel, metricHelp, RANGE_SCOPE_NOTE, ACTIVE_WINDOW_NOTE } from '@aba/mock';
-import { ACTIVE_SNAPSHOT, RANGE, retentionFor, scaleActiveSnapshot, scaleRangeData, TOPKP, type Bar, type KW, type RetentionNode } from '../data/dataBoard';
+import { ACTIVE_SNAPSHOT, RANGE, retentionFor, scaleActiveSnapshot, scaleRangeData, TOPKP, type Bar, type Funnel, type KW, type RetentionNode } from '../data/dataBoard';
 import { CURRENT_ORG, CHILD_ORGS, orgWeightOf } from '@aba/mock';
 import { MultiSelect } from '@aba/ui-admin';
 import { useOrgScope } from '../stores/orgScope';
@@ -80,6 +80,63 @@ function Bars({ data }: { data: Bar[] }) {
   );
 }
 
+// 0819：转化漏斗组件。每一步两行——上行「步骤名 + 绝对量」，下行「进度条 + 累计转化率」；
+// 步与步之间夹一枚「↓ 步间转化率」pill。两个百分比职责严格分工，不可混用：
+//   · 步间（箭头上，深色主视觉）＝ 本步 ÷ 上一步，用来定位漏点——先修哪一环看它；
+//   · 累计（条右，灰色副信息）＝ 本步 ÷ 第一步，用来跟历史周期比大盘。
+// 主视觉给步间：累计口径下三个数都在跟起点比，读不出「哪一环出了问题」，
+// 而漏斗的全部价值就是回答这个问题（GMV / 付费转化率已经回答了「赚了多少」）。
+// 漏斗内的绝对量一律走精确千分位，不走页面通用的 fmtCn 万进制：
+// 万进制会把 10,100 舍成「1万」，用户拿 2,970 ÷ 1万 = 29.7% 与卡上标的 29.4% 对不上，
+// 会被当成数据 bug 报。漏斗是给人做除法验算的对账区，可对账性优先于与页脚万进制通则的一致性。
+const fmtExact = (n: number) => n.toLocaleString('en-US');
+
+function FunnelChart({ f }: { f: Funnel }) {
+  return (
+    <div className="funnel">
+      {f.steps.map((st, i) => (
+        <div className="funnel-step" key={st.nm}>
+          {i > 0 && (
+            <div className="funnel-arrow" title={`${st.step} 的 ${f.steps[i - 1].nm} 走到了「${st.nm}」`}>
+              {/* 图标库无 i-down，沿用 Kpi 里 delta 下降同款：i-up 旋转 180° */}
+              <span className="funnel-arrow-ic"><Icon id="i-up" w={11} h={11} /></span>
+              <b>{st.step}</b>
+              <span>较上一步</span>
+            </div>
+          )}
+          <div className="funnel-head">
+            <span className="nm">{st.nm}</span>
+            <span className="cnt mono">
+              {fmtExact(st.cnt)}
+              <i>{f.unit}</i>
+            </span>
+          </div>
+          <div className="funnel-bar">
+            <span className="bar-track">
+              <span className="bar-fill" style={{ width: st.cum, background: st.color }} />
+            </span>
+            <span className="cum mono" title={`累计转化率＝${st.nm} ÷ ${f.steps[0].nm}`}>{st.cum}</span>
+          </div>
+        </div>
+      ))}
+      <div className="funnel-foot">
+        <span className="funnel-overall">
+          整体转化率<b className="mono">{f.overall}</b>
+        </span>
+        {f.foot.map((ft) => (
+          <span key={ft.lab}>
+            {ft.lab}
+            <b className="mono">
+              {ft.scale ? fmtExact(ft.val) : ft.val}
+              {ft.suf}
+            </b>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // 0717 二批 #8.1：留存回归一行三张等宽指标卡（卡片式、与平台 KPI/图表卡同风格）。
 // 标题行左＝节点名 + 口径问号，右＝状态标（已可统计=玉绿 / 待成熟=中性灰）；
 // 卡身留存率大数字；底部单行灰字「样本 N 人 · 统计至 {日期}注册用户」。
@@ -118,11 +175,14 @@ function RetentionCard({ n }: { n: RetentionNode }) {
   );
 }
 
-function CardTitle({ t, info, periodDays }: { t: string; info: string; periodDays?: number }) {
+// 0819：补 popWidth——转化漏斗三卡的口径条目多，默认 232px 面板会拉到 700px 高、
+// 底部溢出视口把最关键的去重口径切掉。加宽到 300px 压缩行数，配合文案分层（口径进面板、
+// 设计推演留文档）后可完整落在一屏内。
+function CardTitle({ t, info, periodDays, popWidth }: { t: string; info: string; periodDays?: number; popWidth?: number }) {
   return (
     <div className="chart-title" style={{ marginBottom: 14, display: 'inline-flex', alignItems: 'center' }}>
       {t}
-      <InfoDot text={periodDays ? metricHelp(info, periodDays === 1 ? 'today' : 'range') : info} />
+      <InfoDot text={periodDays ? metricHelp(info, periodDays === 1 ? 'today' : 'range') : info} width={popWidth} />
     </div>
   );
 }
@@ -459,19 +519,79 @@ export function DataBoard() {
           </div>
           <div className="grid2" style={{ marginTop: 16, gridTemplateColumns: '1fr 1fr 1fr' }}>
             <div className="chart-card" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
-              <CardTitle t="受限内容触发率" info="触发付费墙次数 ÷ 总提问数，是会员 / 永享转化的漏斗入口。" periodDays={periodDays} />
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 7, paddingBottom: 4 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 32, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.1 }}>{d.limit}</div>
-                <div style={{ fontSize: 12, color: 'var(--ink-3)', lineHeight: 1.6 }}>触发付费墙 / 总提问 · 会员 · 永享转化的入口</div>
+              <CardTitle
+                t="受限内容触发率"
+                info={
+                  '计算式：区间内触发付费墙次数 ÷ 同区间总提问数。' +
+                  '按「次」计，右侧两个漏斗按「人」与「用户 × KP 对」计——单位不同，三卡不可连读成一条链。'
+                }
+                periodDays={periodDays}
+                popWidth={300}
+              />
+              {/* 0819 三改：触发率是「率」不是漏斗步骤，改环形仪表盘——环心大数字、环底分子分母，
+                  与右侧两张条形漏斗形态区分开，既填满卡面也杜绝三张卡被误读成一条链 */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '4px 0' }}>
+                <div style={{ position: 'relative', width: 178, height: 178 }}>
+                  <svg width="178" height="178" viewBox="0 0 120 120">
+                    <defs>
+                      <linearGradient id="limitRingGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" style={{ stopColor: 'var(--amber)' }} />
+                        <stop offset="100%" style={{ stopColor: 'var(--terra)' }} />
+                      </linearGradient>
+                    </defs>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="#eef0f6" strokeWidth="13" />
+                    <circle
+                      cx="60" cy="60" r="50" fill="none" strokeLinecap="round"
+                      stroke="url(#limitRingGrad)" strokeWidth="13"
+                      strokeDasharray={`${(parseFloat(d.limit) / 100) * 314.16} 314.16`}
+                      transform="rotate(-90 60 60)"
+                    />
+                  </svg>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 34, fontWeight: 600, color: 'var(--ink)', lineHeight: 1 }}>{d.limit}</span>
+                    <span style={{ fontSize: 11.5, color: 'var(--ink-3)' }}>触发率</span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>触发付费墙次数 ÷ 总提问数 · 按「次」计</div>
+              </div>
+              <div className="funnel-foot" style={{ marginTop: 'auto' }}>
+                <span>
+                  触发付费墙<b className="mono">{fmtExact(d.limitHits)}次</b>
+                </span>
+                <span>
+                  总提问<b className="mono">{fmtExact(d.limitBase)}条</b>
+                </span>
               </div>
             </div>
+            {/* 0819：会员漏斗四步（起点前移至「可转化用户」）；统计单元＝用户 */}
             <div className="chart-card" style={{ margin: 0 }}>
-              <CardTitle t="会员漏斗" info="看到会员页 → 点击购买 → 完成支付的转化漏斗。" periodDays={periodDays} />
-              <Bars data={d.memberFunnel} />
+              <CardTitle
+                t="会员漏斗"
+                info={
+                  '四步：可转化用户 → 看到会员页 → 点击购买 → 完成支付。' +
+                  '可转化用户 = 区间内活跃用户 − 区间内全程有效会员（包含宽限期会员）。' +
+                  '步间转化率（箭头上）= 本步 ÷ 上一步，看哪一环在漏人；累计转化率（进度条右灰字）= 本步 ÷ 可转化用户，用来比周期。' +
+                  '去重：各环节按用户 ID 去重；完整口径见功能清单「指标口径」表。'
+                }
+                periodDays={periodDays}
+                popWidth={300}
+              />
+              <FunnelChart f={d.memberFunnel} />
             </div>
+            {/* 0819：永享三步（补「点击购买」，「完成购买」改「完成支付」）；统计单元＝用户 × KP 对 */}
             <div className="chart-card" style={{ margin: 0 }}>
-              <CardTitle t="永享转化" info="触发永享墙 → 完成购买的转化。" periodDays={periodDays} />
-              <Bars data={d.yxFunnel} />
+              <CardTitle
+                t="永享转化"
+                info={
+                  '三步：触发永享墙 → 点击购买 → 完成支付。' +
+                  '统计单元是「用户 × KP」对、不是用户——永享按 KP 单本买断。' +
+                  '步间转化率（箭头上）= 本步 ÷ 上一步，看哪一环在漏人；累计转化率（进度条右灰字）= 本步 ÷ 触发永享墙，用来比周期。' +
+                  '去重：同一用户对同一 KP 重复触发只计 1 对，不同 KP 分别计对；完整口径见功能清单「指标口径」表。'
+                }
+                periodDays={periodDays}
+                popWidth={300}
+              />
+              <FunnelChart f={d.yxFunnel} />
             </div>
           </div>
         </>

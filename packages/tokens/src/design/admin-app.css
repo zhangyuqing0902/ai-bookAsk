@@ -1093,7 +1093,16 @@ a {
   box-shadow: var(--sh-lg);
   white-space: normal;
   text-align: left;
+  /* 0819：垂直兜底——面板向下展开，条目多的口径（如转化漏斗）在页面下半屏会溢出视口，
+     把最末几条（往往正是去重口径）切掉且无从察觉。封顶后转为内部滚动：
+     鼠标仍在 .info 内，移到面板上不会收起，可继续滚动读完。 */
+  max-height: min(62vh, 460px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
+.info-pop::-webkit-scrollbar { width: 4px; }
+.info-pop::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.28); border-radius: 99px; }
+.info-pop::-webkit-scrollbar-track { background: transparent; }
 .info:hover {
   z-index: 600;
 }
@@ -2952,3 +2961,94 @@ a {
    品牌区恢复与右侧顶栏等高（58px，沿用 proto-admin.css 的约束），分隔线重新齐平；折叠态只留居中图标 */
 .side-brand .side-logo-icon{width:30px;height:30px;object-fit:contain;flex:none;display:block;}
 .side-brand .side-brandtext .side-org{margin-top:0;font-size:13.5px;font-weight:600;color:var(--ink-2);letter-spacing:.06em;}
+
+/* ============================================================
+   0819 · 转化漏斗（会员四步 / 永享三步）
+   每步两行：上行「步骤名 + 绝对量」、下行「进度条 + 累计转化率」；
+   步与步之间夹一枚「↓ 步间转化率」pill。
+   视觉层级刻意拉开——步间用深墨色 + 中号数字（主视觉，定位漏点用），
+   累计用 ink-3 小字跟在条右（副信息，比大盘用），避免两个百分比被误读成同一把尺子。
+   ============================================================ */
+.dboard .funnel { margin-top: 10px; }
+.dboard .funnel-step + .funnel-step { margin-top: 0; }
+
+.dboard .funnel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dboard .funnel-head .nm { font-size: 12.5px; color: var(--ink-2); }
+.dboard .funnel-head .cnt { font-size: 15px; font-weight: 600; color: var(--ink); }
+.dboard .funnel-head .cnt i {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-3);
+  margin-left: 2px;
+}
+
+.dboard .funnel-bar { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.dboard .funnel-bar .bar-track { flex: 1; height: 10px; background: #eef0f6; border-radius: 99px; overflow: hidden; }
+.dboard .funnel-bar .bar-fill {
+  display: block;
+  height: 100%;
+  position: relative;
+  border-radius: 99px;
+  min-width: 8px;
+  box-shadow: 0 2px 6px -2px rgba(40, 46, 90, 0.35);
+  transition: width 0.28s ease;
+}
+.dboard .funnel-bar .bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 60%);
+}
+.dboard .funnel-bar .cum {
+  width: 46px;
+  text-align: right;
+  flex: none;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  cursor: help;
+}
+
+/* 步间转化率 pill：缩进 + 竖向留白，形成「一步→下一步」的视觉节奏 */
+.dboard .funnel-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 9px 0 9px 10px;
+  padding: 3px 9px 3px 6px;
+  border-radius: 99px;
+  background: var(--surface-warm);
+  cursor: help;
+}
+.dboard .funnel-arrow-ic {
+  display: inline-flex;
+  transform: rotate(180deg);
+  color: var(--ink-3);
+}
+.dboard .funnel-arrow b {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.dboard .funnel-arrow span { font-size: 11px; color: var(--ink-3); }
+
+/* 卡底：整体转化率 + 副指标（永享的人维度覆盖面与复购深度） */
+.dboard .funnel-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 14px;
+  padding-top: 11px;
+  border-top: 1px dashed var(--line);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.dboard .funnel-foot b { font-weight: 600; color: var(--ink-2); margin-left: 4px; }
+.dboard .funnel-foot .funnel-overall b { color: var(--indigo); font-size: 12.5px; }

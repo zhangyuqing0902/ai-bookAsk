@@ -3,6 +3,33 @@
 
 export const I = 'var(--indigo)', J = 'var(--jade)', A = 'var(--amber)', T = 'var(--terra)', G = 'var(--ink-3)';
 export type Bar = { nm: string; pct: number; color: string; pv: string };
+
+// 0819：转化漏斗重构——原「纯百分比横条」升级为标准漏斗结构。
+// 三条第一性原理决策（详见 docs/feature-list.md 指标口径附表）：
+//   ① 起点前移：会员漏斗由 3 步（看到会员页起）改 4 步（可转化用户起）。原起点默认「曝光已发生」，
+//      把「七成可转化用户根本没打开过会员页」这个最大漏点藏在了漏斗之外，导致优化资源被导向错误环节。
+//   ② 分母为「可转化人群」：剔除区间内全程有效会员——他们没有「要不要开通」的决策可做，
+//      留在分母只会稀释；且机构会员占比越高被污染越重，形成反向激励。
+//      注意：区间内到期的会员不剔除，他们那一刻重新面临续费决策，属可转化人群。
+//   ③ 永享统计单元＝「用户 × KP」对，不是用户。永享按 KP 买断，一个用户撞 3 本墙只买 1 本时，
+//      按用户去重会把他记成「转化成功」（66.7%），而真实转化是 33.3%——且用户越重度高估越厉害。
+//      会员是账号级唯一的，按用户去重天然正确；两个漏斗单元不同，是因为售卖单元本来就不同。
+// 闭合漏斗（closed funnel）：后一步人群必须是前一步的严格子集，故各步单调不增、永不出现 >100%。
+export type FunnelStep = {
+  nm: string;
+  cnt: number;      // 绝对量（人 / 对），随机构集合缩放
+  step?: string;    // 步间转化率 = 本步 ÷ 上一步；第一步无
+  cum: string;      // 累计转化率 = 本步 ÷ 第一步；同时用作条宽
+  color: string;
+};
+// foot：卡底副指标。scale=true 的随机构集合缩放，false 的是比值/人均不缩放。
+export type FunnelFoot = { lab: string; val: number; suf: string; scale: boolean };
+export type Funnel = {
+  unit: string;     // 统计单元后缀：'人' / '对'
+  steps: FunnelStep[];
+  overall: string;  // 整体转化率 = 末步 ÷ 首步
+  foot: FunnelFoot[];
+};
 export type KW = { w: string; s: number };
 
 // 0714：各 KPI 补环比字段 xxxDelta:number（较上一周期百分比，正=上升绿↑ / 负=下降红↓），
@@ -42,9 +69,13 @@ export interface RangeData {
   gmvDelta: number; payUsersDelta: number; payRateDelta: number; arppuDelta: number; renewDelta: number;
   // 0722：回流会员（过期后重新开通；不算新增、不算续费）
   reflow: string; reflowDelta: number;
-  limit: string; // 受限内容触发率（漏斗入口）
-  memberFunnel: Bar[];
-  yxFunnel: Bar[];
+  limit: string; // 受限内容触发率（漏斗入口，按「次」计）
+  // 0819：触发率的分子分母显性化——同排另两张卡已给绝对量，只有它是光秃秃一个百分比，
+  // 且它按「次」计、右侧两个漏斗按「人 / 用户×KP 对」计，把两个绝对数摆出来才看得出单位差异。
+  limitHits: number; // 分子：区间内触发付费墙次数
+  limitBase: number; // 分母：同区间总提问数（＝ totalAsk 的精确值；提问分析 Tab 的 KPI 仍按万进制展示）
+  memberFunnel: Funnel;
+  yxFunnel: Funnel;
   refundAmt: string; refundRate: string; refundOrders: string; netGmv: string;
   refundAmtDelta: number; refundRateDelta: number; refundOrdersDelta: number; netGmvDelta: number;
   // —— 热门 KP：榜单数值随区间缩放 ——
@@ -61,6 +92,15 @@ export function scaleCnNum(v: string, w: number): string {
   const num = parseFloat(m[2].replace(/,/g, '')) * (m[3] ? 10000 : 1) * w;
   const fmt = num >= 10000 ? String(Math.round(num / 1000) / 10) + '万' : Math.round(num).toLocaleString('en-US');
   return m[1] + fmt;
+}
+
+/** 0819：漏斗缩放——绝对量（步骤人数/对数、foot 中 scale=true 项）×w；转化率是比值，不缩放。 */
+function scaleFunnel(f: Funnel, w: number): Funnel {
+  return {
+    ...f,
+    steps: f.steps.map((st) => ({ ...st, cnt: Math.max(0, Math.round(st.cnt * w)) })),
+    foot: f.foot.map((ft) => (ft.scale ? { ...ft, val: Math.max(0, Math.round(ft.val * w)) } : ft)),
+  };
 }
 
 export function scaleRangeData(d: RangeData, w: number): RangeData {
@@ -80,6 +120,10 @@ export function scaleRangeData(d: RangeData, w: number): RangeData {
     refundAmt: s(d.refundAmt),
     refundOrders: s(d.refundOrders),
     netGmv: s(d.netGmv),
+    limitHits: Math.max(0, Math.round(d.limitHits * w)),
+    limitBase: Math.max(0, Math.round(d.limitBase * w)),
+    memberFunnel: scaleFunnel(d.memberFunnel, w),
+    yxFunnel: scaleFunnel(d.yxFunnel, w),
     kwMult: d.kwMult * w,
     kpFactor: d.kpFactor * w,
   };
@@ -114,9 +158,35 @@ export const RANGE: Record<string, RangeData> = {
     gmv: '¥1.1万', payUsers: '32', payRate: '5.8%', arppu: '¥98.4', renew: '36%',
     gmvDelta: 5.2, payUsersDelta: 4.1, payRateDelta: 0.9, arppuDelta: 1.2, renewDelta: 2.0,
     reflow: '5', reflowDelta: 3.2,
-    limit: '11%',
-    memberFunnel: [{ nm: '看到会员页', pct: 100, color: I, pv: '100%' }, { nm: '点击购买', pct: 26, color: I, pv: '26%' }, { nm: '完成支付', pct: 15, color: J, pv: '15%' }],
-    yxFunnel: [{ nm: '触发永享墙', pct: 100, color: A, pv: '100%' }, { nm: '完成购买', pct: 14, color: A, pv: '14%' }],
+    limit: '11%', limitHits: 130, limitBase: 1180,
+    memberFunnel: {
+      unit: '人',
+      steps: [
+        { nm: '可转化用户', cnt: 760, cum: '100%', color: I },
+        { nm: '看到会员页', cnt: 185, step: '24.3%', cum: '24.3%', color: I },
+        { nm: '点击购买', cnt: 44, step: '23.8%', cum: '5.8%', color: I },
+        { nm: '完成支付', cnt: 26, step: '59.1%', cum: '3.4%', color: J },
+      ],
+      overall: '3.4%',
+      foot: [
+        { lab: '区间活跃用户', val: 1240, suf: '人', scale: true },
+        { lab: '已排除全程有效会员', val: 480, suf: '人', scale: true },
+      ],
+    },
+    yxFunnel: {
+      unit: '对',
+      steps: [
+        { nm: '触发永享墙', cnt: 71, cum: '100%', color: A },
+        { nm: '点击购买', cnt: 20, step: '28.2%', cum: '28.2%', color: A },
+        { nm: '完成支付', cnt: 10, step: '50.0%', cum: '14.1%', color: J },
+      ],
+      overall: '14.1%',
+      foot: [
+        { lab: '触发人数', val: 41, suf: '人', scale: true },
+        { lab: '购买人数', val: 8, suf: '人', scale: true },
+        { lab: '人均购买', val: 1.3, suf: '本', scale: false },
+      ],
+    },
     refundAmt: '¥1,240', refundRate: '1.6%', refundOrders: '12', netGmv: '¥9,860',
     refundAmtDelta: -3.5, refundRateDelta: -0.8, refundOrdersDelta: -2.4, netGmvDelta: 5.6,
     kpFactor: 0.04,
@@ -138,9 +208,35 @@ export const RANGE: Record<string, RangeData> = {
     gmv: '¥25.6万', payUsers: '210', payRate: '6.6%', arppu: '¥99.6', renew: '38%',
     gmvDelta: 7.8, payUsersDelta: 6.6, payRateDelta: 1.3, arppuDelta: 1.8, renewDelta: 3.0,
     reflow: '38', reflowDelta: 4.5,
-    limit: '12%',
-    memberFunnel: [{ nm: '看到会员页', pct: 100, color: I, pv: '100%' }, { nm: '点击购买', pct: 28, color: I, pv: '28%' }, { nm: '完成支付', pct: 17, color: J, pv: '17%' }],
-    yxFunnel: [{ nm: '触发永享墙', pct: 100, color: A, pv: '100%' }, { nm: '完成购买', pct: 15, color: A, pv: '15%' }],
+    limit: '12%', limitHits: 3840, limitBase: 32000,
+    memberFunnel: {
+      unit: '人',
+      steps: [
+        { nm: '可转化用户', cnt: 3900, cum: '100%', color: I },
+        { nm: '看到会员页', cnt: 1050, step: '26.9%', cum: '26.9%', color: I },
+        { nm: '点击购买', cnt: 294, step: '28.0%', cum: '7.5%', color: I },
+        { nm: '完成支付', cnt: 180, step: '61.2%', cum: '4.6%', color: J },
+      ],
+      overall: '4.6%',
+      foot: [
+        { lab: '区间活跃用户', val: 5600, suf: '人', scale: true },
+        { lab: '已排除全程有效会员', val: 1700, suf: '人', scale: true },
+      ],
+    },
+    yxFunnel: {
+      unit: '对',
+      steps: [
+        { nm: '触发永享墙', cnt: 370, cum: '100%', color: A },
+        { nm: '点击购买', cnt: 104, step: '28.1%', cum: '28.1%', color: A },
+        { nm: '完成支付', cnt: 55, step: '52.9%', cum: '14.9%', color: J },
+      ],
+      overall: '14.9%',
+      foot: [
+        { lab: '触发人数', val: 205, suf: '人', scale: true },
+        { lab: '购买人数', val: 42, suf: '人', scale: true },
+        { lab: '人均购买', val: 1.3, suf: '本', scale: false },
+      ],
+    },
     refundAmt: '¥8,600', refundRate: '2.1%', refundOrders: '86', netGmv: '¥24.7万',
     refundAmtDelta: -4.2, refundRateDelta: -1.5, refundOrdersDelta: -3.1, netGmvDelta: 8.1,
     kpFactor: 0.25,
@@ -162,9 +258,35 @@ export const RANGE: Record<string, RangeData> = {
     gmv: '¥104.7万', payUsers: '860', payRate: '6.9%', arppu: '¥100.2', renew: '41%',
     gmvDelta: 11.4, payUsersDelta: 9.1, payRateDelta: 1.7, arppuDelta: 2.2, renewDelta: 4.1,
     reflow: '124', reflowDelta: 6.8,
-    limit: '13%',
-    memberFunnel: [{ nm: '看到会员页', pct: 100, color: I, pv: '100%' }, { nm: '点击购买', pct: 30, color: I, pv: '30%' }, { nm: '完成支付', pct: 19, color: J, pv: '19%' }],
-    yxFunnel: [{ nm: '触发永享墙', pct: 100, color: A, pv: '100%' }, { nm: '完成购买', pct: 16, color: A, pv: '16%' }],
+    limit: '13%', limitHits: 16640, limitBase: 128000,
+    memberFunnel: {
+      unit: '人',
+      steps: [
+        { nm: '可转化用户', cnt: 10100, cum: '100%', color: I },
+        { nm: '看到会员页', cnt: 2970, step: '29.4%', cum: '29.4%', color: I },
+        { nm: '点击购买', cnt: 890, step: '30.0%', cum: '8.8%', color: I },
+        { nm: '完成支付', cnt: 560, step: '62.9%', cum: '5.5%', color: J },
+      ],
+      overall: '5.5%',
+      foot: [
+        { lab: '区间活跃用户', val: 12000, suf: '人', scale: true },
+        { lab: '已排除全程有效会员', val: 1900, suf: '人', scale: true },
+      ],
+    },
+    yxFunnel: {
+      unit: '对',
+      steps: [
+        { nm: '触发永享墙', cnt: 2600, cum: '100%', color: A },
+        { nm: '点击购买', cnt: 780, step: '30.0%', cum: '30.0%', color: A },
+        { nm: '完成支付', cnt: 416, step: '53.3%', cum: '16.0%', color: J },
+      ],
+      overall: '16.0%',
+      foot: [
+        { lab: '触发人数', val: 1450, suf: '人', scale: true },
+        { lab: '购买人数', val: 320, suf: '人', scale: true },
+        { lab: '人均购买', val: 1.3, suf: '本', scale: false },
+      ],
+    },
     refundAmt: '¥3.4万', refundRate: '2.4%', refundOrders: '342', netGmv: '¥101.3万',
     refundAmtDelta: -5.6, refundRateDelta: -2.1, refundOrdersDelta: -3.8, netGmvDelta: 11.9,
     kpFactor: 1,

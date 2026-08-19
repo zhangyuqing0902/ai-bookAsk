@@ -98,9 +98,44 @@ export function buildDataBoardSpec(input: DataBoardExportInput): ExportSpec {
       ['营收分析', '退款', '退款率', d.refundRate, '退款金额 ÷ 同区间 GMV'],
       ['营收分析', '退款', '退款订单数', u(d.refundOrders, '单'), '发生成功退款（含部分）的去重订单'],
       ['营收分析', '退款', '净 GMV', d.netGmv, 'GMV − 成功退款'],
-      ['营收分析', '转化漏斗', '受限内容触发率', d.limit, '触发付费墙 ÷ 总提问（漏斗入口）'],
-      ...d.memberFunnel.map((b) => ['营收分析', '转化漏斗 · 会员', b.nm, b.pv, ''] as Array<string | number>),
-      ...d.yxFunnel.map((b) => ['营收分析', '转化漏斗 · 永享', b.nm, b.pv, ''] as Array<string | number>),
+      ['营收分析', '转化漏斗', '受限内容触发率', d.limit, '触发付费墙次数 ÷ 总提问数；按「次」计，与下方两个漏斗单位不同'],
+      ['营收分析', '转化漏斗', '· 触发付费墙次数', d.limitHits.toLocaleString('en-US') + '次', '触发率分子'],
+      ['营收分析', '转化漏斗', '· 总提问数', d.limitBase.toLocaleString('en-US') + '条', '触发率分母'],
+      // 0819：漏斗导出三列合一行——绝对量 + 步间 + 累计，口径列写清各自分母，落表后可直接对账
+      ...d.memberFunnel.steps.map((st, i) => [
+        '营收分析',
+        '转化漏斗 · 会员（按用户去重）',
+        st.nm,
+        fmtCnLite(st.cnt) + d.memberFunnel.unit,
+        i === 0
+          ? '漏斗起点：区间活跃用户 − 区间内全程有效会员'
+          : `步间 ${st.step}（÷ ${d.memberFunnel.steps[i - 1].nm}） · 累计 ${st.cum}（÷ ${d.memberFunnel.steps[0].nm}）`,
+      ] as Array<string | number>),
+      ['营收分析', '转化漏斗 · 会员（按用户去重）', '整体转化率', d.memberFunnel.overall, '完成支付 ÷ 可转化用户'],
+      ...d.memberFunnel.foot.map((ft) => [
+        '营收分析',
+        '转化漏斗 · 会员（按用户去重）',
+        ft.lab,
+        (ft.scale ? fmtCnLite(ft.val) : String(ft.val)) + ft.suf,
+        '',
+      ] as Array<string | number>),
+      ...d.yxFunnel.steps.map((st, i) => [
+        '营收分析',
+        '转化漏斗 · 永享（按用户 × KP 去重）',
+        st.nm,
+        fmtCnLite(st.cnt) + d.yxFunnel.unit,
+        i === 0
+          ? '漏斗起点：统计单元为「用户 × KP」对，永享按 KP 单本买断'
+          : `步间 ${st.step}（÷ ${d.yxFunnel.steps[i - 1].nm}） · 累计 ${st.cum}（÷ ${d.yxFunnel.steps[0].nm}）`,
+      ] as Array<string | number>),
+      ['营收分析', '转化漏斗 · 永享（按用户 × KP 去重）', '整体转化率', d.yxFunnel.overall, '完成支付对数 ÷ 触发永享墙对数'],
+      ...d.yxFunnel.foot.map((ft) => [
+        '营收分析',
+        '转化漏斗 · 永享（按用户 × KP 去重）',
+        ft.lab,
+        (ft.scale ? fmtCnLite(ft.val) : String(ft.val)) + ft.suf,
+        ft.lab === '人均购买' ? '完成支付对数 ÷ 购买人数' : '按用户 ID 去重',
+      ] as Array<string | number>),
       // —— 热门 KP Tab ——
       ...topkp.flatMap((board) =>
         board.rows.map((r, i) => ['热门 KP', board.t, `No.${i + 1} ${r[0]}`, board.pre + fmtCnLite(Math.round(r[1] * d.kpFactor)) + board.suf, '数值随区间缩放'] as Array<string | number>),
