@@ -14,6 +14,10 @@ export function Landing() {
   const memberState = useDemoStore((s) => s.user.membership.state);
   const setMemberState = useDemoStore((s) => s.setMemberState);
   const setOrgTokenExceeded = useDemoStore((s) => s.setOrgTokenExceeded);
+  const orgSuspended = useDemoStore((s) => s.orgSuspended);
+  const setOrgSuspended = useDemoStore((s) => s.setOrgSuspended);
+  const foreverAgreed = useDemoStore((s) => s.foreverAgreed);
+  const setForeverAgreed = useDemoStore((s) => s.setForeverAgreed);
 
   const guard = (fn: () => void) => () => {
     if (!agreed) {
@@ -81,6 +85,16 @@ export function Landing() {
             {([['none', '未开通'], ['active', '有效会员'], ['grace', '宽限期'], ['expired', '已过期']] as const).map(([st, lab]) => (
               <b key={st} className={memberState === st ? 'on' : ''} onClick={() => setMemberState(st)}>{lab}</b>
             ))}
+          </div>
+          {/* 0824：演示「机构已停用」→ 会话页问答拦截 + 常驻提示条；「我的」层保持可达（停用短信指向「我的-联系客服」） */}
+          <div className="env-seg">
+            <b className={!orgSuspended ? 'on' : ''} onClick={() => setOrgSuspended(false)}>机构正常</b>
+            <b className={orgSuspended ? 'on' : ''} onClick={() => setOrgSuspended(true)}>机构已停用</b>
+          </div>
+          {/* 0824：演示永享路径协议两态——未同意＝付费墙出现勾选行（首次购买）；已同意＝灰字免勾（非首次） */}
+          <div className="env-seg">
+            <b className={!foreverAgreed ? 'on' : ''} onClick={() => setForeverAgreed(false)}>永享协议未同意</b>
+            <b className={foreverAgreed ? 'on' : ''} onClick={() => setForeverAgreed(true)}>已同意</b>
           </div>
         </div>
       </div>

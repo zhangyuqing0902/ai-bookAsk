@@ -72,6 +72,11 @@ interface DemoStore {
   phoneBound: boolean;
   // 0614 演示：机构本月 Token 是否超额度（开启则前台会话给 C 端友好提示）
   orgTokenExceeded: boolean;
+  // 0824 演示：机构已停用（前台问答拦截，「我的」层保持可达——停用短信把用户指向「我的-联系客服」，账户层不能拦）
+  orgSuspended: boolean;
+  // 0824：永享路径协议同意标记——从永享路径首次购买须勾选合体《AI 会员服务与永享服务协议》，
+  // 同意一次后该路径后续购买免勾（会员路径每次购买都勾，与本标记无关；两条路径各取一次明示同意）
+  foreverAgreed: boolean;
   // 操作
   setRole: (r: Role) => void;
   setOrg: (orgId: string) => void;
@@ -81,6 +86,8 @@ interface DemoStore {
   /** 0806-2：演示切会员四态（覆盖 user.membership） */
   setMemberState: (st: 'none' | 'active' | 'grace' | 'expired') => void;
   setOrgTokenExceeded: (v: boolean) => void;
+  setOrgSuspended: (v: boolean) => void;
+  setForeverAgreed: (v: boolean) => void;
   wechatLogin: () => void;
   phoneLogin: () => void;
   bindPhone: () => void;
@@ -109,6 +116,8 @@ const initialState = (role: Role = 'free', orgId: string = DEFAULT_ORG_ID) => ({
   wechatEnv: true,
   phoneBound: true,
   orgTokenExceeded: false,
+  orgSuspended: false,
+  foreverAgreed: false,
 });
 
 export const useDemoStore = create<DemoStore>()(
@@ -156,6 +165,8 @@ export const useDemoStore = create<DemoStore>()(
           },
         })),
       setOrgTokenExceeded: (v) => set({ orgTokenExceeded: v }),
+      setOrgSuspended: (v) => set({ orgSuspended: v }),
+      setForeverAgreed: (v) => set({ foreverAgreed: v }),
       // 微信授权成功：带回头像 / 昵称 / 性别 / 地区；手机号未绑（H5 无法获取手机号）
       wechatLogin: () =>
         set((s) => ({
@@ -237,7 +248,8 @@ export const useDemoStore = create<DemoStore>()(
     {
       name: 'aba-demo',
       // 0613：User 结构新增 gender/region/bookGrants 与登录演示开关，bump 版本以重置过期持久态
-      version: 3,
+      // 0824：新增 orgSuspended / foreverAgreed，bump 版本
+      version: 4,
     },
   ),
 );

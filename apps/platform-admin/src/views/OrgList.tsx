@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DomainInput, DataGrid, InfoDot, exportWorkbook, type Col } from '@aba/ui-admin';
-import { PLATFORM_ORGS, platformOrgRole, secondaryTenantDomain, suspensionImpact, tenantDomainSuffix, validateDomainPrefix, type PlatformOrg } from '@aba/mock';
+import { PLATFORM_ORGS, platformOrgRole, secondaryTenantDomain, suspensionBillingImpact, suspensionImpact, tenantDomainSuffix, validateDomainPrefix, type PlatformOrg } from '@aba/mock';
 import { limitOf } from '../data/orgPlans';
 import { buildOrgListSpec } from '../exports/orgList';
 import { applyOrgOverrides, useOrgTree } from '../stores/orgTree';
@@ -227,12 +227,27 @@ export function OrgList() {
         open={confirm !== null}
         title={confirm?.status === '正常' ? '停用机构' : '恢复机构'}
         danger={confirm?.status === '正常'}
+        width={confirm?.status === '正常' ? 520 : 400}
         confirmText={confirm?.status === '正常' ? '确认停用' : '确认恢复'}
         desc={
           confirm?.status === '正常' ? (
-            <>停用「{confirm?.name}」后，仅该机构后台与前台暂停。{confirm ? suspensionImpact(effData.some((x) => x.parentId === confirm.id)).message : ''}</>
+            <>
+              停用「{confirm?.name}」后，仅该机构后台与前台暂停。{confirm ? suspensionImpact(effData.some((x) => x.parentId === confirm.id)).message : ''}
+              {/* 0824：会员计费影响显性化——明确告知操作者会批量解约 + 批量发短信 + 退款须机构方主动操作，
+                  让平台在按下停用键之前看见全部代价（人数为演示态按机构推导的示例值）。
+                  0824-2：改有序编号 + 重点加粗 + 琥珀警示引用块（淡底 + 左色条，与后台既有警示语言同源） */}
+              {confirm && (
+                <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--amber-soft)', borderLeft: '3px solid var(--amber)', color: 'var(--amber-ink)', lineHeight: 1.7 }}>
+                  {suspensionBillingImpact(20 + ((confirm.i * 37) % 160), 60 + ((confirm.i * 53) % 320)).lines.map((line, i) => (
+                    <div key={i}>
+                      {line.map((seg, j) => (seg.b ? <b key={j}>{seg.t}</b> : <span key={j}>{seg.t}</span>))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
-            <>恢复「{confirm?.name}」后，该机构的后台与前台访问将立即解封。</>
+            <>恢复「{confirm?.name}」后，该机构的后台与前台访问将立即解封。已停用期间解除的会员自动续费签约不会自动恢复，用户须在会员中心重新开通。</>
           )
         }
         onConfirm={() => confirm && toggleStatus(confirm)}

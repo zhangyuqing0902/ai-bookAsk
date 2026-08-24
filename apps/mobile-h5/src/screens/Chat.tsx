@@ -62,6 +62,8 @@ export function Chat() {
   const { guard, gate } = usePhoneGate();
   // 0614：机构本月 Token 超额度 → 给 C 端的友好提示（演示开关在落地页）
   const orgTokenExceeded = useDemoStore((s) => s.orgTokenExceeded);
+  // 0824：机构已停用 → 问答服务拦截（「我的」层不拦——停用短信把用户指向「我的-联系客服」，账户层必须可达）
+  const orgSuspended = useDemoStore((s) => s.orgSuspended);
   // 0806：抽屉页脚用户卡接演示 store（与「我的」页同源，四态口径），替换硬编码
   const dUser = useDemoStore((s) => s.user);
   const dPhoneBound = useDemoStore((s) => s.phoneBound);
@@ -99,8 +101,9 @@ export function Chat() {
   // 0614：机构本月 Token 已达上限 → 任何提问/语音/实时会话入口都拦截，不让问题发出去
   // 0614c：不再弹 3 秒 toast（界面顶部已有珊瑚红常驻提示条），改为让该提示条放大抖动 + 跳亮一下，提醒用户看已有提示
   const orgTipRef = useRef<HTMLDivElement>(null);
+  // 0824：机构停用与 Token 超限同走一条拦截（停用优先展示）——提问/语音/实时会话入口全部拦截
   const tokenBlocked = () => {
-    if (orgTokenExceeded) {
+    if (orgSuspended || orgTokenExceeded) {
       const el = orgTipRef.current;
       if (el) {
         el.classList.remove('pulse');
@@ -178,11 +181,11 @@ export function Chat() {
           </div>
         </div>
 
-        {/* 0614：机构本月 Token 超额度 → 给 C 端的友好提示 */}
-        {orgTokenExceeded && (
+        {/* 0614：机构本月 Token 超额度 → 给 C 端的友好提示；0824：机构已停用优先于 Token 超限展示 */}
+        {(orgSuspended || orgTokenExceeded) && (
           <div className="org-tip" ref={orgTipRef}>
             <Icon id="i-warn" w={14} h={14} />
-            当前机构 Token 已达上限，请联系客服
+            {orgSuspended ? '机构服务已暂停，暂时无法使用问答服务；如有疑问请到「我的 - 联系客服」' : '当前机构 Token 已达上限，请联系客服'}
           </div>
         )}
 
@@ -562,17 +565,45 @@ function AiMsg({
 
 // 付费墙内容卡片：会话内直接弹 / lightbox 内下方弹 复用同一套
 // 权益改造:按资源门槛动态——永享内容只显「买断」按钮(不需会员)、会员内容只显「开会员」按钮
+// 0824:永享路径协议勾选——两条业务路径各取一次明示同意(已勾会员协议不豁免永享,反之亦然):
+//   首次从永享路径购买(未同意过)→ 按钮上方出现勾选行,默认不勾,未勾点按钮 toast 拦截;
+//   已同意过 → 勾选行替换为灰字「购买即视为同意…」(保留知情,去掉动作);
+//   同意时点=勾选后提交订单(点击购买按钮进收银台)即记录,不依赖支付结果。演示重置开关在落地页。
 function PaywallCard({ media, onMember, onBuy }: { media: Media | null; onMember: () => void; onBuy: () => void }) {
+  const nav = useNavigate();
   const isForever = media?.tier === 'forever';
+  const foreverAgreed = useDemoStore((s) => s.foreverAgreed);
+  const setForeverAgreed = useDemoStore((s) => s.setForeverAgreed);
+  const [agree, setAgree] = useState(false);
+  const buy = () => {
+    if (!foreverAgreed && !agree) return toast('请先阅读并同意《AI 会员服务与永享服务协议》');
+    if (!foreverAgreed) setForeverAgreed(true);
+    onBuy();
+  };
   return (
     <div className="pw-inner">
       <div className="pw-h">
         <div className="t">{media?.name}</div>
         <div className="s">{isForever ? '永享内容单独购买、永久持有，无需开通会员' : '开通会员畅享全部会员内容'}</div>
       </div>
+      {isForever &&
+        (foreverAgreed ? (
+          <div className="pw-agree-note">
+            购买即视为同意
+            <a onClick={() => nav('/agreement/member')}>《AI 会员服务与永享服务协议》</a>
+          </div>
+        ) : (
+          <div className="pw-agree" onClick={() => setAgree((a) => !a)}>
+            <span className={'bx' + (agree ? '' : ' off')}>{agree && <Icon id="i-check" />}</span>
+            <span>
+              已阅读并同意
+              <a onClick={(e) => { e.stopPropagation(); nav('/agreement/member'); }}>《AI 会员服务与永享服务协议》</a>
+            </span>
+          </div>
+        ))}
       <div className="pw-btns">
         {isForever ? (
-          <button className="btn btn-amber" onClick={onBuy}>
+          <button className={'btn btn-amber' + (!foreverAgreed && !agree ? ' btn-dim' : '')} onClick={buy}>
             ¥{media?.price ?? 9.9} 永久解锁此内容
           </button>
         ) : (

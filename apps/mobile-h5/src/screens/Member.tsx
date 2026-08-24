@@ -108,14 +108,16 @@ export function Member() {
               <span>会员到期附赠 <b>72 小时</b> 缓冲期，权益持续可用，缓冲期不计会员时长。</span>
             </div>
             <div className="member-foot">
-              {/* 0718 #8③：协议勾选真实可点；协议随方式联动——连续包月多一份《自动续费协议》 */}
+              {/* 0718 #8③：协议勾选真实可点；协议随方式联动——连续包月多一份《自动续费协议》
+                  0824：协议名改合体《AI 会员服务与永享服务协议》（会员/永享共用一份文本）；
+                  死链接真实跳转到协议正文页；会员路径每次购买都勾选（含断档重开/宽限期续费——都是新签约） */}
               <div className="agree" onClick={() => setAgree((a) => !a)}>
                 <span className={'bx' + (agree ? '' : ' off')}>{agree && <Icon id="i-check" />}</span>
                 <span className="agree-txt">
                   已阅读并同意
-                  <a onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>《会员服务协议》</a>
+                  <a onClick={(e) => { e.stopPropagation(); nav('/agreement/member'); }}>《AI 会员服务与永享服务协议》</a>
                   {monthly && (
-                    <a onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>《自动续费协议》</a>
+                    <a onClick={(e) => { e.stopPropagation(); nav('/agreement/autopay'); }}>《自动续费协议》</a>
                   )}
                 </span>
               </div>

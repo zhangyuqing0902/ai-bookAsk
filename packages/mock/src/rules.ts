@@ -168,6 +168,37 @@ export function suspensionImpact(isParent: boolean) {
     : { cascades: false, message: '停用子机构仅暂停该机构自身服务，不影响父机构或其他子机构。' };
 }
 
+// 0824：机构停用的会员计费影响——停用生效当天即对该机构全部自动续费会员批量解除微信代扣签约、
+// 停止后续扣款，并向其发送停服通知短信（一条合并：停服 + 已取消续费 + 客服入口，之后无任何后续通知）。
+// 统一原则：凡决定不再扣款一律主动解约，「签约存在＝未来会扣款」在系统内恒成立，不留僵尸签约。
+// 会员时长不冻结（到期→宽限→过期走既有四态）；恢复机构不自动恢复签约、也不另发通知——解约后不存在
+// 「扣款悄悄恢复」的可能，无资金风险即无通知义务，用户续开自动续费须在会员中心重新签约。
+// 0824-2：弹窗文案改有序编号 + 重点加粗，故返回结构化分段（b=true 段渲染为粗体），
+// message 为纯文本拼接（供导出 / 断言等无标记场景）。渲染为琥珀警示引用块，见 OrgList。
+// 0824-3：文案精简为两条（解约+短信合为一句；短信内容细节删去——模版在文档层，弹窗只说会发）。
+export function suspensionBillingImpact(autoRenewMembers: number, paidUsers: number) {
+  const lines: { t: string; b?: boolean }[][] = [
+    [
+      { t: '① 机构停用后，将立即' },
+      { t: `解除 ${autoRenewMembers} 位自动续费会员的代扣签约`, b: true },
+      { t: '，不再扣款，并' },
+      { t: '向其发送停服通知短信', b: true },
+      { t: '；' },
+    ],
+    [
+      { t: `② 有效会员与永享用户共 ${paidUsers} 位，剩余权益建议按未消费天数退款——` },
+      { t: '需机构方操作，平台不自动退款', b: true },
+      { t: '。' },
+    ],
+  ];
+  return {
+    autoRenewMembers,
+    paidUsers,
+    lines,
+    message: lines.map((l) => l.map((s) => s.t).join('')).join('\n'),
+  };
+}
+
 export function revealPhone(phone: string) {
   return phone.replace(/^(\d{3})\*{4}(\d{4})$/, (_, head: string, tail: string) => `${head}0013${tail}`);
 }

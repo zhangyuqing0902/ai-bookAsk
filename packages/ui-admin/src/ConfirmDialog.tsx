@@ -11,6 +11,7 @@ export function ConfirmDialog({
   confirmText = '确认',
   cancelText = '取消',
   danger = false,
+  width = 400,
   onConfirm,
   onClose,
 }: {
@@ -20,6 +21,8 @@ export function ConfirmDialog({
   confirmText?: string;
   cancelText?: string;
   danger?: boolean;
+  /** 0824-3：影响声明较长的确认场景（如停用机构）可加宽，默认 400 */
+  width?: number;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -28,7 +31,7 @@ export function ConfirmDialog({
       title={title}
       open={open}
       onClose={onClose}
-      width={400}
+      width={width}
       footer={
         <>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>

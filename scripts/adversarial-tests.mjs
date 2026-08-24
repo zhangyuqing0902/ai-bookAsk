@@ -285,10 +285,13 @@ test('0714/#19 账户名称创建后不可修改（编辑态 disabled，文案�
   assert.ok(/账户名[\s\S]*?disabled=\{!!edit\}/.test(src) || src.includes('disabled={!!edit}'), '账户名编辑态未 disabled');
   assert.ok(!src.includes('账户名称创建后不可修改'), '说明文案应已删除');
 });
-test('0714/#5.1 主控台与模型用量：父机构汇总说明', () => {
-  for (const p of ['../apps/platform-admin/src/views/Dashboard.tsx', '../apps/platform-admin/src/views/ModelUsage.tsx']) {
-    assert.match(read(p), /含子机构|已汇总子机构/, `${p} 缺少子机构汇总说明`);
-  }
+test('0714/#5.1 主控台与模型用量：父子机构汇总口径（0814-4 起改层级多选，勾父＝含子机构）', () => {
+  // 0714 原方案是「选中父机构显示汇总横幅」；0814-4 升级为层级多选后，
+  // 勾选父机构＝子机构显式一并勾上，汇总口径体现在选择集本身 + InfoDot 说明里，横幅已刻意移除。
+  assert.match(read('../apps/platform-admin/src/views/Dashboard.tsx'), /含子机构|已汇总子机构/, 'Dashboard 缺少子机构汇总说明');
+  const mu = read('../apps/platform-admin/src/views/ModelUsage.tsx');
+  assert.ok(/MultiSelect[\s\S]*?childrenOf=\{childrenOf\}/.test(mu), 'ModelUsage 缺少层级多选（childrenOf）');
+  assert.match(mu, /勾选父机构[\s\S]{0,20}全部子机构/, 'ModelUsage 缺少「勾选父机构＝含全部子机构」口径说明');
 });
 test('0714/#10 用量看板卡片标题去「（实时快照）」', () => {
   const src = read('../apps/platform-admin/src/views/OrgDetail.tsx');
@@ -622,7 +625,8 @@ test('0717 二批/#5 禁用置灰统一为「前台访问地址」标准（实�
 test('0718/#8 会员开通页重构（先权益再套餐后协议 + 协议可点 + 续费语义 pill）', () => {
   const src = read('../apps/mobile-h5/src/screens/Member.tsx');
   // 套餐卡新结构：续费语义 pill + 权益速览 + 选中对勾；按钮/协议随方式联动（价格语义不变）
-  for (const t of ['连续包月', '单月会员', '自动续费 · 可随时取消', '不自动续费', '到期自动失效不扣款', '¥9.9 开通连续包月', '¥19.9 购买单月会员', '《自动续费协议》', '《会员服务协议》', 'mb-perks', 'mb-plan', 'mb-plan-renew', 'mb-check', '请先阅读并同意相关协议']) assert.ok(src.includes(t), `Member 缺 ${t}`);
+  // 0824：《会员服务协议》改名合体《AI 会员服务与永享服务协议》（会员/永享共用一份文本），且协议链接真实跳转协议正文页
+  for (const t of ['连续包月', '单月会员', '自动续费 · 可随时取消', '不自动续费', '到期自动失效不扣款', '¥9.9 开通连续包月', '¥19.9 购买单月会员', '《自动续费协议》', '《AI 会员服务与永享服务协议》', 'mb-perks', 'mb-plan', 'mb-plan-renew', 'mb-check', '请先阅读并同意相关协议']) assert.ok(src.includes(t), `Member 缺 ${t}`);
   assert.ok(!src.includes('按月自动续费'), '残留歧义文案「按月自动续费」');
   assert.ok(!src.includes('plan-corner'), '残留旧角标 plan-corner');
   // 0718 #4：按钮下方补充说明文案删除
@@ -725,7 +729,8 @@ test('0806/#1 移动端会员标（0806-3 定稿：C 端二分展示，运营四
   assert.ok(my.includes("mState === 'active' || mState === 'grace'"), 'My 会员标应为 active/grace 二分');
   assert.ok(!my.includes('会员 · 待续费'), 'C 端不得再显「待续费」运营语义');
   assert.ok(!my.includes('宽限期（待续费）'), '会员中心右值不得再显宽限期');
-  assert.ok(my.includes("grace: '已开通'") && my.includes("expired: '未开通'"), '会员中心右值应为 已开通/未开通 二分');
+  // 0814-2 部分推翻 0806 二分：宽限期右值由「已开通」改为琥珀倒计时（grace: graceLeft），active/expired/none 维持二分
+  assert.ok(my.includes("active: '已开通'") && my.includes('grace: graceLeft') && my.includes("expired: '未开通'"), '会员中心右值应为 已开通/倒计时/未开通（0814-2 口径）');
   const chat = read('../apps/mobile-h5/src/screens/Chat.tsx');
   assert.ok(!chat.includes('微信昵称A'), 'Chat 抽屉用户卡仍硬编码');
   assert.ok(!chat.includes('会员 · 待续费'), 'Chat 抽屉不得显「待续费」');
