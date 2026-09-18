@@ -1061,7 +1061,7 @@ test('0918 账户导入：新建 / 更新 / 错误三分，更新时空列不必
   const opts = { orgs: ['YY 教育'], roles: ['运营'] };
   const p = r.planAccountImport([
     { line: 4, account: 'new01', password: '', person: '甲', org: 'YY 教育', role: '运营', contact: '' },
-    { line: 5, account: 'Old01', password: '', person: '', org: '', role: '', contact: '' },
+    { line: 5, account: 'old01', password: '', person: '', org: '', role: '', contact: '' },
     { line: 6, account: 'new02', password: '', person: '', org: 'YY 教育', role: '运营', contact: '' },
   ], ['old01'], opts);
   assert.equal(p.creates.length, 1);
@@ -1070,9 +1070,18 @@ test('0918 账户导入：新建 / 更新 / 错误三分，更新时空列不必
 });
 test('0918 账户导入：文件内重复账户名只保留首行，后行报错并指向首行', () => {
   const row = (line, account) => ({ line, account, password: '', person: '甲', org: 'YY 教育', role: '运营', contact: '' });
-  const p = r.planAccountImport([row(4, 'dup01'), row(9, 'DUP01')], [], { orgs: ['YY 教育'], roles: ['运营'] });
+  const p = r.planAccountImport([row(4, 'dup01'), row(9, 'dup01')], [], { orgs: ['YY 教育'], roles: ['运营'] });
   assert.equal(p.creates.length, 1);
   assert.match(p.errors[0].reasons[0], /与第 4 行重复/);
+});
+test('0918-4 账户名区分大小写（导入与手动新建一致）：Admin01 ≠ admin01', () => {
+  const row = (line, account) => ({ line, account, password: '', person: '甲', org: 'YY 教育', role: '运营', contact: '' });
+  const p = r.planAccountImport([row(4, 'Admin01'), row(5, 'admin01'), row(6, 'ADMIN01')], ['admin01'], { orgs: ['YY 教育'], roles: ['运营'] });
+  assert.deepEqual([...p.updates.map((x) => x.account)], ['admin01']);
+  assert.deepEqual([...p.creates.map((x) => x.account)], ['Admin01', 'ADMIN01']);
+  assert.equal(p.errors.length, 0);
+  const view = read('../apps/platform-admin/src/views/Accounts.tsx');
+  assert.ok(!view.includes('toLowerCase'), '机构账户页残留忽略大小写比对');
 });
 test('0918 账户导入：密码 / 手机号 / 机构 / 角色逐项校验', () => {
   const p = r.planAccountImport([{ line: 4, account: 'x01', password: '12345678', person: '甲', org: '无', role: '超管', contact: '1380000' }], [], { orgs: ['YY 教育'], roles: ['运营'] });
@@ -1092,6 +1101,11 @@ test('0918 机构账户页：导出带明文密码列、重置密码回写、批
   assert.ok(src.includes('批量导入') && src.includes('AccountImportModal'));
   assert.ok(/resetPwd[\s\S]{0,160}pwd/.test(src), '重置密码未回写到账户');
   assert.ok(read('../apps/platform-admin/src/exports/accounts.ts').includes("'账户名', '密码'"));
+});
+test('0918-3 导入流程：上传 → 预览（三数 + 有误明细）→ 确认导入 → 结果弹窗（成功数 + 失败明细）', () => {
+  const src = read('../apps/platform-admin/src/views/AccountImportModal.tsx');
+  for (const t of ['导入预览', '将新建', '将更新', '有误 · 将跳过', '确认导入', '部分导入成功', '导入失败', '失败明细', '有误明细', '下载{title}', '修正后重新上传'])
+    assert.ok(src.includes(t), `导入弹窗缺「${t}」`);
 });
 
 let passed = 0;

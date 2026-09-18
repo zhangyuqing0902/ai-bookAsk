@@ -185,9 +185,12 @@ async function main() {
     // 模板：表头齐全，写入 3 行后读回
     const tpl = await buildAccountImportTemplate();
     const ws = tpl.worksheets[0];
+    const tipText = String(ws.getCell(2, 1).value);
+    const tipLines = tipText.split('\n');
+    check('导入模板:填写说明按序号逐条换行', tipLines.length >= 6 && tipLines.slice(1).every((l, i) => l.startsWith(`${i + 1}. `)), tipLines.slice(0, 3).join(' | '));
     check('导入模板:表头 = 导入列', ACCOUNT_IMPORT_HEADERS.every((h, i) => ws.getCell(3, i + 1).value === h));
     ws.getRow(4).values = ['newbie01', '', '新人', 'YY 教育', '运营', '13800001234'];
-    ws.getRow(5).values = ['ADMIN01', 'Abc12345', '', '', '', ''];
+    ws.getRow(5).values = ['admin01', 'Abc12345', '', '', '', ''];
     ws.getRow(6).values = ['bad name', 'short', '', '不存在机构', '超管', '123'];
     const buf = await tpl.xlsx.writeBuffer();
     const parsed = await parseAccountImportFile(buf as ArrayBuffer);
@@ -196,7 +199,7 @@ async function main() {
       check('导入模板:解析 3 行且行号正确', parsed.rows.length === 3 && parsed.rows[0].line === 4, JSON.stringify(parsed.rows.map((r) => r.line)));
       const plan = planAccountImport(parsed.rows, existing, opts);
       check('导入:新账户→新建', plan.creates.length === 1 && plan.creates[0].account === 'newbie01');
-      check('导入:已有账户（忽略大小写）→更新', plan.updates.length === 1 && plan.updates[0].account === 'ADMIN01');
+      check('导入:已有账户→更新', plan.updates.length === 1 && plan.updates[0].account === 'admin01');
       check('导入:错误行给出多条原因', plan.errors.length === 1 && plan.errors[0].reasons.length >= 5, JSON.stringify(plan.errors));
     }
     // 导出文件直接回传：表头在第 4 行、多余列忽略、全部识别为更新

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { Modal, exportWorkbook } from '@aba/ui-admin';
-import { ACCOUNT_IMPORT_LIMIT, planAccountImport, type AccountImportPlan, type AccountImportRow } from '@aba/mock';
+import { ACCOUNT_IMPORT_LIMIT, planAccountImport, type AccountImportIssue, type AccountImportPlan, type AccountImportRow } from '@aba/mock';
 import {
   ACCOUNT_IMPORT_ORGS,
   ACCOUNT_IMPORT_ROLES,
@@ -15,14 +15,15 @@ import {
 } from '../exports/accountImport';
 
 // 0918：平台后台 · 机构账户批量导入弹窗。
-// 四步收在一个弹窗里：选文件（附模板下载）→ 解析校验预览（新建 / 更新 / 错误三数）→ 确认导入 → 结果（可下载含密码的导入结果）。
-// 错误行跳过、其余照常导入；超 500 条整份拒绝，引导拆分。
+// 0918-3：上传 → 预览（将新建 / 将更新 / 有误三数 + 有误明细）→ 确认导入 → 结果弹窗
+//   （成功多少、哪些失败 + 原因，可下载失败明细与导入结果）。有误的行跳过、其余照常导入，不因单条错误整批失败。
+//   整份级问题（非 xlsx / 缺表头 / 超 500 条）不进预览、直接提示，引导修正后重传。
 type Stage =
   | { k: 'pick' }
   | { k: 'parsing'; file: string }
   | { k: 'fail'; file: string; msg: string }
   | { k: 'preview'; file: string; plan: AccountImportPlan }
-  | { k: 'done'; created: number; updated: number; skipped: number; result: ImportResultRow[] };
+  | { k: 'done'; file: string; total: number; created: number; updated: number; errors: AccountImportIssue[]; result: ImportResultRow[] };
 
 export function AccountImportModal({
   open,
@@ -65,20 +66,44 @@ export function AccountImportModal({
     if (!parsed.ok) return setStage({ k: 'fail', file: f.name, msg: parsed.error });
     const plan = planAccountImport(parsed.rows, existingAccounts, { orgs: ACCOUNT_IMPORT_ORGS, roles: ACCOUNT_IMPORT_ROLES });
     if (plan.overLimit) {
-      return setStage({ k: 'fail', file: f.name, msg: `文件共 ${plan.total} 条，超过单次上限 ${ACCOUNT_IMPORT_LIMIT} 条。请拆分为多个文件后分批导入。` });
+      return setStage({ k: 'fail', file: f.name, msg: `文件共 ${plan.total} 条，超过单次上限 ${ACCOUNT_IMPORT_LIMIT} 条，本次未导入任何数据。请拆分为多个文件后分批导入。` });
     }
     setStage({ k: 'preview', file: f.name, plan });
   };
 
   const confirm = () => {
     if (stage.k !== 'preview') return;
-    const { plan } = stage;
+    const { plan, file } = stage;
     const result = onApply(plan.creates, plan.updates);
-    setStage({ k: 'done', created: plan.creates.length, updated: plan.updates.length, skipped: plan.errors.length, result });
+    setStage({ k: 'done', file, total: plan.total, created: plan.creates.length, updated: plan.updates.length, errors: plan.errors, result });
   };
 
-  const valid = stage.k === 'preview' ? stage.plan.creates.length + stage.plan.updates.length : 0;
+  const errorList = (errors: AccountImportIssue[], title: string) => (
+    <>
+      <div className="imp-err-h">
+        <span>{title}</span>
+        {/* 0918-3：下载入口做成按钮样式（原文字链看不出可点） */}
+        <button className="btn btn-sm imp-dl" onClick={() => { void exportWorkbook(buildImportErrorSpec(errors)); toast(`正在下载${title}`); }}>
+          <Icon id="i-dl" w={13} h={13} />
+          下载{title}
+        </button>
+      </div>
+      <div className="imp-err-list">
+        {errors.slice(0, 50).map((e) => (
+          <div className="imp-err" key={e.line}>
+            <span className="mono ln">第 {e.line} 行</span>
+            <span className="ac">{e.account}</span>
+            <span className="rs">{e.reasons.join('；')}</span>
+          </div>
+        ))}
+        {errors.length > 50 && <div className="imp-err muted">仅展示前 50 条，完整明细请下载</div>}
+      </div>
+    </>
+  );
+
   const reupload = <button className="btn btn-ghost btn-sm" onClick={() => setStage({ k: 'pick' })}>重新上传</button>;
+
+  const valid = stage.k === 'preview' ? stage.plan.creates.length + stage.plan.updates.length : 0;
 
   let footer;
   if (stage.k === 'preview') {
@@ -86,17 +111,23 @@ export function AccountImportModal({
       <>
         {reupload}
         <button className={'btn btn-primary btn-sm' + (valid ? '' : ' off')} disabled={!valid} onClick={confirm}>
-          {stage.plan.errors.length && valid ? `跳过错误行，导入 ${valid} 条` : `确认导入 ${valid} 条`}
+          确认导入 {valid} 条
         </button>
       </>
     );
   } else if (stage.k === 'done') {
+    const ok = stage.created + stage.updated;
     footer = (
       <>
-        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildImportResultSpec(stage.result)); toast('正在下载导入结果'); }}>
-          <Icon id="i-dl" w={14} h={14} />
-          下载导入结果
-        </button>
+        {stage.errors.length > 0 && (
+          <button className="btn btn-ghost btn-sm" onClick={() => setStage({ k: 'pick' })}>修正后重新上传</button>
+        )}
+        {ok > 0 && (
+          <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildImportResultSpec(stage.result)); toast('正在下载导入结果'); }}>
+            <Icon id="i-dl" w={14} h={14} />
+            下载导入结果
+          </button>
+        )}
         <button className="btn btn-primary btn-sm" onClick={close}>完成</button>
       </>
     );
@@ -106,6 +137,13 @@ export function AccountImportModal({
     footer = <button className="btn btn-ghost btn-sm" onClick={close}>取消</button>;
   }
 
+  const doneTitle = (d: Extract<Stage, { k: 'done' }>) => {
+    const ok = d.created + d.updated;
+    if (!d.errors.length) return { t: '导入完成', cls: 'ok' };
+    if (ok) return { t: '部分导入成功', cls: 'part' };
+    return { t: '导入失败', cls: 'bad' };
+  };
+
   return (
     <Modal title="批量导入机构账户" open={open} onClose={close} width={560} footer={footer}>
       {stage.k === 'pick' && (
@@ -113,13 +151,14 @@ export function AccountImportModal({
           <div className="imp-step">
             <span className="imp-no">1</span>
             <span className="imp-step-t">下载模板并填写</span>
-            <span className="op" onClick={() => void downloadTemplate()}>
-              <Icon id="i-dl" w={13} h={13} /> 下载导入模板
-            </span>
+            <button className="btn btn-sm imp-dl" onClick={() => void downloadTemplate()}>
+              <Icon id="i-dl" w={13} h={13} />
+              下载导入模板
+            </button>
           </div>
           <div className="imp-step">
             <span className="imp-no">2</span>
-            <span className="imp-step-t">上传填好的文件</span>
+            <span className="imp-step-t">上传填好的文件，预览无误后导入</span>
             <span className="muted" style={{ fontSize: 12 }}>「导出」的文件也可直接修改后上传</span>
           </div>
           <input ref={inputRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={(e) => { void handleFile(e.target.files?.[0]); e.target.value = ''; }} />
@@ -152,44 +191,47 @@ export function AccountImportModal({
 
       {stage.k === 'preview' && (
         <>
-          <div className="imp-file">已解析「{stage.file}」，共 {stage.plan.total} 条</div>
-          <div className="imp-sum">
+          <div className="imp-res-h ok" style={{ marginBottom: 12 }}>
+            <span className="t">导入预览</span>
+            <span className="f">「{stage.file}」共 {stage.plan.total} 条</span>
+          </div>
+          <div className="imp-sum three">
             <div className="imp-card"><b>{stage.plan.creates.length}</b><span>将新建</span></div>
             <div className="imp-card"><b>{stage.plan.updates.length}</b><span>将更新</span></div>
-            <div className={'imp-card' + (stage.plan.errors.length ? ' bad' : '')}><b>{stage.plan.errors.length}</b><span>有错误 · 将跳过</span></div>
+            <div className={'imp-card' + (stage.plan.errors.length ? ' bad' : '')}><b>{stage.plan.errors.length}</b><span>有误 · 将跳过</span></div>
           </div>
-          {stage.plan.errors.length > 0 && (
-            <>
-              <div className="imp-err-h">
-                <span>错误明细</span>
-                <span className="op" onClick={() => { void exportWorkbook(buildImportErrorSpec(stage.plan.errors)); toast('正在下载错误明细'); }}>
-                  下载错误明细
-                </span>
-              </div>
-              <div className="imp-err-list">
-                {stage.plan.errors.slice(0, 50).map((e) => (
-                  <div className="imp-err" key={e.line}>
-                    <span className="mono ln">第 {e.line} 行</span>
-                    <span className="ac">{e.account}</span>
-                    <span className="rs">{e.reasons.join('；')}</span>
-                  </div>
-                ))}
-                {stage.plan.errors.length > 50 && <div className="imp-err muted">仅展示前 50 条，完整明细请下载</div>}
-              </div>
-            </>
-          )}
-          {stage.plan.updates.length > 0 && <div className="imp-note">更新时留空的单元格不修改；填写了密码的已存在账户将被重置为新密码。</div>}
+          {stage.plan.errors.length > 0 && errorList(stage.plan.errors, '有误明细')}
+          <div className="imp-note">
+            {valid
+              ? `确认后导入 ${valid} 条${stage.plan.errors.length ? `，有误的 ${stage.plan.errors.length} 条跳过，可修正后单独重传` : ''}；更新时留空的单元格不修改，填写了密码的已有账户将被重置为新密码。`
+              : '没有可导入的数据，请修正后重新上传。'}
+          </div>
         </>
       )}
 
-      {stage.k === 'done' && (
-        <div className="imp-done">
-          <Icon id="i-check" w={28} h={28} />
-          <div className="imp-done-t">导入完成</div>
-          <div>新建 {stage.created} 个 · 更新 {stage.updated} 个{stage.skipped ? ` · 跳过错误 ${stage.skipped} 条` : ''}</div>
-          <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>系统生成的初始密码见「下载导入结果」（含明文密码，请妥善保管）</div>
-        </div>
-      )}
+      {stage.k === 'done' && (() => {
+        const head = doneTitle(stage);
+        return (
+          <>
+            <div className={'imp-res-h ' + head.cls}>
+              <Icon id={head.cls === 'ok' ? 'i-check' : 'i-warn'} w={18} h={18} />
+              <span className="t">{head.t}</span>
+              <span className="f">「{stage.file}」共 {stage.total} 条</span>
+            </div>
+            <div className="imp-sum">
+              <div className="imp-card"><b>{stage.created + stage.updated}</b><span>成功（新建 {stage.created} · 更新 {stage.updated}）</span></div>
+              <div className={'imp-card' + (stage.errors.length ? ' bad' : '')}><b>{stage.errors.length}</b><span>失败 · 未导入</span></div>
+            </div>
+            {stage.errors.length > 0 && (
+              <>
+                {errorList(stage.errors, '失败明细')}
+                <div className="imp-note">修正失败行后，可只把这些行重新上传（成功的行无需重复导入）。</div>
+              </>
+            )}
+            {stage.created > 0 && <div className="imp-note">新建账户的密码（含系统生成的）见「下载导入结果」，含明文密码请妥善保管。</div>}
+          </>
+        );
+      })()}
     </Modal>
   );
 }

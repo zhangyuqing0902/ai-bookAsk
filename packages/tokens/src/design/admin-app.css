@@ -3055,21 +3055,29 @@ a {
 
 /* 0918：机构账户批量导入弹窗 */
 .imp-step { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; }
-.imp-step .op { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.imp-step .imp-dl { margin-left: auto; }
+/* 0918-3：导入弹窗内的下载按钮——淡靛底 + 靛色字 + 下载图标，一眼可点；与底部主按钮区分层级 */
+.btn.imp-dl { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; font-size: 12px; font-weight: 600; color: var(--indigo-ink); background: var(--indigo-soft); border: 1px solid rgba(75, 87, 232, 0.22); border-radius: 8px; }
+.btn.imp-dl:hover { background: #E0E3FD; border-color: var(--indigo); }
 .imp-no { width: 20px; height: 20px; border-radius: 50%; background: var(--indigo-soft); color: var(--indigo-ink); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .imp-step-t { font-weight: 600; color: var(--ink); }
 .imp-center { padding: 36px 0; text-align: center; color: var(--ink-2); font-size: 13px; }
 .imp-fail { padding: 14px 16px; border-radius: 10px; background: var(--terra-soft); color: var(--ink-2); font-size: 13px; line-height: 1.7; }
 .imp-fail-t { font-weight: 700; color: var(--terra); margin-bottom: 4px; }
-.imp-file { font-size: 12.5px; color: var(--ink-2); margin-bottom: 10px; word-break: break-all; }
-.imp-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.imp-sum { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.imp-sum.three { grid-template-columns: repeat(3, 1fr); }
+.imp-res-h { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.imp-res-h .t { font-size: 15px; font-weight: 700; color: var(--ink); }
+.imp-res-h .f { margin-left: auto; font-size: 12px; color: var(--ink-3); max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-res-h.ok svg { color: var(--jade); }
+.imp-res-h.part svg { color: var(--amber); }
+.imp-res-h.bad svg { color: var(--terra); }
 .imp-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
 .imp-card b { font-size: 22px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .imp-card span { font-size: 12px; color: var(--ink-3); }
 .imp-card.bad { border-color: rgba(229, 83, 59, 0.3); background: var(--terra-soft); }
 .imp-card.bad b { color: var(--terra); }
 .imp-err-h { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
-.imp-err-h .op { font-weight: 400; }
 .imp-err-list { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
 .imp-err { display: flex; gap: 10px; padding: 8px 12px; font-size: 12px; line-height: 1.6; border-bottom: 1px solid var(--line); }
 .imp-err:last-child { border-bottom: none; }
@@ -3077,6 +3085,3 @@ a {
 .imp-err .ac { flex: none; width: 88px; color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .imp-err .rs { flex: 1; color: var(--terra); }
 .imp-note { margin-top: 12px; font-size: 12px; color: var(--ink-3); }
-.imp-done { text-align: center; padding: 18px 0 8px; color: var(--ink-2); font-size: 13px; }
-.imp-done svg { color: var(--jade); }
-.imp-done-t { font-size: 16px; font-weight: 700; color: var(--ink); margin: 8px 0 4px; }

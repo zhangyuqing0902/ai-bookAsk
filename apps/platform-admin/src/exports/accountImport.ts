@@ -21,6 +21,7 @@ export const ACCOUNT_IMPORT_TIPS = [
   '按「账户名」匹配：已存在则更新，不存在则新建',
   '新建时账户名 / 姓名 / 机构 / 角色必填；密码留空由系统生成',
   '更新时留空的单元格不修改；填写密码即重置为该密码',
+  '上传后先预览、确认后导入；有误的行跳过、其余照常导入，导入后弹窗告知成功数与失败明细（行号 + 原因）',
 ];
 
 async function loadExcel() {
@@ -46,14 +47,20 @@ export async function buildAccountImportTemplate() {
 
   sheet.mergeCells(2, 1, 2, n);
   const tip = sheet.getCell(2, 1);
-  tip.value = [
-    '填写说明：' + ACCOUNT_IMPORT_TIPS.map((t, i) => `${i + 1}）${t}`).join('；'),
-    `账户名：${ACCOUNT_NAME_RULE}；密码：8–16 位，同时含字母和数字，不含空格；机构：${ACCOUNT_IMPORT_ORGS.join(' / ')}；角色：${ACCOUNT_IMPORT_ROLES.join(' / ')}；联系电话：11 位手机号，可留空。`,
-    '赭色表头为新建必填列。请从第 4 行开始填写，不要修改表头。',
-  ].join('\n');
+  // 0918-2：填写说明按序号逐条换行（原先规则挤在一段里难读）
+  const tipLines = [
+    '填写说明：',
+    ...ACCOUNT_IMPORT_TIPS.map((t, i) => `${i + 1}. ${t}`),
+    `${ACCOUNT_IMPORT_TIPS.length + 1}. 账户名：${ACCOUNT_NAME_RULE}`,
+    `${ACCOUNT_IMPORT_TIPS.length + 2}. 密码：8–16 位，同时含字母和数字，不含空格`,
+    `${ACCOUNT_IMPORT_TIPS.length + 3}. 机构：${ACCOUNT_IMPORT_ORGS.join(' / ')}；角色：${ACCOUNT_IMPORT_ROLES.join(' / ')}（均可下拉选择）`,
+    `${ACCOUNT_IMPORT_TIPS.length + 4}. 联系电话：11 位手机号，可留空`,
+    `${ACCOUNT_IMPORT_TIPS.length + 5}. 赭色表头为新建必填列；请从第 4 行开始填写，不要修改表头`,
+  ];
+  tip.value = tipLines.join('\n');
   tip.font = { name: 'Microsoft YaHei', size: 10, color: { argb: 'FF6B7185' } };
   tip.alignment = { vertical: 'top', wrapText: true };
-  sheet.getRow(2).height = 78;
+  sheet.getRow(2).height = tipLines.length * 15 + 8;
 
   const header = sheet.getRow(3);
   header.values = [...ACCOUNT_IMPORT_HEADERS];
@@ -137,11 +144,11 @@ export async function parseAccountImportFile(buffer: ArrayBuffer): Promise<Parse
 
 export function buildImportErrorSpec(errors: AccountImportIssue[]): ExportSpec {
   return {
-    context: { scope: '全域', business: '机构账户导入错误明细' },
+    context: { scope: '全域', business: '机构账户导入失败明细' },
     sheets: [{
-      name: '错误明细',
-      title: '机构账户导入 · 错误明细（修正后可重新导入）',
-      headers: ['文件行号', '账户名', '错误原因'],
+      name: '失败明细',
+      title: '机构账户导入 · 失败明细（修正后可只导入这些行）',
+      headers: ['文件行号', '账户名', '失败原因'],
       rows: errors.map((e) => [e.line, e.account, e.reasons.join('；')]),
       widths: [12, 20, 70],
     }],

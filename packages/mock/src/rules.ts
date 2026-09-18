@@ -318,7 +318,7 @@ export function isSlidingSessionValid(lastActiveAt: Date, now: Date, days = 7) {
   return now.getTime() - lastActiveAt.getTime() <= days * 24 * 60 * 60 * 1000;
 }
 
-// 0918：平台后台 · 机构账户批量导入。按「账户名」匹配（忽略大小写）：已存在 → 更新，不存在 → 新建。
+// 0918：平台后台 · 机构账户批量导入。按「账户名」匹配（区分大小写，与手动新建一致）：已存在 → 更新，不存在 → 新建。
 //   单次上限 500 条，超限整份拒绝（不做部分截断，避免「以为全导了其实只导了前 500」）；
 //   逐行校验，错误行跳过、其余照常导入，错误明细可下载；
 //   更新时留空的单元格＝不修改该字段（允许只填要改的列）；新建时密码留空由系统生成。
@@ -357,7 +357,7 @@ export function planAccountImport(
   const limit = opts.limit ?? ACCOUNT_IMPORT_LIMIT;
   const plan: AccountImportPlan = { total: rows.length, overLimit: rows.length > limit, creates: [], updates: [], errors: [] };
   if (plan.overLimit) return plan;
-  const existing = new Set(existingAccounts.map((a) => a.trim().toLowerCase()));
+  const existing = new Set(existingAccounts.map((a) => a.trim()));
   const seen: Record<string, number> = {};
   for (const raw of rows) {
     const row: AccountImportRow = {
@@ -370,7 +370,7 @@ export function planAccountImport(
       contact: (raw.contact ?? '').replace(/[\s-]/g, ''),
     };
     const reasons: string[] = [];
-    const key = row.account.toLowerCase();
+    const key = row.account;
     const isUpdate = existing.has(key);
     if (!row.account) reasons.push('账户名必填');
     else if (!/^[A-Za-z0-9_.@-]{3,32}$/.test(row.account)) reasons.push(`账户名格式不正确（${ACCOUNT_NAME_RULE}）`);

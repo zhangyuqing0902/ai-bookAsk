@@ -57,7 +57,8 @@ export function Accounts() {
       return;
     }
     // 新建：加一行 + 弹凭证（账号 + 系统生成密码）
-    if (data.some((r) => r.name.toLowerCase() === fAccount.trim().toLowerCase())) return toast('账户名已存在');
+    // 0918-4：账户名区分大小写（与导入口径一致），完全相同才算重复
+    if (data.some((r) => r.name === fAccount.trim())) return toast('账户名已存在');
     const id = 'AC' + String(100 + data.length + 1);
     const row: Acct = { id, name: fAccount.trim(), person: fName.trim(), org: fOrg, parent: parentOf(fOrg), role: fRole, roleCls: roleClsOf(fRole), status: '正常', statusCls: 'tag-jade', contact: fContact.trim() || '—', pwd: genPassword() };
     setData((d) => [row, ...d]);
@@ -76,7 +77,7 @@ export function Accounts() {
     const result: ImportResultRow[] = [];
     const next = [...data];
     for (const u of updates) {
-      const i = next.findIndex((r) => r.name.toLowerCase() === u.account.toLowerCase());
+      const i = next.findIndex((r) => r.name === u.account);
       if (i < 0) continue;
       const o = next[i];
       const role = u.role || o.role;
