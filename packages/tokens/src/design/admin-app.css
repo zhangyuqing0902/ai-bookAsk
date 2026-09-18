@@ -3052,3 +3052,31 @@ a {
 }
 .dboard .funnel-foot b { font-weight: 600; color: var(--ink-2); margin-left: 4px; }
 .dboard .funnel-foot .funnel-overall b { color: var(--indigo); font-size: 12.5px; }
+
+/* 0918：机构账户批量导入弹窗 */
+.imp-step { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; }
+.imp-step .op { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.imp-no { width: 20px; height: 20px; border-radius: 50%; background: var(--indigo-soft); color: var(--indigo-ink); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.imp-step-t { font-weight: 600; color: var(--ink); }
+.imp-center { padding: 36px 0; text-align: center; color: var(--ink-2); font-size: 13px; }
+.imp-fail { padding: 14px 16px; border-radius: 10px; background: var(--terra-soft); color: var(--ink-2); font-size: 13px; line-height: 1.7; }
+.imp-fail-t { font-weight: 700; color: var(--terra); margin-bottom: 4px; }
+.imp-file { font-size: 12.5px; color: var(--ink-2); margin-bottom: 10px; word-break: break-all; }
+.imp-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.imp-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.imp-card b { font-size: 22px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.imp-card span { font-size: 12px; color: var(--ink-3); }
+.imp-card.bad { border-color: rgba(229, 83, 59, 0.3); background: var(--terra-soft); }
+.imp-card.bad b { color: var(--terra); }
+.imp-err-h { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.imp-err-h .op { font-weight: 400; }
+.imp-err-list { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+.imp-err { display: flex; gap: 10px; padding: 8px 12px; font-size: 12px; line-height: 1.6; border-bottom: 1px solid var(--line); }
+.imp-err:last-child { border-bottom: none; }
+.imp-err .ln { flex: none; width: 58px; color: var(--ink-3); }
+.imp-err .ac { flex: none; width: 88px; color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-err .rs { flex: 1; color: var(--terra); }
+.imp-note { margin-top: 12px; font-size: 12px; color: var(--ink-3); }
+.imp-done { text-align: center; padding: 18px 0 8px; color: var(--ink-2); font-size: 13px; }
+.imp-done svg { color: var(--jade); }
+.imp-done-t { font-size: 16px; font-weight: 700; color: var(--ink); margin: 8px 0 4px; }

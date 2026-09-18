@@ -1048,10 +1048,55 @@ test('0814 文档收敛：PRD 第 7 章只留索引与两项配套规则 + 功�
   for (const r of rows) assert.ok(r.includes('1）'), `指标行缺有序序号：${r.slice(0, 60)}`);
 });
 
+// —— 0918 批：KP「第三方跳转链接」改名 + 机构账户导出明文密码 + 批量导入 ——
+test('0918 KP 基础信息「纸书购买链接」全量改名为「第三方跳转链接」（两后台共用 KpDetailView + 前台溯源）', () => {
+  for (const f of ['../packages/ui-admin/src/KpDetailView.tsx', '../apps/mobile-h5/src/screens/Chat.tsx', '../docs/feature-list-build/gen.py', '../docs/prd-build/build-prd.js']) {
+    const code = read(f);
+    // 带书名号的「纸书购买链接」是改名说明里的历史引用，允许；裸字段名即残留
+    assert.ok(!/纸书购买链接|纸书链接/.test(code.replace(/「纸书购买链接」/g, '')), `${f} 残留旧字段名`);
+  }
+  assert.ok(read('../packages/ui-admin/src/KpDetailView.tsx').includes('>第三方跳转链接<'));
+});
+test('0918 账户导入：新建 / 更新 / 错误三分，更新时空列不必填', () => {
+  const opts = { orgs: ['YY 教育'], roles: ['运营'] };
+  const p = r.planAccountImport([
+    { line: 4, account: 'new01', password: '', person: '甲', org: 'YY 教育', role: '运营', contact: '' },
+    { line: 5, account: 'Old01', password: '', person: '', org: '', role: '', contact: '' },
+    { line: 6, account: 'new02', password: '', person: '', org: 'YY 教育', role: '运营', contact: '' },
+  ], ['old01'], opts);
+  assert.equal(p.creates.length, 1);
+  assert.equal(p.updates.length, 1);
+  assert.deepEqual([...p.errors[0].reasons], ['新建账户姓名必填']);
+});
+test('0918 账户导入：文件内重复账户名只保留首行，后行报错并指向首行', () => {
+  const row = (line, account) => ({ line, account, password: '', person: '甲', org: 'YY 教育', role: '运营', contact: '' });
+  const p = r.planAccountImport([row(4, 'dup01'), row(9, 'DUP01')], [], { orgs: ['YY 教育'], roles: ['运营'] });
+  assert.equal(p.creates.length, 1);
+  assert.match(p.errors[0].reasons[0], /与第 4 行重复/);
+});
+test('0918 账户导入：密码 / 手机号 / 机构 / 角色逐项校验', () => {
+  const p = r.planAccountImport([{ line: 4, account: 'x01', password: '12345678', person: '甲', org: '无', role: '超管', contact: '1380000' }], [], { orgs: ['YY 教育'], roles: ['运营'] });
+  assert.equal(p.errors[0].reasons.length, 4);
+  assert.equal(r.isValidAccountPassword('Abc12345'), true);
+  assert.equal(r.isValidAccountPassword('abc 12345'), false);
+});
+test('0918 账户导入：单次上限 500，超限整份拒绝不截断', () => {
+  assert.equal(r.ACCOUNT_IMPORT_LIMIT, 500);
+  const rows = Array.from({ length: 501 }, (_, i) => ({ line: i + 4, account: 'u' + i + 'aa', password: '', person: '甲', org: 'YY 教育', role: '运营', contact: '' }));
+  const p = r.planAccountImport(rows, [], { orgs: ['YY 教育'], roles: ['运营'] });
+  assert.equal(p.overLimit, true);
+  assert.equal(p.creates.length, 0);
+});
+test('0918 机构账户页：导出带明文密码列、重置密码回写、批量导入入口', () => {
+  const src = read('../apps/platform-admin/src/views/Accounts.tsx');
+  assert.ok(src.includes('批量导入') && src.includes('AccountImportModal'));
+  assert.ok(/resetPwd[\s\S]{0,160}pwd/.test(src), '重置密码未回写到账户');
+  assert.ok(read('../apps/platform-admin/src/exports/accounts.ts').includes("'账户名', '密码'"));
+});
 
 let passed = 0;
 for (const [name, fn] of tests) {
   try { fn(); passed += 1; console.log(`✓ ${name}`); }
   catch (error) { console.error(`✗ ${name}`); throw error; }
 }
-console.log(`\n${passed}/${tests.length} 条对抗性测试通过（V1.4 基线 + 0714~0806 批）`);
+console.log(`\n${passed}/${tests.length} 条对抗性测试通过（V1.4 基线 + 0714~0918 批）`);

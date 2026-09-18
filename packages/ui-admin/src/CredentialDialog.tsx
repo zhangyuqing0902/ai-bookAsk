@@ -16,11 +16,14 @@ export function CredentialDialog({
   title = '账户凭证',
   cred,
   onClose,
+  tip = '请妥善保存并发送给账户使用人，密码仅此一次明文展示。',
 }: {
   open: boolean;
   title?: string;
   cred: Credential | null;
   onClose: () => void;
+  /** 0918：机构账户导出已含明文密码，「仅此一次」对其不成立，由调用方覆盖 */
+  tip?: string;
 }) {
   if (!cred) return null;
   const rows: [string, string][] = [
@@ -48,7 +51,7 @@ export function CredentialDialog({
         </>
       }
     >
-      <div className="cred-tip">请妥善保存并发送给账户使用人，密码仅此一次明文展示。</div>
+      <div className="cred-tip">{tip}</div>
       <div className="cred-box">
         {rows.map(([k, v]) => (
           <div className="cred-row" key={k}>

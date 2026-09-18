@@ -11,6 +11,7 @@ import { buildWorkbook, exportFilename } from '../packages/ui-admin/src/exportCs
 import type { ExportSpec } from '../packages/ui-admin/src/exportCsv.ts';
 import { TEMPLATE_SPECS as ORG_SPECS } from '../apps/org-admin/src/exports/index.ts';
 import { TEMPLATE_SPECS as PLATFORM_SPECS } from '../apps/platform-admin/src/exports/index.ts';
+import { buildAccountImportTemplate, ACCOUNT_IMPORT_TEMPLATE_NAME } from '../apps/platform-admin/src/exports/accountImport.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, '..', 'docs', 'export-templates');
@@ -58,6 +59,11 @@ async function main() {
     }
   }
 
+  // 0918：导入模板（非导出，单独一份）——与平台后台「机构账户 · 批量导入」弹窗内下载的模板同源
+  const importTpl = await buildAccountImportTemplate();
+  await importTpl.xlsx.writeFile(path.join(OUT_DIR, ACCOUNT_IMPORT_TEMPLATE_NAME));
+  console.log(`✓ ${ACCOUNT_IMPORT_TEMPLATE_NAME}`);
+
   const readme = [
     '# AI 问书 · 导出模板样张',
     '',
@@ -67,6 +73,10 @@ async function main() {
     '| 后台 | 页面 | 文件名 | Sheet | 默认筛选 |',
     '|---|---|---|---|---|',
     ...index.map((r) => `| ${r.admin} | ${r.page} | ${r.file} | ${r.sheets} | ${r.filters} |`),
+    '',
+    '## 导入模板',
+    '',
+    `- 平台超管后台 · 机构账户 · 批量导入：${ACCOUNT_IMPORT_TEMPLATE_NAME}（单次 ≤500 条；按账户名匹配，新账户创建、已有账户更新；导出文件也可直接回传）`,
     '',
     '文件名规范：`AI问书_{机构名｜全域}_{业务名}数据导出.xlsx`；每个 Sheet 头部依次为 标题 / 导出时间（实时指标另标实时统计时间；区间指标标注区间起止）/ 导出时刻的筛选条件。',
     '',

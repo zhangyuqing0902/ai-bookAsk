@@ -351,7 +351,7 @@ export function Chat() {
             <div className="t">参考来源</div>
           </div>
           {/* 上块:知识 KP(同一 KP 内多个命中文件归并展示,最多 2 个,余下用省略号) */}
-          <div className="src-item tap" onClick={() => setJump({ url: '纸书购买链接', n: 3 })}>
+          <div className="src-item tap" onClick={() => setJump({ url: '第三方跳转链接', n: 3 })}>
             <div className="src-cover">
               <span className="sp" />
             </div>

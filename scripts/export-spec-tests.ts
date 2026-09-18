@@ -9,6 +9,10 @@ import { buildWorkbook, exportFilename } from '../packages/ui-admin/src/exportCs
 import type { ExportSpec } from '../packages/ui-admin/src/exportCsv.ts';
 import { TEMPLATE_SPECS as ORG_SPECS } from '../apps/org-admin/src/exports/index.ts';
 import { TEMPLATE_SPECS as PLATFORM_SPECS } from '../apps/platform-admin/src/exports/index.ts';
+import { buildAccountsSpec } from '../apps/platform-admin/src/exports/accounts.ts';
+import { buildAccountImportTemplate, parseAccountImportFile, ACCOUNT_IMPORT_ORGS, ACCOUNT_IMPORT_ROLES } from '../apps/platform-admin/src/exports/accountImport.ts';
+import { planAccountImport, ACCOUNT_IMPORT_HEADERS } from '../packages/mock/src/rules.ts';
+import { ACCOUNT_ROWS } from '../apps/platform-admin/src/data/accounts.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let pass = 0;
@@ -168,10 +172,51 @@ async function main() {
     check(`平台后台:注册了「${page}」导出`, PLATFORM_SPECS.some((s) => s.page.includes(page)));
   }
 
+  // —— 0918 机构账户：导出含明文密码 + 导入模板/导出文件均可回传解析 ——
+  {
+    const spec = buildAccountsSpec();
+    const sh = spec.sheets[0];
+    const pi = sh.headers.indexOf('密码');
+    check('机构账户导出:含「密码」列且紧跟账户名', pi === sh.headers.indexOf('账户名') + 1);
+    check('机构账户导出:密码为明文（非掩码）', sh.rows.every((r) => typeof r[pi] === 'string' && !String(r[pi]).includes('*') && String(r[pi]).length >= 8));
+
+    const existing = ACCOUNT_ROWS.map((r) => r.name);
+    const opts = { orgs: ACCOUNT_IMPORT_ORGS, roles: ACCOUNT_IMPORT_ROLES };
+    // 模板：表头齐全，写入 3 行后读回
+    const tpl = await buildAccountImportTemplate();
+    const ws = tpl.worksheets[0];
+    check('导入模板:表头 = 导入列', ACCOUNT_IMPORT_HEADERS.every((h, i) => ws.getCell(3, i + 1).value === h));
+    ws.getRow(4).values = ['newbie01', '', '新人', 'YY 教育', '运营', '13800001234'];
+    ws.getRow(5).values = ['ADMIN01', 'Abc12345', '', '', '', ''];
+    ws.getRow(6).values = ['bad name', 'short', '', '不存在机构', '超管', '123'];
+    const buf = await tpl.xlsx.writeBuffer();
+    const parsed = await parseAccountImportFile(buf as ArrayBuffer);
+    check('导入模板:可解析', parsed.ok, parsed.ok ? '' : parsed.error);
+    if (parsed.ok) {
+      check('导入模板:解析 3 行且行号正确', parsed.rows.length === 3 && parsed.rows[0].line === 4, JSON.stringify(parsed.rows.map((r) => r.line)));
+      const plan = planAccountImport(parsed.rows, existing, opts);
+      check('导入:新账户→新建', plan.creates.length === 1 && plan.creates[0].account === 'newbie01');
+      check('导入:已有账户（忽略大小写）→更新', plan.updates.length === 1 && plan.updates[0].account === 'ADMIN01');
+      check('导入:错误行给出多条原因', plan.errors.length === 1 && plan.errors[0].reasons.length >= 5, JSON.stringify(plan.errors));
+    }
+    // 导出文件直接回传：表头在第 4 行、多余列忽略、全部识别为更新
+    const exWb = await buildWorkbook(spec);
+    const exParsed = await parseAccountImportFile((await exWb.xlsx.writeBuffer()) as ArrayBuffer);
+    check('导出文件可直接回传解析', exParsed.ok && exParsed.rows.length === ACCOUNT_ROWS.length, exParsed.ok ? String(exParsed.rows.length) : exParsed.error);
+    if (exParsed.ok) {
+      const plan = planAccountImport(exParsed.rows, existing, opts);
+      check('导出文件回传:全部为更新、零错误', plan.updates.length === ACCOUNT_ROWS.length && plan.errors.length === 0, JSON.stringify(plan.errors.slice(0, 2)));
+    }
+    // 条数上限
+    const many = Array.from({ length: 501 }, (_, i) => ({ line: i + 4, account: `u${i}xx`, password: '', person: 'a', org: 'YY 教育', role: '运营', contact: '' }));
+    check('导入:501 条整份拒绝', planAccountImport(many, existing, opts).overLimit === true);
+    check('导入:500 条放行', planAccountImport(many.slice(0, 500), existing, opts).overLimit === false);
+  }
+
   // —— 模板产物一致性（若已生成） ——
   const outDir = path.join(__dirname, '..', 'docs', 'export-templates');
   if (fs.existsSync(outDir)) {
-    const files = fs.readdirSync(outDir).filter((f) => f.endsWith('.xlsx'));
+    const files = fs.readdirSync(outDir).filter((f) => f.endsWith('数据导出.xlsx'));
     const total = ORG_SPECS.length + PLATFORM_SPECS.length;
     check('模板产物数=注册 spec 数', files.length === total, `${files.length} vs ${total}`);
     check('模板 README 存在', fs.existsSync(path.join(outDir, 'README.md')));

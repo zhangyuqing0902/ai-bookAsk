@@ -580,9 +580,10 @@ export function KpDetailView({ listBase = '/kps', orgPrefix = 'xx-press', domain
               <div className="ctl"><TextInput placeholder="心血管疾病诊疗知识库,覆盖诊断、用药、术后管理…" disabled={isRealtime} /></div>
             </div>
             <div className="fm-row">
-              <div className="lab">纸书购买链接</div>
+              {/* 0918：「纸书购买链接」改名「第三方跳转链接」——不限于纸书购买页，出版社官网 / 电商店铺 / 课程页均可填 */}
+              <div className="lab">第三方跳转链接</div>
               {/* 6.2:说明文案放进输入框做 placeholder 提示 */}
-              <div className="ctl"><TextInput placeholder="填写后,用户查看内容溯源时可跳转该链接" disabled={isRealtime} /></div>
+              <div className="ctl"><TextInput placeholder="如纸书购买页、官网等，用户查看溯源时可跳转" disabled={isRealtime} /></div>
             </div>
             <div className="fm-row">
               {/* 0613-2:关联 Agent 为必填（KP 必须挂载一个 Agent 才能对外提问） */}

@@ -317,3 +317,76 @@ export function stackMembershipExpiry(now: Date, currentPaidExpiry: Date | null,
 export function isSlidingSessionValid(lastActiveAt: Date, now: Date, days = 7) {
   return now.getTime() - lastActiveAt.getTime() <= days * 24 * 60 * 60 * 1000;
 }
+
+// 0918：平台后台 · 机构账户批量导入。按「账户名」匹配（忽略大小写）：已存在 → 更新，不存在 → 新建。
+//   单次上限 500 条，超限整份拒绝（不做部分截断，避免「以为全导了其实只导了前 500」）；
+//   逐行校验，错误行跳过、其余照常导入，错误明细可下载；
+//   更新时留空的单元格＝不修改该字段（允许只填要改的列）；新建时密码留空由系统生成。
+export const ACCOUNT_IMPORT_LIMIT = 500;
+export const ACCOUNT_IMPORT_HEADERS = ['账户名', '密码', '姓名', '机构', '角色', '联系电话'] as const;
+export const ACCOUNT_NAME_RULE = '3–32 位，字母、数字或 _ - . @，不含空格与中文';
+
+export interface AccountImportRow {
+  /** 文件中的 Excel 行号（报错定位用） */
+  line: number;
+  account: string;
+  password: string;
+  person: string;
+  org: string;
+  role: string;
+  contact: string;
+}
+export interface AccountImportIssue { line: number; account: string; reasons: string[] }
+export interface AccountImportPlan {
+  total: number;
+  overLimit: boolean;
+  creates: AccountImportRow[];
+  updates: AccountImportRow[];
+  errors: AccountImportIssue[];
+}
+
+export function isValidAccountPassword(pwd: string) {
+  return pwd.length >= 8 && pwd.length <= 16 && /[a-zA-Z]/.test(pwd) && /\d/.test(pwd) && !/\s/.test(pwd);
+}
+
+export function planAccountImport(
+  rows: AccountImportRow[],
+  existingAccounts: string[],
+  opts: { orgs: string[]; roles: string[]; limit?: number },
+): AccountImportPlan {
+  const limit = opts.limit ?? ACCOUNT_IMPORT_LIMIT;
+  const plan: AccountImportPlan = { total: rows.length, overLimit: rows.length > limit, creates: [], updates: [], errors: [] };
+  if (plan.overLimit) return plan;
+  const existing = new Set(existingAccounts.map((a) => a.trim().toLowerCase()));
+  const seen: Record<string, number> = {};
+  for (const raw of rows) {
+    const row: AccountImportRow = {
+      line: raw.line,
+      account: (raw.account ?? '').trim(),
+      password: (raw.password ?? '').trim(),
+      person: (raw.person ?? '').trim(),
+      org: (raw.org ?? '').trim(),
+      role: (raw.role ?? '').trim(),
+      contact: (raw.contact ?? '').replace(/[\s-]/g, ''),
+    };
+    const reasons: string[] = [];
+    const key = row.account.toLowerCase();
+    const isUpdate = existing.has(key);
+    if (!row.account) reasons.push('账户名必填');
+    else if (!/^[A-Za-z0-9_.@-]{3,32}$/.test(row.account)) reasons.push(`账户名格式不正确（${ACCOUNT_NAME_RULE}）`);
+    else if (seen[key]) reasons.push(`账户名与第 ${seen[key]} 行重复`);
+    if (!isUpdate) {
+      if (!row.person) reasons.push('新建账户姓名必填');
+      if (!row.org) reasons.push('新建账户机构必填');
+      if (!row.role) reasons.push('新建账户角色必填');
+    }
+    if (row.org && !opts.orgs.includes(row.org)) reasons.push(`机构「${row.org}」不存在`);
+    if (row.role && !opts.roles.includes(row.role)) reasons.push(`角色「${row.role}」不存在，可选：${opts.roles.join(' / ')}`);
+    if (row.contact && !/^1\d{10}$/.test(row.contact)) reasons.push('联系电话须为 11 位手机号');
+    if (row.password && !isValidAccountPassword(row.password)) reasons.push('密码不符合规则（8–16 位，同时含字母和数字，不含空格）');
+    if (row.account && !seen[key]) seen[key] = row.line;
+    if (reasons.length) plan.errors.push({ line: row.line, account: row.account || '—', reasons });
+    else (isUpdate ? plan.updates : plan.creates).push(row);
+  }
+  return plan;
+}

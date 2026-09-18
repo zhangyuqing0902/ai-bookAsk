@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { Icon, toast } from '@aba/ui';
 import { Search, Dropdown, Modal, ConfirmDialog, TextInput, DataGrid, CredentialDialog, exportWorkbook, genPassword, type Col, type Credential } from '@aba/ui-admin';
-import { orgOptionLabel, orgOptionValue, revealPhone } from '@aba/mock';
+import { orgOptionLabel, orgOptionValue, revealPhone, type AccountImportRow } from '@aba/mock';
 import { ACCOUNT_ROWS, type Acct } from '../data/accounts';
 import { buildAccountsSpec } from '../exports/accounts';
+import type { ImportResultRow } from '../exports/accountImport';
+import { AccountImportModal } from './AccountImportModal';
 
 // 平台后台 · 机构账户（新建 / 编辑复用同一弹窗 + 停用/恢复二次确认）
 // 0714：mock 数据下移 ../data/accounts；「所属机构」统一为「机构」；#19 编辑态账户名不可改；
 //       新增筛选行「导出」（exports/accounts.ts spec）。
+// 0918：导出新增明文「密码」列；新增「批量导入」（按账户名匹配：新账户创建、已有账户更新，单次 ≤500 条）。
 export function Accounts() {
   const [data, setData] = useState<Acct[]>(ACCOUNT_ROWS);
   const [modal, setModal] = useState<{ mode: 'new' | 'edit'; row?: Acct } | null>(null);
   const [confirm, setConfirm] = useState<Acct | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [q, setQ] = useState('');
   const [org, setOrg] = useState('全部');
   const [parent, setParent] = useState('全部');
@@ -26,6 +30,8 @@ export function Accounts() {
   const [fContact, setFContact] = useState('');
 
   // 上级机构筛选项 = 实际作为上级出现过的机构名（去重，剔除 — 顶级）
+  // 上级机构由机构决定（演示数据：XX 出版集团为顶级，YY / ZZ 挂在其下）
+  const parentOf = (o: string) => ACCOUNT_ROWS.find((r) => r.org === o)?.parent ?? '—';
   const parentNames = [...new Set(ACCOUNT_ROWS.filter((r) => r.parent !== '—').map((r) => r.parent))];
 
   const toggleStatus = (t: Acct) => {
@@ -45,21 +51,46 @@ export function Accounts() {
     if (!fAccount.trim() || !fName.trim()) return toast('请填写账户名称与姓名');
     if (modal?.mode === 'edit' && modal.row) {
       const id = modal.row.id;
-      setData((d) => d.map((r) => (r.id === id ? { ...r, name: fAccount.trim(), person: fName.trim(), org: fOrg, role: fRole, roleCls: roleClsOf(fRole), contact: fContact.trim() } : r)));
+      setData((d) => d.map((r) => (r.id === id ? { ...r, name: fAccount.trim(), person: fName.trim(), org: fOrg, parent: parentOf(fOrg), role: fRole, roleCls: roleClsOf(fRole), contact: fContact.trim() } : r)));
       setModal(null);
       toast('已保存账户');
       return;
     }
     // 新建：加一行 + 弹凭证（账号 + 系统生成密码）
+    if (data.some((r) => r.name.toLowerCase() === fAccount.trim().toLowerCase())) return toast('账户名已存在');
     const id = 'AC' + String(100 + data.length + 1);
-    const row: Acct = { id, name: fAccount.trim(), person: fName.trim(), org: fOrg, parent: '—', role: fRole, roleCls: roleClsOf(fRole), status: '正常', statusCls: 'tag-jade', contact: fContact.trim() || '—' };
+    const row: Acct = { id, name: fAccount.trim(), person: fName.trim(), org: fOrg, parent: parentOf(fOrg), role: fRole, roleCls: roleClsOf(fRole), status: '正常', statusCls: 'tag-jade', contact: fContact.trim() || '—', pwd: genPassword() };
     setData((d) => [row, ...d]);
     setModal(null);
-    setCred({ account: row.name, password: genPassword(), name: row.person, org: row.org, role: row.role });
+    setCred({ account: row.name, password: row.pwd, name: row.person, org: row.org, role: row.role });
   };
+  // 0918：重置后的新密码回写到账户，导出时带出的即为当前密码
   const resetPwd = (r: Acct) => {
-    setCred({ account: r.name, password: genPassword(), name: r.person, org: r.org, role: r.role });
+    const pwd = genPassword();
+    setData((d) => d.map((x) => (x.id === r.id ? { ...x, pwd } : x)));
+    setCred({ account: r.name, password: pwd, name: r.person, org: r.org, role: r.role });
     toast('已重置密码');
+  };
+  // 0918：批量导入落库——已有账户按非空列覆盖（空＝不改），新账户建行（密码空则系统生成）
+  const applyImport = (creates: AccountImportRow[], updates: AccountImportRow[]): ImportResultRow[] => {
+    const result: ImportResultRow[] = [];
+    const next = [...data];
+    for (const u of updates) {
+      const i = next.findIndex((r) => r.name.toLowerCase() === u.account.toLowerCase());
+      if (i < 0) continue;
+      const o = next[i];
+      const role = u.role || o.role;
+      const org = u.org || o.org;
+      next[i] = { ...o, person: u.person || o.person, org, parent: parentOf(org), role, roleCls: roleClsOf(role), contact: u.contact || o.contact, pwd: u.password || o.pwd };
+      result.push({ type: '更新', account: o.name, password: u.password || '未修改', person: next[i].person, org, role });
+    }
+    const fresh: Acct[] = creates.map((c, k) => {
+      const pwd = c.password || genPassword();
+      result.push({ type: '新建', account: c.account, password: pwd, person: c.person, org: c.org, role: c.role });
+      return { id: 'AC' + String(100 + next.length + k + 1), name: c.account, person: c.person, org: c.org, parent: parentOf(c.org), role: c.role, roleCls: roleClsOf(c.role), status: '正常', statusCls: 'tag-jade', contact: c.contact || '—', pwd };
+    });
+    setData([...fresh, ...next]);
+    return result;
   };
 
   const rows = data.filter(
@@ -107,6 +138,10 @@ export function Accounts() {
           <div className="pt">机构账户</div>
         </div>
         <div className="pa">
+          <button className="btn btn-ghost btn-sm" onClick={() => setImportOpen(true)}>
+            <Icon id="i-up" w={14} h={14} />
+            批量导入
+          </button>
           <button className="btn btn-primary btn-sm" onClick={openNew}>
             <Icon id="i-plus" w={14} h={14} />
             新建账户
@@ -120,7 +155,7 @@ export function Accounts() {
         <Dropdown label="角色" options={['全部', '管理员', '运营', '只读']} onSelect={setRole} />
         <Dropdown label="状态" options={['全部', '正常', '停用']} onSelect={setStatus} />
         <div className="grow" />
-        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildAccountsSpec({ rows, filters: [['关键词', q || '无'], ['机构', org], ['上级机构', parent], ['角色', role], ['状态', status]] })); toast('正在导出'); }}>
+        <button className="btn btn-ghost btn-sm" onClick={() => { void exportWorkbook(buildAccountsSpec({ rows, filters: [['关键词', q || '无'], ['机构', org], ['上级机构', parent], ['角色', role], ['状态', status]] })); toast('正在导出，文件含明文密码，请妥善保管'); }}>
           <Icon id="i-dl" w={14} h={14} />
           导出
         </button>
@@ -181,7 +216,14 @@ export function Accounts() {
         {!edit && <div className="sub-tip">初始密码由系统生成，创建后弹窗展示并支持复制，本页不设置密码。</div>}
       </Modal>
 
-      <CredentialDialog open={!!cred} cred={cred} title="账户凭证" onClose={() => setCred(null)} />
+      <AccountImportModal
+        open={importOpen}
+        existingAccounts={data.map((r) => r.name)}
+        onClose={() => setImportOpen(false)}
+        onApply={applyImport}
+      />
+
+      <CredentialDialog open={!!cred} cred={cred} title="账户凭证" tip="请妥善保存并发送给账户使用人；机构账户密码也可通过列表「导出」获取。" onClose={() => setCred(null)} />
     </>
   );
 }

@@ -1,4 +1,5 @@
 // 机构账户导出 spec（0714 新增）——纯函数，视图与模板生成共用（node 可运行，约束同 dashboard.ts）。
+// 0918：新增「密码」列（明文），紧跟账户名；导出文件可直接改后回传「导入」（导入按表头名取列，多余列忽略）。
 import type { ExportSpec } from '@aba/ui-admin';
 import { ACCOUNT_ROWS, type Acct } from '../data/accounts.ts';
 import { revealPhone } from '../../../../packages/mock/src/rules.ts';
@@ -20,9 +21,9 @@ export function buildAccountsSpec(args: AccountsExportArgs = {}): ExportSpec {
       {
         name: '账户明细',
         title: '平台机构账户',
-        headers: ['账户 ID', '账户名', '姓名', '机构', '上级机构', '角色', '状态', '联系电话'],
-        rows: rows.map((r) => [r.id, r.name, r.person, r.org, r.parent, r.role, r.status, r.contact === '—' ? '—' : revealPhone(r.contact)]),
-        widths: [12, 16, 12, 22, 22, 12, 10, 18],
+        headers: ['账户 ID', '账户名', '密码', '姓名', '机构', '上级机构', '角色', '状态', '联系电话'],
+        rows: rows.map((r) => [r.id, r.name, r.pwd, r.person, r.org, r.parent, r.role, r.status, r.contact === '—' ? '—' : revealPhone(r.contact)]),
+        widths: [12, 16, 16, 12, 22, 22, 12, 10, 18],
       },
     ],
   };
